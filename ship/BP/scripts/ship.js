@@ -156,7 +156,7 @@ export const seatBand = (rec) => {
   const bands = PROPORTIONS[rec.plan]?.seats;
   if (!bands || Object.keys(bands).length < 2) return "";
   const d = rec.dims?.depth ?? 1;
-  return d < 0.9 ? "_lo" : d > 1.2 ? "_hi" : "";
+  return d < 0.9 ? "_lo" : d > 1.1 ? "_hi" : "";   // vision: the deep set from 1.1, where the law-deep hulls' (D-004) helm loses the horizon over the mid set
 };
 export const seatEvent = (rec, height = seatHeight()) => `shipwright:seats_${height}_${midsOf(rec)}${seatBand(rec)}`;
 

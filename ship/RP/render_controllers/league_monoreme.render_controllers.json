@@ -514,7 +514,7 @@
           "bow": true
         },
         {
-          "ram": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 2), 2) == 1"
+          "ram": "q.property('shipwright:stage') >= 5"
         }
       ]
     },

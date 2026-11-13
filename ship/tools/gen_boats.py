@@ -1604,7 +1604,9 @@ def deck_modules(pid, b, name, i, z0):
     at its side), then carried up onto this hull's walked deck, the rail being the bulwark over it."""
     F, rail, wy = b["F"], b["side"] + b["wash"], deck_y(b)
     lift = wy - 2
-    on_deck = deck_bones(pid, b, name, i, z0, F, rail - lift)
+    # sized by the bulwark over the deck, as they were by an open hull's side, but never smaller than for a
+    # three-quarter-block bulwark (vision: a barrel or a bench stays a size a person uses on the law's low small boats)
+    on_deck = deck_bones(pid, b, name, i, z0, F, max(rail - lift, 12 / b.get("scale", 1)))
     on_hull = {x["name"]: x for x in deck_bones(pid, b, name, i, z0, F, rail)}
     out = []
     for x in on_deck:
@@ -1937,7 +1939,9 @@ def controllers(pid, zones):
         [{n: f"{stage} >= 5 && {mod_on(key)}"} for n in names]
     rc[f"controller.render.{NS}.{pid}.ram"] = {
         "geometry": "Geometry.outfit", "materials": [{"*": "Material.default"}], "textures": ["Texture.copper"],
-        "part_visibility": (mods_vis([], "ram") + [{"ram": f"{stage} >= 5"}]) if pid.startswith("theran") else mods_vis(["ram"], "ram")}
+        # D-005: a ram only where it was used: the League's and the Therans' ships carry theirs; any other shows one
+        # only when the ram fitting is fitted
+        "part_visibility": (mods_vis([], "ram") + [{"ram": f"{stage} >= 5"}]) if pid.startswith(("theran", "league")) else mods_vis(["ram"], "ram")}
     mids_vis = [{"*": False}, {"yaw": True}, {"root": True}] + [{z: True} for z in zones["mid"] if z.count("_") == 1]
     deck_vis = lambda part, key: mids_vis + [{f"deck_{part}_{i}": f"{stage} >= 5 && {deck_at(i, key)}"} for i in range(max_mids(b))]
     rc[f"controller.render.{NS}.{pid}.deck_hold"] = {
