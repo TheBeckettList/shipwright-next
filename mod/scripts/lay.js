@@ -45,7 +45,7 @@ import { LEVEL } from "./rings.js";
 export { LEVEL };
 const C = 16;   // given: a chunk's side
 const PILE = 3;   // derived: a stilt house's piles every three blocks, FIB[3] (the stilt peoples' shallows are three deep)
-const LADDER_FACES = [[1, 0, 5], [-1, 0, 4], [0, 1, 3], [0, -1, 2]];   // given: out of the door each way, and the ladder's facing_direction that way (east 5, west 4, south 3, north 2)
+const BEHIND = { 2: [0, 1], 3: [0, -1], 4: [1, 0], 5: [-1, 0] };   // given: a ladder facing north (2), south (3), west (4) or east (5) hangs on the block behind it
 const perms = new Map();
 export function perm(id, states) {
   const key = states ? `${id}|${JSON.stringify(states)}` : id;
@@ -150,6 +150,15 @@ function grownOf(cx, cz) {
 /** Bring a grown chunk's beasts out (once, as the folk). */
 function spawnBeasts(dim, cx, cz) { for (const k of BEAST_BY[`${cx},${cz}`] ?? []) { const [t, x, y, z] = BEASTS[k]; try { dim.spawnEntity(BEAST_TYPES[t], { x: x + 0.5, y, z: z + 0.5 }); } catch { fails++; } } }
 
+/** A placed prototype's lowest block in each column it fills, "x,z" -> y (a stilt house's floor, its porch, its legs), and .floor, the level most columns start at. */
+function undersOf(P, turn, pl) {
+  const f = flatOf(P), out = new Map();
+  for (let i = 0; i < f.length; i += 4) { let dx = f[i], dz = f[i + 2]; for (let t = 0; t < turn; t++) [dx, dz] = [-dz, dx]; const k = `${pl.x + dx},${pl.z + dz}`, y = pl.y + f[i + 1]; if (!out.has(k) || out.get(k) > y) out.set(k, y); }
+  const n = new Map(); for (const y of out.values()) n.set(y, (n.get(y) ?? 0) + 1);
+  out.floor = [...n].sort((p, q) => q[1] - p[1] || p[0] - q[0])[0]?.[0] ?? pl.y;   // the floor: the level most columns start at
+  return out;
+}
+
 /** The columns a structure stands on (the deep pass leaves them as the surface laid them), each with the lowest block
  *  of what stands there (its prototype's base): the body is filled only under that, so a house set lower than the
  *  skin's foot (cut into a slope, or a floor under the hill) keeps its rooms. */
@@ -192,11 +201,12 @@ export function* lifeChunk(dim, cx, cz, { folk = true } = {}) {
   for (const k of BY_CHUNK[`${cx},${cz}`] ?? []) {
     const a = PLACEMENTS[k], pl = { p: a[0], x: a[1], y: a[2], z: a[3], f: a[4], s: a[5] & 1, c: a[5] & 2, free: a[5] & 4, b: [a[6], a[7], a[8], a[9]] }, P = PROTOS[pl.p], fp = palPerm(pl.f);   // free: a way in the air (a skyway), no foundation and nothing covered under it
     const bx0 = Math.max(pl.b[0], x0), bx1 = Math.min(pl.b[2], x0 + C - 1), bz0 = Math.max(pl.b[1], z0), bz1 = Math.min(pl.b[3], z0 + C - 1);
+    const under = pl.s ? undersOf(P, (a[5] >> 3) & 3, pl) : null;   // a stilt house's piles run up to its own lowest block in each column
     if (!pl.free) for (let x = bx0; x <= bx1; x++) for (let z = bz0; z <= bz1; z++) {
       covered.add((z - z0) * C + (x - x0));
       const top = cols[(z - z0) * C + (x - x0)].top;
       const pile = ((x - pl.b[0]) % PILE === 0 || x === pl.b[2]) && ((z - pl.b[1]) % PILE === 0 || z === pl.b[3]);   // a stilt house's piles: a grid every PILE, its edges always
-      if (!pl.s || pile) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp);
+      if (!pl.s) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp); else if (pile && under.get(`${x},${z}`) <= under.floor + 1) fill(dim, x, top + 1, z, x, under.get(`${x},${z}`) - 1, z, fp);   // piles only under the floor (not under an eave, nor where the box is empty)
       if (pl.c) fill(dim, x, pl.y + 1, z, x, top, z, "minecraft:air");   // cut into the slope
     }
     yield;
@@ -208,14 +218,17 @@ export function* lifeChunk(dim, cx, cz, { folk = true } = {}) {
       set(dim, x, y, z, palPerm(rot ? rot[f[i + 3]] : f[i + 3]));
       if (i % 256 === 0) yield;
     }
-    if (pl.s) for (let i = 0; i < f.length; i += 4) {   // a stilt house on land: a ladder up a pile to each door
-      const e = PALETTE[rot ? rot[f[i + 3]] : f[i + 3]]; if (!/_door$/.test(e[0]) || e[1]?.upper_block_bit) continue;
-      let dx = f[i], dz = f[i + 2]; for (let t = 0; t < turn; t++) [dx, dz] = [-dz, dx];
-      const x = pl.x + dx, y = pl.y + f[i + 1], z = pl.z + dz;
-      for (const [ux, uz, face] of LADDER_FACES) { const nx = x + ux, nz = z + uz; if (nx >= pl.b[0] && nx <= pl.b[2] && nz >= pl.b[1] && nz <= pl.b[3]) continue;   // the outside of the door
-        if (nx < x0 || nx >= x0 + C || nz < z0 || nz >= z0 + C || x < x0 || x >= x0 + C || z < z0 || z >= z0 + C) break;   // both columns in this chunk
-        const g = cols[(nz - z0) * C + (nx - x0)].top, gp = cols[(z - z0) * C + (x - x0)].top; if (g < SEA || y - 1 - g < 2) break;   // on land, and high enough to need one
-        fill(dim, x, gp + 1, z, x, pl.y - 1, z, fp); fill(dim, nx, g + 1, nz, nx, y - 1, nz, perm("minecraft:ladder", { facing_direction: face })); break; }
+    if (pl.s) {   // a stilt house on land: its own ladders, made for the sea, run on down to the ground, a pile behind each
+      const lad = new Map();   // "x,z" -> the lowest ladder there: [y, its permutation's palette entry]
+      for (let i = 0; i < f.length; i += 4) { const e = PALETTE[rot ? rot[f[i + 3]] : f[i + 3]]; if (e[0] !== "minecraft:ladder") continue;
+        let dx = f[i], dz = f[i + 2]; for (let t = 0; t < turn; t++) [dx, dz] = [-dz, dx];
+        const k = `${pl.x + dx},${pl.z + dz}`, y = pl.y + f[i + 1]; if (!lad.has(k) || lad.get(k)[0] > y) lad.set(k, [y, e]); }
+      const low = Math.min(...[...lad.values()].map(([y]) => y));   // only the run's foot: a ladder that steps down the porch reaches the ground once
+      for (const [k, [y, e]] of lad) { if (y !== low) continue; const [x, z] = k.split(",").map(Number), [bx, bz] = BEHIND[e[1]?.facing_direction] ?? [0, 0], px2 = x + bx, pz = z + bz;
+        if ([x, px2].some((u) => u < x0 || u >= x0 + C) || [z, pz].some((v) => v < z0 || v >= z0 + C)) continue;   // both columns in this chunk
+        const g = cols[(z - z0) * C + (x - x0)].top; if (g < SEA || y - 1 <= g) continue;   // on land, and short of the ground
+        if (bx || bz) fill(dim, px2, cols[(pz - z0) * C + (px2 - x0)].top + 1, pz, px2, y - 1, pz, fp);
+        fill(dim, x, g + 1, z, x, y - 1, z, perm(e[0], e[1])); }
     }
   }
   // a grown settlement's blocks (data/grown.js): each column's runs, a fill apiece
