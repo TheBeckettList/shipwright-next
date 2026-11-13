@@ -12,7 +12,7 @@ import { system } from "@minecraft/server";
 import { countItems } from "./inventory.js";
 import { setP } from "./props.js";
 import { forwardOf } from "./frame.js";
-import { flyLaw, flyingOf, FLIGHT } from "./flight.js";
+import { flyLaw, flyingOf, stageOf as stageLaw, FLIGHT } from "./flight.js";
 import { clamLaw } from "./clamsail.js";
 import { WATER } from "./config/yards.js";
 import { PHI } from "../core/golden.js";
@@ -46,13 +46,20 @@ export function hasSherd(helm, s) {
 /** The core's top speed on the water (blocks a tick): her cruise. */
 export const CORE_TOP = FLIGHT.CRUISE;
 
-/** Her wings: spread aloft and at speed, folded onto the hull otherwise; eased over FOLD_STEP. */
-export function foldTick(e, s) {
-  // her plates are her sail and her wings (Richard: "at different speeds the sail zips away, then 1/3 of the wing comes at a
-  // time"): a third of each plate zips from sail to wing as she passes 1/phi^2, 1/phi and the whole of her lift speed
-  const v = Math.abs(s.speed ?? 0);
-  const thirds = s.fly?.flying ? 3 : [1 / PHI ** 2, 1 / PHI, 1].filter((f) => v > FLY.vLift * f).length;
-  const want = 1 - thirds / 3;
+// Her stages (Richard: "sailing; pull back a little, foil a third up; pull back more, 2/3; more, full foil with 1/3
+// sail; full pull, V1, and the sail is away: you're gliding"): the helmsman's pull (how far they look up) asks for a
+// stage, and her speed allows it. Stage n rides her min(n, 3) thirds of the way up her foil, and zips n - 1 thirds of
+// her plates over from sail to wing; stage 4 is flight.
+/** Her plates between sail and wing, and her stage, eased over FOLD_STEP. */
+export function foldTick(e, s, helm) {
+  let pull = 0;
+  try {
+    pull = -helm.getRotation().x;                    // looking up is pulling back
+  } catch {
+    /* level */
+  }
+  s.stage = stageLaw(pull, Math.abs(s.speed ?? 0), !!s.fly?.flying, FLY.vLift);
+  const want = 1 - Math.max(0, s.stage - 1) / 3;
   const was = s.fold ?? 1;
   s.fold = was + Math.max(-FOLD_STEP, Math.min(FOLD_STEP, want - was));
   if (Math.abs(s.fold - (s.foldShown ?? -1)) >= 0.05 || (s.fold === want && s.foldShown !== want)) {
@@ -82,6 +89,7 @@ export function flightTick(e, s, helm, { wet, turnRight }) {
   s.fly ??= { v: 0, g: 0, h: 0, flying: false };
   if (!s.fly.flying) {
     if (!wet) return false;                        // she leaves only from the water
+    if ((s.stage ?? 0) < 4) return false;          // and only on a full pull at V1, her sail away
     s.fly = { v: Math.max(0, s.speed), g: 0, h: 0, flying: false };
   }
   let pitch = 0;
@@ -152,4 +160,37 @@ export function clamTick(e, s, { sailing, wind, off, flying, tack = 1 }) {
     }
   }
   return law;
+}
+
+// Her foiling (Richard: "the thirds can also be the foiling height"): each stage rides her a third higher on her keel's
+// foil, her hull lifting clear of the water, until at stage 4 she flies. The foil
+// reaches FOIL_H below her hull (gen_boats: her keel's foil at her rudders' feet), and she rises at most to keep it
+// wet. Clear of the water her hull drags less: her sail and her core carry her faster (foilGain), which brings the next
+// third sooner, as a foiler's take-off goes.
+export const FOIL_H = 0.85;                        // derived: her foil's reach below her hull, blocks (11 px, less a little kept wet)
+const FOIL_EASE = 1 / 13;                          // vision: FIB, the share of the gap to her ride height closed each tick
+
+/** How far down to look for her water: the foil's depth while she foils. */
+export const foilReach = (s) => (s.ride ?? 0) + 0.1;
+
+/** Her speed gain while foiling: up to 1/phi more, full up on her foil. */
+export const foilGain = (s) => 1 + ((s.fly?.flying ? 0 : Math.min(3, s.stage ?? 0)) / 3) / PHI;
+
+/** Her ride height on the water: a third of FOIL_H a third, held by the foil's lift against her weight. */
+export function foilTick(e, s, water) {
+  if (s.fly?.flying) return;
+  const want = water.wet && !water.lip ? (Math.min(3, s.stage ?? 0) / 3) * FOIL_H : 0;
+  const was = s.ride ?? 0;
+  s.ride = was + (want - was) * FOIL_EASE;
+  if (s.ride < 0.01 && want === 0) {
+    s.ride = 0;
+    return;                                         // afloat: her buoyancy holds her
+  }
+  try {
+    const v = e.getVelocity();
+    const lift = s.ride - was;                      // what the foil raises her by this tick
+    e.applyImpulse({ x: 0, y: lift - v.y + GRAVITY, z: 0 });
+  } catch {
+    /* not this tick */
+  }
 }

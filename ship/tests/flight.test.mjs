@@ -34,3 +34,14 @@ test("the burning core holds her level near cruise, and she never passes the cei
   const up = fly(FLIGHT.CRUISE, () => ({ pitch: -40, burning: true }), 2400);
   assert.ok(up.top <= FLIGHT.CEILING + 3, `top ${up.top.toFixed(1)}`);   // vision: the few blocks her levelling takes
 });
+
+import { stageOf, PULL } from "../BP/scripts/flight.js";
+test("her stages: the pull asks, her speed allows, flight only on a full pull at V1", () => {
+  const vL = 0.45;
+  assert.equal(stageOf(0, 1, false, vL), 0, "no pull: sailing");
+  assert.equal(stageOf(PULL[0] + 1, 1, false, vL), 1, "a little pull: a third up her foil");
+  assert.equal(stageOf(PULL[2] + 1, 1, false, vL), 3, "more: full foil, a third of sail");
+  assert.equal(stageOf(PULL[3] + 1, vL * 0.9, false, vL), 3, "full pull short of V1: not yet");
+  assert.equal(stageOf(PULL[3] + 1, vL, false, vL), 4, "full pull at V1: gliding");
+  assert.equal(stageOf(PULL[3] + 1, 0.01, false, vL), 0, "no speed: no foil");
+});

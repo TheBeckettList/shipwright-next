@@ -82,3 +82,17 @@ export function flyLaw(state, { pitch, burning }, f) {
   if (h <= 0) return { v: v * FLIGHT.SPLASH, g: 0, h: 0, flying: false, landed: true, lift: 0 };
   return { v, g, h, flying: true, lift: Lm / f.G };
 }
+
+// Her stages (glide.js shows them): how far the helmsman pulls back asks for one, and her speed allows it.
+export const PULL = [FLIGHT.DEAD_DEG, FLIGHT.DEAD_DEG + (FLIGHT.AIM_DEG - FLIGHT.DEAD_DEG) / PHI ** 2,
+  FLIGHT.DEAD_DEG + (FLIGHT.AIM_DEG - FLIGHT.DEAD_DEG) / PHI, FLIGHT.AIM_DEG];          // vision: degrees of pull for stages 1..4
+export const GATE = [1 / PHI ** 3, 1 / PHI ** 2, 1 / PHI, 1];                                  // vision: of her lift speed, for stages 1..4
+
+/** The stage the helm asks for and her speed allows (0 sailing .. 4 flying). */
+export function stageOf(pullDeg, speed, flying, vLift) {
+  if (flying) return 4;
+  const asked = PULL.filter((d) => pullDeg >= d).length;
+  const allowed = GATE.filter((f) => speed >= vLift * f).length;
+  return Math.min(asked, allowed);
+}
+

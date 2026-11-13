@@ -23,7 +23,7 @@ import { manageShields, shieldsLaw, PEG } from "./shields.js";
 import { towTick, castOff, useHandling } from "./tender.js";
 import { turnDrag, oarsInLaw } from "./laws.js";
 import { sailLaw, driveLaw, heelLaw, heelTarget, rollPeriod, driftLaw, wakeLaw } from "./laws.js";
-import { isGlider, hasSherd, foldTick, flightTick, clamTick, CORE_TOP } from "./glide.js";
+import { isGlider, hasSherd, foldTick, flightTick, clamTick, foilReach, foilTick, foilGain, CORE_TOP } from "./glide.js";
 import { PHI } from "../core/golden.js";
 
 const SIGN_KEY = "shipwright:steer_sign";
@@ -128,8 +128,9 @@ function onIce(e) {
 }
 
 /** Water under the boat: whether it's afloat and how many blocks deep the water is. */
-function waterUnder(e) {
-  const { x, y, z } = e.location;
+function waterUnder(e, reach = 0) {
+  const { x, z } = e.location;
+  const y = e.location.y - reach;   // a foiling hull: her foil, below her, is what's in the water
   const fx = Math.floor(x), fz = Math.floor(z);
   const get = (yy) => {
     try {
@@ -641,7 +642,7 @@ export function steerBoat(e, helm) {
   if (!s.stats) return s;
   const h = s.stats;
   const glider = isGlider(e);   // the Exokoitos: her core, her wings, her flight (glide.js)
-  if (glider) foldTick(e, s);
+  if (glider) foldTick(e, s, helm);
   const prevSpeed = s.speed;
   const cond = s.cond ?? { bow: 1, mid: 1, stern: 1, sail: 1 };
   const hullF = 0.7 + 0.3 * ((cond.bow + cond.mid + cond.stern) / 3);   // a worn hull is slower
@@ -659,7 +660,8 @@ export function steerBoat(e, helm) {
     if (Math.abs(turnRight) > 0.3) unlash(s, "Tiller freed");           // steering frees a lashed tiller
     else turnRight = 0;
   }
-  let water = waterUnder(e);
+  let water = waterUnder(e, glider ? foilReach(s) : 0);
+  if (glider) foilTick(e, s, water);
   if (!water.wet && h.iceRunners && onIce(e)) water = { wet: true, depth: 99, ice: true };
   s.aground = water.wet && water.depth < h.draft && !water.lip;   // a lip she scrapes over (with a touch of drag)
   if (water.lip) s.speed *= 0.985;
@@ -718,7 +720,7 @@ export function steerBoat(e, helm) {
   // Law: the sail. Projection: telltales and the cloth's fill.
   // the Exokoitos's seed sail is a rigid wing: its own law (clamsail.js), no cloth to fill
   const sail = glider
-    ? { fill: 0, telltale: 0, target: clamTick(e, s, { sailing, wind: windSpeed, off, flying: !!s.fly?.flying,
+    ? { fill: 0, telltale: 0, target: foilGain(s) * clamTick(e, s, { sailing, wind: windSpeed, off, flying: !!s.fly?.flying,
         tack: Math.sign(s.wind.x * Math.cos((s.heading * Math.PI) / 180) + s.wind.z * Math.sin((s.heading * Math.PI) / 180)) || 1 }).target * sailF * hullF }
     : sailLaw(h, { sailing, off, windSpeed, sailF, hullF });
   const fill = sail.fill, sailTarget = sail.target;
@@ -749,7 +751,7 @@ export function steerBoat(e, helm) {
     }
     furnaceDrive = s.fuel > 0;
   }
-  const baseTop = poleOut ? h.max * 0.15 : core ? CORE_TOP : furnaceDrive ? Math.min(h.max * 1.25, h.max * power.top) : h.max;
+  const baseTop = poleOut ? h.max * 0.15 : core ? CORE_TOP * foilGain(s) : furnaceDrive ? Math.min(h.max * 1.25, h.max * power.top) : h.max;
   const rowTop = (core ? baseTop : !furnaceDrive && hungry ? baseTop * 0.5 : baseTop) * hullF;
   if (rowing && !core && !furnaceDrive && hungry && !s.warnedHungry) { say(s, "Too hungry to row hard"); s.warnedHungry = true; }
   if (!hungry) s.warnedHungry = false;
