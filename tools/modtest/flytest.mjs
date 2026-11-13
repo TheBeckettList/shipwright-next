@@ -1,3 +1,4 @@
+import "./mock/register.mjs";   // the game's API, as modtest's stand-in (tools/modtest/mock)
 // The real layer (main.js) in Node's game loop: a player flies a line at a speed, the engine's slack is a budget of
 // ms a tick, and we count the holes in view as the probes would: is the skin's mark on each chunk in view?
 //   node tools/buildmod.mjs --nozip && node tools/modtest/flytest.mjs [--speed 10.89] [--secs 60] [--budget 2] [--view 8] [--heading 0]

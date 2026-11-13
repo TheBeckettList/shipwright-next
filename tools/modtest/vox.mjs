@@ -1,3 +1,4 @@
+import "./mock/register.mjs";   // the game's API, as modtest's stand-in (tools/modtest/mock)
 // inherency: instrument
 // The built world in 3D, block for block: lays chunks of the built add-on (dist/) with the stand-in for the game's
 // API (as view.mjs does) and writes every block that can be seen (one with air, water or glass beside it) for the

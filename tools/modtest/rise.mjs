@@ -1,3 +1,4 @@
+import "./mock/register.mjs";   // the game's API, as modtest's stand-in (tools/modtest/mock)
 // The ground's steps from above: each column's largest drop to a neighbour, as the game lays it (the city's kinds, the
 // pools, the tarn): green flat, yellow a step or two, orange a climb, red a cliff of ten, magenta twenty and more.
 //   node tools/modtest/rise.mjs <cx> <cz> <chunks> out.png

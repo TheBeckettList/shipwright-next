@@ -1,3 +1,4 @@
+import "./mock/register.mjs";   // the game's API, as modtest's stand-in (tools/modtest/mock)
 // The mod in Node: lays sample chunks of the built add-on (dist/) with a stand-in for the game's API that knows
 // vanilla's every block and state (lab/bedrock_blocks.json), and reports cost, folk and any bad block.
 //   node tools/buildmod.mjs --nozip && npm run modtest
