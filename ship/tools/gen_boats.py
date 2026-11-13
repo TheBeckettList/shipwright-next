@@ -2731,7 +2731,8 @@ def glider_parts(b):
         # 1/phi^3, and at its tail a level stab with two fins on its tips, her rudders mirrored (up, canted out)
         pl, km_ = b["_plates"], km
         Lb = km_ * LB                                                       # derived: the bulb, her length at 1/phi^3
-        rb = Lb / (2 * PHI ** 3)                                            # vision: a drop's fineness, its girth 1/phi^3 of its length
+        rb = Lb / (2 * PHI ** 5)                                            # vision: a slim drop, its girth 1/phi^5 of its length (Richard:
+                                                                            # "way slimmer; not weight, just hydro")
         z0b = zc - Lb / PHI ** 2                                            # its nose: its wing at the third of its length
         ybk = yb                                                            # its axis, the wing's plane
         prof = [(0.0, 0.25), (0.1, 0.8), (1 / PHI ** 2, 1.0), (1 / PHI, 0.72), (1.0, 0.18)]   # vision: a drop, full at 0.38
@@ -2751,17 +2752,21 @@ def glider_parts(b):
                 ca, cb = c0m + (c1m - c0m) * u0, c0m + (c1m - c0m) * u1
                 xa, xb_ = sx * Lm * u0, sx * Lm * u1
                 mini += slab((xa, ybk, zle + sm * u0), (xb_, ybk, zle + sm * u1), (xa, ybk, zle + sm * u0 + ca), (xb_, ybk, zle + sm * u1 + cb), 0.6, (0, ybk - 99, zle))
-        # its tail: a level stab across the bulb's tail, a fin up from each tip, canted out as her rudders are down
-        zt_ = z0b + Lb * (1 - 1 / PHI ** 3)
-        hsm = max(2.5, km_ * 2 * 16 * 1.5 / 2 / PHI)                        # vision: its half span, at least 2.5 px to read
-        csm = max(2.0, km_ * 16 * PHI)                                      # vision: its chord
-        mini += slab((-hsm, ybk, zt_), (hsm, ybk, zt_), (-hsm * 0.8, ybk, zt_ + csm), (hsm * 0.8, ybk, zt_ + csm), 0.5, (0, ybk - 99, zt_))
-        hf = max(3.0, km_ * 22)                                             # vision: the fins' height, her rudders' depth at 1/phi^3
-        cant_ = math.atan(1 / PHI ** 3)
+        # its tail, as her own stern is (Richard: "redo the tail to match the rear of the boat: flat h stab with drop v
+        # stabs"; "widen the h stab so it's a real foil"): a flat stab swept as her wing, 1/phi of its span, and from
+        # each tip a fin dropping down, canted out and raked aft as her rudders are
+        zt_ = z0b + Lb * (1 - 1 / PHI ** 2)
+        hsm = Lm / PHI                                                      # vision: its half span, 1/phi of the wing's
+        csm = c0m / PHI                                                     # vision: its root chord, 1/phi of the wing's
+        smt = sm / PHI
         for sx in (-1, 1):
-            A_ = (sx * hsm * 0.9, ybk, zt_)
-            T_ = (A_[0] + sx * hf * math.tan(cant_), ybk + hf, zt_ + hf / PHI ** 2)
-            mini += slab(A_, T_, (A_[0], ybk, zt_ + csm), (T_[0], T_[1], T_[2] + csm / PHI), 0.5, (0, ybk, zt_ - 99))
+            mini += slab((0, ybk, zt_), (sx * hsm, ybk, zt_ + smt), (0, ybk, zt_ + csm), (sx * hsm, ybk, zt_ + smt + csm / PHI), 0.5, (0, ybk - 99, zt_))
+        hf = max(3.0, km_ * 22)                                             # vision: the fins' depth, her rudders' at 1/phi^3
+        cant_, rake_ = math.atan(1 / PHI ** 3), math.atan(1 / PHI ** 2)
+        for sx in (-1, 1):
+            A_ = (sx * hsm, ybk, zt_ + smt)
+            T_ = (A_[0] + sx * hf * math.tan(cant_), ybk - hf, A_[2] + hf * math.tan(rake_))
+            mini += slab(A_, T_, (A_[0], ybk, A_[2] + csm / PHI), (T_[0], T_[1], T_[2] + csm / PHI), 0.5, (0, ybk, A_[2] - 99))
         yr_, tail_y, tail_z = ybk, ybk, z0b + Lb                            # the mast meets its axis; the emitter at its tail
         b["_bulb_rb"] = rb
     # dropped (Richard: "drop the keel and foil and resize in turn with the rudders as they are"): its midline down to
