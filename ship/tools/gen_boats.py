@@ -104,7 +104,7 @@ XBOW = dict(taper="xbow", rise=0.18, floor=0.06, stem="xhead")
 FLY_TAIL = dict(taper="fly_tail", rise=0, floor=0.45, stem="raked_short")
 AC_ROUND = 2.2     # vision: a little fuller than a carved log (2.0): with the crown (X/phi) the AC72's upright oval section
 is_theran = lambda b: any(b.get("bow") is x for x in (AC_BOW, PIERCE, YACHT_BOW, XBOW))   # the Theran build (their pod, rudders, nets)
-BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, glider=True, keel=False, wings="fold", hull="dart", bow=XBOW, stern=FLY_TAIL, round=AC_ROUND, crown=True)
+BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, glider=True, keel=False, wings="fold", hull="arrow", tail="stealth", bow=XBOW, stern=FLY_TAIL, round=AC_ROUND, crown=True)
 
 # Fitted modules drawn on the boat, as bits of the shipwright:mods property (mirrored in ship.js).
 MODULE_BITS = {"shield_rail": 0, "ram": 1, "ice_runners": 3, "crossbow": 4, "full_deck": 5, "sewn_hull": 6, "bulkheads": 7, "light_hull": 8,
@@ -1409,8 +1409,8 @@ def parts(b):
         # (cf/phi), with an inverted-V foil at its foot level with the keel's, so the two fly together
         zf, ye, cr_ = END + g["Lb"], g["ye"], g["cf"] / PHI
         yfoil = 1 - side
-        bones.append({"name": "rudder", "parent": "root", "pivot": [0, ye, zf], "cubes": theran_uv(
-            slab((0, yfoil, zf - cr_ / 2), (0, ye, zf - cr_ / 2), (0, yfoil, zf + cr_ / 2), (0, ye, zf + cr_ / 2), 0.7, (99, 0, zf)), "gold")})   # just the rudder, her fin (Richard: "fuck the foil on the rudder")
+        bones.append({"name": "rudder", "parent": "root", "pivot": [0, ye, zf], "cubes": [] if b.get("tail") == "stealth" else theran_uv(
+            slab((0, yfoil, zf - cr_ / 2), (0, ye, zf - cr_ / 2), (0, yfoil, zf + cr_ / 2), (0, ye, zf + cr_ / 2), 0.7, (99, 0, zf)), "gold")})   # the stealth tail steers with its fins (glider_parts)   # just the rudder, her fin (Richard: "fuck the foil on the rudder")
     elif b.get("foils"):
         # A foiler steers with a T-rudder hung on the centre of her transom: the blade reaches as deep as the main
         # foil (depth 0.8 of the strut's, so it flies a little higher, trimming her bow up), a small T-wing at its
@@ -1770,71 +1770,92 @@ FOLD_OUT = 180 - math.degrees(math.atan(1 / PHI ** 2) + math.atan(1 / PHI))     
 
 
 def fold_wings(b, g, H, wingpts):
-    """Her wings folded into her hull (Richard, S003: "the wing attaches at the keel, then trifolds to fill out to the
-    hull with our shape; the wing looks like a hull piece, then unfolds when gliding"; "fold the red bits down in hull
-    config; the first hinge tucks into the structural keel and gold piece of the hull; keep a bit of that metal hull on
-    the bottom for impact and water; make the tips gold; a tiny gap between the tips and the gold hull exposing a bit
-    of wing"; open, "the first two sections flat or slightly bowed the other way").
-    Three panels a side, hinged along her length: the root from the keel, the middle, and the gold tip. Their sizes are
-    her own section's at her fullest: folded, the root runs from the keel to her widest chine, the middle from there to
-    her shoulder, and the tip folds down outside from the shoulder to just above her gold bottom (a gap of 1/phi^4 of a
-    block, the wing showing in it). Open (the model's rest pose; the animation folds it by shipwright:fold), the root
-    rises at atan 1/phi^3, the middle at atan 1/phi^4, and the tip drops at atan 1/phi. The panels run her middle,
-    0.25 to 0.72 of her length (between the bow shield and the booms' roots)."""
-    W, TMAX, zs, wid, bot, top, section, boot = H["W"], H["TMAX"], H["zs"], H["wid"], H["bot"], H["top"], H["section"], H["boot"]
-    half = H["half"]
+    """Her wings, slim and swept, folding away as part of her hull (Richard, S003: "way slimmer ... a slight backsweep
+    ... cool origami to stealthily give as much area ... longer when unfolded"; the counterfolds /\\/; "the wingtips
+    gold for the folding effect and a little gap"; "the folded wings stand out a bit more, but as if part of the hull").
+    Each wing keeps the folding wing's area (about 2,500 px^2 a side), its chord 1/phi of the hull band it folds onto
+    at the root and 1/phi of that at the tip, so it runs long. Its root hinge sits on her flank just above her gold
+    waterline, near her centre of gravity (just ahead of her keel's foil and at the front of her cockpits).
+    Folding, as a carrier plane's "Sto-Wing" does with one skewed hinge (here a swing and a turn): the wing swings
+    back along her flank and turns on edge, its chord standing up her side; then it counterfolds twice along its span,
+    mountain then valley, so its three panels stack along her flank like a strake; the gold tip folds over last,
+    outermost, stopping a little short so a band of wing shows. Open (fold 0): swept back atan 1/phi^3, rising at
+    atan 1/phi^3 (the golden arch), the tip dropped at atan 1/phi. The model's rest pose is the wing straight out,
+    level and unswept; the animation (shipwright:fold) sets the rest."""
+    TMAX, zs, wid, bot, top, section, boot = H["TMAX"], H["zs"], H["wid"], H["bot"], H["top"], H["section"], H["boot"]
+    LB, zt = H["LB"], H["zt"]
     gold = lambda cubes: [dict(c, uv=H["spar"]) for c in cubes]
     skin = lambda cubes: [dict(c, uv=H["skin_uv"]) for c in cubes]
-    t = TMAX
-    sec = section(t)
-    P_ = lambda uv: (wid(t) * uv[0], bot(t) + (top(t) - bot(t)) * (uv[1] + 1) / 2)
-    iE = max(range(len(sec) // 2 + 1), key=lambda k: sec[k][0])         # her widest chine, on the +x side
-    K, E, Wt = P_(sec[0]), P_(sec[iE]), P_(sec[iE + 1])                   # keel, chine, shoulder
-    GAP = 16 / PHI ** 4                                                   # vision: the band of wing that shows, folded
-    G = (E[0] + 0.6, boot(t) + GAP)                                       # the tip's edge, just above her gold bottom
-    Lr, Lm, Lt_ = (math.dist(K, E), math.dist(E, Wt), math.dist(Wt, G))
-    ang = lambda A, B: math.atan2(B[1] - A[1], B[0] - A[0])
-    f = (ang(K, E), ang(E, Wt), ang(Wt, G))                               # folded, each panel's angle (outward side)
-    o = (math.atan(1 / PHI ** 3), math.atan(1 / PHI ** 4), -math.atan(1 / PHI))   # vision: open, the golden arch and drop
-    dr = f[0] - o[0]
-    b["_fold"] = tuple(math.degrees(v) for v in (dr, (f[1] - o[1]) - dr, (f[2] - o[2]) - (f[1] - o[1])))
-    zA, zB = -half + 2 * half * 0.25, -half + 2 * half * 0.72             # vision: her middle, between shield and booms
-    zm = (zA + zB) / 2
+    tr = H["t_root"]
+    zr = zt(tr)
+    y0 = boot(tr) + 0.5                                                   # just above her gold waterline
+    sec = section(tr)
+    iE = max(range(len(sec) // 2 + 1), key=lambda k: sec[k][0])
+    xr = wid(tr) * sec[iE][0] + 1.5                                       # vision: standing a little proud of her flank
+    band = max(4.0, (top(tr) - y0) * 0.9)                                 # the hull band it folds onto, keel-ish to coaming
+    cr = band / PHI ** 0.5                                                # vision: the root chord, a little under the band
+    ct = cr / PHI                                                         # the tip's, 1/phi of it
+    AREA = 2500                                                           # derived: the folding wing's area a side, px^2
+    S = 2 * AREA / (cr + ct)                                              # derived: the span that keeps it
+    st = S / PHI ** 4                                                     # vision: the gold tip, 1/phi^4 of the span
+    s1 = (S - st) / 3                                                     # three panels between the root and the tip
+    chord = lambda x: cr + (ct - cr) * x / S
+    T_ = 0.6                                                              # a panel's thickness
+    GAP = 16 / PHI ** 4                                                   # the band of wing the gold tip leaves showing
+    LAM, ARCH, DROP = (math.degrees(math.atan(1 / PHI ** 3)), math.degrees(math.atan(1 / PHI ** 3)), math.degrees(math.atan(1 / PHI)))
+    sg = [float(v) for v in os.environ.get("WING_SIGNS", "1,1,1,1").split(",")]   # preview signs (yaw, roll, arch/fold)
+    b["_wing"] = dict(LAM=LAM, ARCH=ARCH, DROP=DROP)
     out = []
     for side_, sx in (("l", 1), ("r", -1)):
-        Ko = (sx * 0.5, K[1])                                             # the keel hinge, tucked in her gold keel
-        Eo = (Ko[0] + sx * Lr * math.cos(o[0]), Ko[1] + Lr * math.sin(o[0]))
-        Wo = (Eo[0] + sx * Lm * math.cos(o[1]), Eo[1] + Lm * math.sin(o[1]))
-        To = (Wo[0] + sx * Lt_ * math.cos(o[2]), Wo[1] + Lt_ * math.sin(o[2]))
-        under = (0, Ko[1] - 99, zm)
-        def plate(A, B, framed=True):
-            """A panel from line A to line B (bow-on), run along zA..zB: cloth with a gold frame round it and two
-            ribs between, or (framed False) one gold plate."""
-            a3, b3 = lambda z: (A[0], A[1], z), lambda z: (B[0], B[1], z)
-            if not framed:
-                return gold(slab(a3(zA), b3(zA), a3(zB), b3(zB), 0.6, under)), []
-            fr = []
-            for P in (A, B):                                              # the spars along its hinges
-                fr += slab((P[0] - 0.3, P[1], zA), (P[0] + 0.3, P[1], zA), (P[0] - 0.3, P[1], zB), (P[0] + 0.3, P[1], zB), 0.6, under)
-            for z in (zA, zA + (zB - zA) / 3, zA + 2 * (zB - zA) / 3, zB - 0.5):   # ribs: its ends and the thirds
-                fr += slab(a3(z), b3(z), a3(z + 0.5), b3(z + 0.5), 0.5, under)
-            return gold(fr), skin(slab(a3(zA), b3(zA), a3(zB), b3(zB), 0.2, under))
-        (fr1, cl1), (fr2, cl2), (fr3, cl3) = plate(Ko, Eo), plate(Eo, Wo), plate(Wo, To, framed=False)
         n = f"rig_glide_{side_}"
-        rp = lambda Q: [round(Q[0], 3), round(Q[1], 3), round(zm, 3)]
-        out += [{"name": n, "parent": "root", "pivot": rp(Ko), "cubes": fr1},
-                {"name": n + "_skin", "parent": n, "pivot": rp(Ko), "cubes": cl1},
-                {"name": n + "_mid", "parent": n, "pivot": rp(Eo), "cubes": fr2},
-                {"name": n + "_mid_skin", "parent": n + "_mid", "pivot": rp(Eo), "cubes": cl2},
-                {"name": n + "_out", "parent": n + "_mid", "pivot": rp(Wo), "cubes": fr3},
-                {"name": n + "_out_skin", "parent": n + "_out", "pivot": rp(Wo), "cubes": cl3}]
+        R0 = (sx * xr, y0, zr)                                            # the root hinge, at the leading edge
+        X = lambda x: R0[0] + sx * x                                      # a span station, outward
+        def plate(xa, xb, gold_=False, edges=True, lift=0.0):
+            """A panel from span xa to xb (rest pose: straight out, level, chord aft from the leading edge)."""
+            a0, a1 = (X(xa), y0 + lift, zr), (X(xb), y0 + lift, zr)
+            q0, q1 = (X(xa), y0 + lift, zr + chord(xa)), (X(xb), y0 + lift, zr + chord(xb))
+            under = ((a0[0] + a1[0]) / 2, y0 - 99, zr + cr / 2)
+            if gold_:
+                return gold(slab(a0, a1, q0, q1, T_ * 1.3, under)), []
+            fr = []
+            if edges:                                                     # gold rails at its leading and trailing edges,
+                fr += slab(a0, a1, (a0[0], a0[1], a0[2] + 0.8), (a1[0], a1[1], a1[2] + 0.8), T_ * 1.2, under)   # the strake's
+                fr += slab((q0[0], q0[1], q0[2] - 0.8), (q1[0], q1[1], q1[2] - 0.8), q0, q1, T_ * 1.2, under)   # lines folded
+                for xx in (xa, xb):                                       # and its ends
+                    fr += slab((X(xx) - 0.3 * sx, y0 + lift, zr), (X(xx) + 0.3 * sx, y0 + lift, zr), (X(xx) - 0.3 * sx, y0 + lift, zr + chord(xx)), (X(xx) + 0.3 * sx, y0 + lift, zr + chord(xx)), T_, under)
+            return gold(fr), skin(slab(a0, a1, q0, q1, T_ * 0.5, under))
+        x1, x2, x3 = s1, 2 * s1, 3 * s1
+        (f1, c1), (f2, c2), (f3, c3) = plate(0, x1), plate(x1, x2), plate(x2, x3)
+        ft, _ = plate(x3, x3 + st - GAP, gold_=True)
+        pv = lambda x, dy=0.0: [round(X(x), 3), round(y0 + dy, 3), round(zr, 3)]
+        out += [{"name": n, "parent": "root", "pivot": pv(0), "cubes": []},                       # the swing (yaw)
+                {"name": n + "_turn", "parent": n, "pivot": pv(0), "cubes": []},                   # the turn on edge (roll)
+                {"name": n + "_arch", "parent": n + "_turn", "pivot": pv(0), "cubes": f1},          # the arch, and panel one
+                {"name": n + "_skin", "parent": n + "_arch", "pivot": pv(0), "cubes": c1},
+                {"name": n + "_mid", "parent": n + "_arch", "pivot": pv(x1, T_), "cubes": f2},      # counterfold one (mountain)
+                {"name": n + "_mid_skin", "parent": n + "_mid", "pivot": pv(x1, T_), "cubes": c2},
+                {"name": n + "_out", "parent": n + "_mid", "pivot": pv(x2, -T_), "cubes": f3},      # counterfold two (valley)
+                {"name": n + "_out_skin", "parent": n + "_out", "pivot": pv(x2, -T_), "cubes": c3},
+                {"name": n + "_tip", "parent": n + "_out", "pivot": pv(x3, T_), "cubes": ft}]      # the gold tip, over last
         if os.environ.get("FOLD_PREVIEW"):                                # a still of the fold, for the viewer
             fo = float(os.environ["FOLD_PREVIEW"].split(",")[0])
-            for nm, d in ((n, b["_fold"][0]), (n + "_mid", b["_fold"][1]), (n + "_out", b["_fold"][2])):
-                next(x_ for x_ in out if x_["name"] == nm)["rotation"] = [0, 0, round(-sx * d * fo, 3)]
-        wingpts[sx] = (Ko[0], Ko[1], Wo[0], Wo[1], To[0], To[1], zA, zA, zA, zB - zA, zB - zA, (zB - zA) / PHI)
+            for nm, rot in wing_pose(sx, fo, b["_wing"], sg).items():
+                next(x_ for x_ in out if x_["name"] == n + nm)["rotation"] = [round(v, 3) for v in rot]
+        tipx = X(S)
+        wingpts[sx] = (R0[0], y0, X(x2), y0 + x2 * math.tan(math.radians(ARCH)), tipx, y0, zr, zr + S * math.tan(math.radians(LAM)) / 2, zr + S * math.tan(math.radians(LAM)), cr, (cr + ct) / 2, ct)
     return out
 
+
+def wing_pose(sx, fo, w, sg=(1, 1, 1, 1)):
+    """Each wing bone's rotation [x, y, z] at fold fo (0 open, 1 folded): the swing back (y) from the sweep to along
+    her flank, the turn on edge (x), the arch (z) open only, the counterfolds (z, 180 each way) and the tip (z, dropped
+    open, folded over)."""
+    return {"": [0, sg[0] * -sx * (w["LAM"] + (90 - w["LAM"]) * fo), 0],
+            "_turn": [sg[1] * -90 * fo, 0, 0],
+            "_arch": [0, 0, sg[2] * -sx * w["ARCH"] * (1 - fo)],
+            "_mid": [0, 0, sg[3] * sx * 180 * fo],
+            "_out": [0, 0, sg[3] * -sx * 180 * fo],
+            "_tip": [0, 0, sg[2] * sx * w["DROP"] * (1 - fo) + sg[3] * sx * 180 * fo]}
 
 def glider_parts(b):
     """The Exokoitos's own parts (Richard, S003: "a gold ultralight frame wrapped in the transparent sailcloth, like the
@@ -1862,7 +1883,11 @@ def glider_parts(b):
     W, H = F, 0.8 * side                                  # her envelope: half-breadth and half-depth at her fullest
     TMAX = 1 / PHI ** 2                                   # vision: full at 0.38 of her length, a fast hull's
     N = 21                                                # vision: FIB, twenty-one stations (the pod's fairing needs them)
-    zs = [-half + 2 * half * i / N for i in range(N + 1)]
+    # her run, nose to tail point: the Silver Arrow's is longer aft (Richard: "extend the rear ... more Silver Arrows
+    # proportions"; "not a beluga bulge, a tapered aero rear"), by 1/phi^2 of her length past the half-length aft
+    EXT = 2 * half / PHI ** 2 if b.get("hull") == "arrow" else 0
+    LB = 2 * half + EXT
+    zs = [-half + LB * i / N for i in range(N + 1)]
     # her whole hull, nose to the booms' roots, by b["hull"] (Richard: "the whole hull from tip to end of main fuselage
     # ... get the area for the main fuselage and play with it"). Each is a plan (her breadth, wid), a profile (her deck
     # line, top, and keel line, bot) and a section, all inside the envelope above, the waterline wl:
@@ -1908,7 +1933,7 @@ def glider_parts(b):
         # tandem seats (the entity's, at its origin and 0.7 of a block ahead) she swells to POD_W a side at her shoulders,
         # a seated player's arms (8 px a side) and room, a diamond in section, faired into the dart fore and aft
         mids_ = (half - END) // 8
-        seat_t = [((zv * 16 + mids_ * 8) + half) / (2 * half) for zv in (0, -0.7)]   # given: the entity's seats, blocks
+        seat_t = [((zv * 16 + mids_ * 8) + half) / LB for zv in (0, -0.7)]   # given: the entity's seats, blocks
         podA, podB = min(seat_t) - 1 / PHI ** 4, max(seat_t) + 1 / PHI ** 5           # vision: the pod's run, round both seats
         FAIR = 1 / PHI ** 4                                                        # vision: its fairing, fore and aft
         def pod(t):
@@ -1922,6 +1947,44 @@ def glider_parts(b):
         def section(t):
             q = pod(t)                                                             # the pod's diamond: the apex out, the shoulders wide
             return [(0, -1), (lerp(0.62, 0.5, q), -0.45), (1, 0.1), (lerp(0.5, 0.8, q), 0.78), (0, 1), (-lerp(0.5, 0.8, q), 0.78), (-1, 0.1), (-lerp(0.62, 0.5, q), -0.45)]
+    elif hull == "arrow":
+        # a Silver Arrow with her plumb bow (Richard: "kinda like a Mercedes Silver Arrows with the current bow"): the
+        # 1930s streamliners' long rounded body with a flattish belly, full at the cockpits, a headrest fairing rising
+        # behind the driver and a long tail drawn to a point; forward it narrows to her knife-edged plumb stem
+        mids_ = (half - END) // 8
+        seat_t = [((zv * 16 + mids_ * 8) + half) / LB for zv in (0, -0.7)]   # given: the entity's seats, blocks
+        TF = (min(seat_t) + max(seat_t)) / 2                                       # her fullest, between the cockpits
+        BEAM = 16 * 1.5 / 2                                                        # given: her law's beam, 1.5 blocks (lawdump)
+        pod = lambda t: max(0.0, 1 - abs(t - TF) / (max(seat_t) - min(seat_t) + 1 / PHI ** 4))
+        # her tail (Richard: "a tapered aero rear", "not a beluga bulge"): behind the rear cockpit's after edge a small
+        # headrest fairing, then she draws out long and clean to a point, the belly sweeping gently up to meet the deck
+        TT = max(seat_t) + (0.7 * 16 / 3) / LB                                     # derived: the rear cockpit's after edge
+        tailu = lambda t: max(0.0, min(1.0, (t - TT) / (1 - TT)))
+        def wid(t):
+            if t <= TF:
+                return BEAM * max(0.03, math.sin(math.pi / 2 * t / TF) ** (1 / PHI))   # vision: a full, rounded entry
+            if t <= TT:
+                return BEAM
+            return BEAM * max(1 / PHI ** 5, math.cos(math.pi / 2 * tailu(t)) ** 1.2)   # vision: a long taper to a point
+        def bot(t):
+            if t <= TF:
+                return lerp(-0.2 * side, -0.3 * side, math.sin(math.pi / 2 * t / TF))
+            return lerp(-0.3 * side, wl + 0.35 * side, tailu(t) ** PHI)          # the belly, sweeping gently up
+        H0, HEND = 1.5 * side, wl + 0.45 * side                                    # vision: the coaming, the tail's point
+        rest = lambda t: math.exp(-((tailu(t) - 1 / PHI ** 3) / (1 / PHI ** 3)) ** 2)   # the headrest, just behind the driver
+        def top(t):
+            if t <= TF:
+                return lerp(1.25 * side, H0, t / TF)
+            if t <= TT:
+                return H0
+            return lerp(HEND, H0, math.cos(math.pi / 2 * tailu(t)) ** 0.9) + 0.3 * side * rest(t)   # vision: a modest fairing
+        SEC = [(0, -1), (0.58, -0.9), (0.9, -0.55), (1, -0.05), (0.95, 0.42), (0.78, 0.75), (0, 1),
+               (-0.78, 0.75), (-0.95, 0.42), (-1, -0.05), (-0.9, -0.55), (-0.58, -0.9)]   # vision: a rounded body, flattish belly
+        KNIFE = [(0, -1), (0.35, -0.7), (0.62, -0.3), (0.75, 0.1), (0.62, 0.45), (0.4, 0.75), (0, 1),
+                 (-0.4, 0.75), (-0.62, 0.45), (-0.75, 0.1), (-0.62, -0.3), (-0.35, -0.7)]   # the plumb bow's own, a diamond
+        def section(t):
+            e = (lambda v: v * v * (3 - 2 * v))(max(0.0, min(1.0, t / (1 / PHI ** 2))))   # knife to round over her first 0.38
+            return [(a[0] + (c[0] - a[0]) * e, a[1] + (c[1] - a[1]) * e) for a, c in zip(KNIFE, SEC)]
     else:
         seat_t, pod = [], (lambda t: 0)
         ymid0 = 0.7 * side
@@ -1994,7 +2057,7 @@ def glider_parts(b):
     # the coamings and windscreens (the biplane's): a gold rim along each opening's shoulders and across its ends, raised a
     # little; ahead of each, a small screen of her cloth leaning back over its front edge
     for z0, z1 in pits:
-        tm = lambda z: max(0.0, min(1.0, (z + half) / (2 * half)))
+        tm = lambda z: max(0.0, min(1.0, (z + half) / LB))
         sh = lambda z, sx: (sx * wid(tm(z)) * section(tm(z))[3][0], bot(tm(z)) + (top(tm(z)) - bot(tm(z))) * (section(tm(z))[3][1] + 1) / 2)
         ridge = lambda z: (0, top(tm(z)))
         for sx in (-1, 1):                                                  # along her shoulders
@@ -2011,7 +2074,7 @@ def glider_parts(b):
     # above her waterline down to her forefoot, sweeping back along her flank to a point a quarter of her length aft;
     # on a raked nose, a V under her forefoot
     t1 = 0.25
-    z1 = -half + 2 * half * t1
+    z1 = -half + LB * t1
     if hull == "dart":
         frame += slab((0, boot(0), zs[0] - 0.2), (0, bot(0), zs[0] - 0.2), (0, boot(0), zs[0] + 0.6), (0, bot(0), zs[0] + 0.6), 0.7, (99, 0, zs[0]))   # a gold stem bar
     else:
@@ -2023,19 +2086,20 @@ def glider_parts(b):
     # the foiling keel (Richard: "a foiling keel that could be lift too"): a gold strut down from her keel line just
     # ahead of her fullest, as deep as her fins, carrying an inverted-V hydrofoil phi^2 of her breadth across: the foil
     # she rises onto before she flies, her tail riding on the tailplane's canted tips
-    tk = TMAX - 0.06
-    zk, yk = -half + 2 * half * tk, cy(tk) - hd(tk)
+    tk = 1 / math.sqrt(5) if b.get("hull") == "arrow" else TMAX - 0.06   # vision: the Arrow's foil just ahead of her centre of
+                                                   # gravity (her riders aft at the cockpits, her long tail)
+    zk, yk = -half + LB * tk, cy(tk) - hd(tk)
     ck = Lt / PHI ** 5                                    # a fine chord, bow to stern (Richard: "less thick")
     bones = [{"name": "rig_glide_body", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(frame + gskin)},
              {"name": "rig_glide_body_skin", "parent": "rig_glide_body", "pivot": [0, 0, 0], "cubes": skin(cloth)}]
     # the core: an asterion crystal turned on its corners (three cubes, an icosahedron's look), at her heart
-    zc, rc = -half + 2 * half * 0.42, 0.7 * W
+    zc, rc = -half + LB * 0.42, 0.7 * W
     core = [{"origin": [-rc / 2, ymid - rc / 2, zc - rc / 2], "size": [rc, rc, rc], "pivot": [0, ymid, zc], "rotation": rot, "uv": core_uv}
             for rot in ([45, 0, 35], [0, 45, 35], [35, 0, 45])]
     bones.append({"name": "rig_glide_core", "parent": "rig_glide_body", "pivot": [0, ymid, zc], "cubes": core})
     # the tail: twin booms from her flanks just aft of her fullest, back and down, splaying to phi of her breadth
     tb = TMAX + 0.2
-    zr, yr, xr = -half + 2 * half * tb, cy(tb), W * fat(tb)
+    zr, yr, xr = -half + LB * tb, cy(tb), W * fat(tb)
     ze, ye, xb = half + g["Lb"], g["ye"], PHI * W
     tail, tcloth = [], []
     for sx in (-1, 1):
@@ -2048,12 +2112,58 @@ def glider_parts(b):
     for sx in (-1, 1):
         tcloth += slab((sx * xb, ye, ze - cs / 2), (sx * hs, ytip, ze - 0.4 * cs), (sx * xb, ye, ze + cs / 2), (sx * hs, ytip, ze + 0.3 * cs), 0.2, (0, -99, ze))
         tail += slab((sx * xb, ye + 0.2, ze - cs / 2 - 0.3), (sx * hs, ytip + 0.2, ze - 0.4 * cs - 0.3), (sx * xb, ye + 0.2, ze - cs / 2 + 0.3), (sx * hs, ytip + 0.2, ze - 0.4 * cs + 0.3), 0.5, (0, -99, ze))
+    if b.get("tail") == "stealth":
+        # her tail (Richard: "two rudders that act like inverted YF-23 stabilisers, or F-117 kinda"; "pushed back when
+        # gliding"; "the rudders should be all gold"; "too many gold plates: make the rudders on one gold hull piece, that
+        # hull piece is a central horizontal stabiliser"): her tail cone ends in one gold piece spread level from her
+        # sides, her horizontal stabiliser, swept back; from its two tips hang the rudders, solid gold, an inverted V
+        # canted atan phi below level (her foils' Lambda) down to her rudder's depth, swept back atan sqrt(phi), the tip
+        # chord 1/phi of the root's. They swing with the helm, and aloft (her wings spread) back about their roots.
+        tail, tcloth = [], []
+        tz = lambda t: -half + LB * t
+        tS0, tS1 = 1 - 1 / PHI ** 3, 1.0                                        # vision: the piece spans her tail's last 0.24
+        yS = bot(1 - 1 / PHI ** 4) + (top(1 - 1 / PHI ** 4) - bot(1 - 1 / PHI ** 4)) / PHI ** 2   # derived: low on her tail cone
+        hsS = 16 * 1.5 / 2                                                       # given: her law's beam, 1.5 blocks: its span
+        swS = (tz(tS1) - tz(tS0)) / PHI                                          # vision: its tips swept back 1/phi of its root
+        r0, r1 = (wid(tS0) * 0.9, yS, tz(tS0)), (0.5, yS, tz(tS1))               # its root along her sides, to the tail's point
+        k0, k1 = (hsS, yS, tz(tS0) + swS), (hsS, yS, tz(tS1) + swS / PHI)       # its tip: the rudders' root
+        # aloft (her wings spread) the whole piece slides back a block on a hidden twin-boom telescope (Richard: "then it
+        # pushes maybe a block rear of the craft using a twin boom telescope thing; that's hidden"): two gold booms run
+        # forward from its root into her tail cone, out of sight there until it runs out
+        TEL = 16                                                                 # vision: a block
+        ext = TEL * (1 - float(os.environ["FOLD_PREVIEW"].split(",")[0])) if os.environ.get("FOLD_PREVIEW") else 0
+        sh = lambda P_: (P_[0], P_[1], P_[2] + ext)                              # (a still of it run out, for the viewer)
+        piece = []
+        for sx in (-1, 1):                                                       # one gold piece, a half a side
+            m = lambda P_: sh((sx * P_[0], P_[1], P_[2]))
+            piece += slab(m(r0), m(k0), m(r1), m(k1), 1.0, (sx * hsS / 2, yS - 99, tz(tS0)))
+            bx = wid(tS0) * 0.45                                                 # a boom, inside her tail cone when home
+            piece += strut(sh((sx * bx, yS + 0.6, tz(tS0) + 2)), sh((sx * bx, yS + 0.6, tz(tS0) - TEL - 2)), 0.45)
+        tpv = [0, round(yS, 3), round(tz(tS0) + ext, 3)]
+        bones.append({"name": "rig_glide_tailset", "parent": "root", "pivot": tpv, "cubes": gold(piece)})
+        # the rudders (Richard: "gold rudders swept back a bit, racing dual canted rudders style"): an ocean racer's
+        # twin blades, narrow and deep, canted out atan 1/phi^3 from upright and raked aft atan 1/phi^2, each hung from a
+        # tip of the gold piece, its root chord 16/phi (0.62 of a block) and its tip's 1/phi of that
+        cant, sweep = math.pi / 2 - math.atan(1 / PHI ** 3), math.atan(1 / PHI ** 2)
+        yfoil = 1 - side                                                         # her rudder's depth, as before
+        crR = 16 / PHI                                                           # vision: a racing blade's chord
+        for side_, sx in (("l", 1), ("r", -1)):
+            A0 = sh((sx * k0[0], yS, (k0[2] + k1[2]) / 2 - crR / 2))
+            A1 = (A0[0], A0[1], A0[2] + crR)
+            sp = (yS - yfoil) / math.sin(cant)                                   # derived: down to her rudder's depth
+            cr0 = crR
+            T0 = (A0[0] + sx * sp * math.cos(cant), yfoil, A0[2] + (yS - yfoil) * math.tan(sweep))   # raked aft
+            T1 = (T0[0], yfoil, T0[2] + cr0 / PHI)
+            mid = tuple((A0[k] + A1[k] + T0[k] + T1[k]) / 4 for k in range(3))
+            plate = slab(A0, T0, A1, T1, 0.9, (mid[0] - sx * 99, mid[1] - 99, mid[2]))   # one solid gold plate
+            pv = [round(v, 3) for v in A0]
+            bones.append({"name": f"rig_glide_fin_{side_}", "parent": "rig_glide_tailset", "pivot": pv, "cubes": gold(plate)})
     bones.append({"name": "rig_glide_tail", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(tail)})
     bones.append({"name": "rig_glide_tail_skin", "parent": "rig_glide_tail", "pivot": [0, 0, 0], "cubes": skin(tcloth)})
     # the wings, by style (b["wings"]): each side a root panel hinged at her flank and an outer panel hinged to it (to
     # fold), each a gold frame bone with its cloth in a child *_skin bone
     style = b.get("wings", "corsair")
-    yw, zw, hsw = ymid, -half + 2 * half * TMAX, g["wspan"] / 2
+    yw, zw, hsw = ymid, -half + LB * TMAX, g["wspan"] / 2
     s1, s2 = hsw / PHI, hsw / PHI ** 2
     cr = Lt / PHI ** 2.5
     def panel(x0, y0, x1, y1, c0, c1, l0, l1, t=0.6):
@@ -2094,10 +2204,15 @@ def glider_parts(b):
             cl += slab(a0_, a1_, b0_, b1_, 0.2, (x0, y0 - 9, l0))
         return gold(fr), skin(cl)
     wingpts = {}
+    if os.environ.get("NO_WINGS"):
+        style = "none"
     if style == "fold":
+        t_root = (seats_z[-1] - 0.7 * 16 * 2 / 3 - 4 + half) / LB if seat_t else TMAX   # vision: the front cockpit's fore edge, less a rib
         bones += fold_wings(b, g, dict(W=W, TMAX=TMAX, half=half, zs=zs, wid=wid, bot=bot, top=top, cy=cy, section=section,
-                                       boot=boot, spar=spar, skin_uv=skin_uv), wingpts)
-    for side_, sx in ((("l", 1), ("r", -1)) if style != "fold" else ()):
+                                       boot=boot, spar=spar, skin_uv=skin_uv, LB=LB, zt=lambda t: -half + LB * t, t_root=t_root), wingpts)
+    if os.environ.get("NO_WINGS"):                       # a look at her body alone, for the viewer
+        style = "none"
+    for side_, sx in ((("l", 1), ("r", -1)) if style not in ("fold", "none") else ()):
         braces = []                                       # her lift struts (the kestrel's), a bone of their own: they stay
         rx = sx * W * fat(TMAX) * 0.95                    # with the hull, hidden while the wings are folded
         if style == "corsair":            # an F4U Corsair's inverted gull: the inner panel down to the knee, the outer up
@@ -2189,7 +2304,7 @@ def glider_parts(b):
     sf, sc = [], []
     if sail == "dorsal":                  # a flying fish's dorsal fin: a raked spar from her back, gold rays fanned from its
         ts = 0.3                          # foot, cloth between; it lies flat along her spine to fly
-        z0, y0 = -half + 2 * half * ts, cy(ts) + hd(ts)
+        z0, y0 = -half + LB * ts, cy(ts) + hd(ts)
         hgt, rake = Lt / PHI, 1 / PHI
         foot_aft = Lt / PHI ** 1.5
         rays = 6
@@ -2207,12 +2322,12 @@ def glider_parts(b):
         for (xa, ya), (xb, yb) in zip(arc, arc[1:]):
             sc += slab((xa, ya, kz - kc / 2), (xb, yb, kz - kc / 2), (xa, ya, kz + kc / 2), (xb, yb, kz + kc / 2), 0.25, (0, ky - 99, kz))
             sf += slab((xa, ya + 0.3, kz - kc / 2 - 0.3), (xb, yb + 0.3, kz - kc / 2 - 0.3), (xa, ya + 0.3, kz - kc / 2 + 0.3), (xb, yb + 0.3, kz - kc / 2 + 0.3), 0.5, (0, ky - 99, kz))
-        bow = (0, cy(0.05) + 0.3, -half + 2 * half * 0.05)
+        bow = (0, cy(0.05) + 0.3, -half + LB * 0.05)
         for (xa, ya) in (arc[1], arc[-2]):              # the two lines, down to her nose
             sf += slab((bow[0] - 0.15, bow[1], bow[2]), (bow[0] + 0.15, bow[1], bow[2]), (xa - 0.15, ya, kz), (xa + 0.15, ya, kz), 0.3, (0, 0, -999))
     elif sail == "claw":                  # the Pacific crab-claw redrawn: two gold spars from a tack on her foredeck opening
         ts = 0.18                         # into a V, the cloth a crescent between them
-        tack = (0, cy(ts) + hd(ts), -half + 2 * half * ts)
+        tack = (0, cy(ts) + hd(ts), -half + LB * ts)
         L1, L2 = Lt / PHI * 1.3, Lt / PHI * 1.15
         up = (0, tack[1] + L1 * math.cos(math.atan(1 / PHI ** 2)), tack[2] + L1 * math.sin(math.atan(1 / PHI ** 2)))
         aft = (0, tack[1] + L2 * math.cos(math.atan(PHI)), tack[2] + L2 * math.sin(math.atan(PHI)))
@@ -2279,7 +2394,7 @@ def glider_parts(b):
         # the fillet: a wedge where the wing's root meets the spindle, under its leading half
         f0, f1 = T((0, yw_, lr_)), T((0, yw_, lr_ + cr_ * 0.6))
         mini += slab((f0[0], f0[1] + 0.5, f0[2]), (sx * 1.2, f0[1], f0[2] + 0.4), (f1[0], f1[1] + 0.5, f1[2]), (sx * 1.2, f1[1], f1[2]), 0.6, (0, f0[1] - 99, f0[2]))
-    for sgn in (-1, 1):                                    # the tailplane, cast the same, its tips canted up
+    for sgn in ((-1, 1) if b.get("tail") != "stealth" else ()):   # the tailplane, cast the same, its tips canted up
         mini += cast([(0, ye), (sgn * xb, ye), (sgn * hs, ytip)], ze - cs / 2, cs * PHI, cs / PHI, 6, 0.7, 0.4, T((0, ye - 99, ze)))
     # the mast: her keel line down to the reflection's back, at its wing root
     ytop, ybot = cy(tk) - hd(tk) + 0.5, yr_
@@ -2292,9 +2407,26 @@ def glider_parts(b):
 
 
 GLIDE_BONES = ("rig_glide_body", "rig_glide_body_skin", "rig_glide_core", "rig_glide_tail", "rig_glide_tail_skin", "rig_glide_sail", "rig_glide_sail_skin",
-               "rig_glide_l", "rig_glide_l_skin", "rig_glide_l_mid", "rig_glide_l_mid_skin", "rig_glide_l_out", "rig_glide_l_out_skin",
-               "rig_glide_r", "rig_glide_r_skin", "rig_glide_r_mid", "rig_glide_r_mid_skin", "rig_glide_r_out", "rig_glide_r_out_skin")
+               *[f"rig_glide_{sd}{p_}" for sd in ("l", "r") for p_ in ("", "_turn", "_arch", "_skin", "_mid", "_mid_skin", "_out", "_out_skin", "_tip")])
 GLIDE_STRUTS = ("rig_glide_l_strut", "rig_glide_r_strut")   # shown only with her wings spread
+GLIDE_BONES = GLIDE_BONES + ("rig_glide_tailset", "rig_glide_fin_l", "rig_glide_fin_r")
+def _fin_back():
+    """Aloft, how far each tail fin swings back about its root (degrees): until its span, canted atan phi below level and
+    swept back atan sqrt(phi), trails aft dipping only atan 1/phi^2 below level (vision), the tips clear of the water."""
+    c, sw = math.atan(PHI), math.atan(math.sqrt(PHI))
+    d = (math.cos(c), -math.sin(c), math.tan(sw) * math.cos(c))
+    n = math.sqrt(sum(v * v for v in d))
+    want = -math.sin(math.atan(1 / PHI ** 2))
+    lo, hi = 0.0, 90.0
+    for _ in range(40):                                   # bisect: the dip falls as the swing grows
+        th = (lo + hi) / 2
+        r = math.radians(th)
+        y = (d[1] * math.cos(r) + d[2] * math.sin(r)) / n
+        lo, hi = (th, hi) if y < want else (lo, th)
+    return (lo + hi) / 2
+
+
+FIN_BACK = _fin_back()
 
 
 def strut(A, B, r):
@@ -2627,14 +2759,17 @@ def animation(pid, b):
         "foils": {"position": [0, 0, f"-{mids} * 8"]},
         # the Exokoitos's wings ride amidships with her foils (the fold, by v.glide, comes with her flight)
         **({w: {"position": [0, 0, f"-{mids} * 8"]} for w in ("rig_glide_body", "rig_glide_tail", "rig_glide_sail") + GLIDE_STRUTS} if b.get("glider") else {}),
+        # her tail piece runs out a block aloft on its telescope; the rudders swing with the helm
+        **({"rig_glide_tailset": {"position": [0, 0, f"-{mids} * 8 + 16 * (1 - {P('fold')})"]}} if b.get("glider") and b.get("tail") == "stealth" else {}),
+        **({f"rig_glide_fin_{sd}": {"rotation": [0, f"-1 * {P('rudder')}", 0]} for sd in ("l", "r")} if b.get("glider") and b.get("tail") == "stealth" else {}),
         # her wings fold (FOLD_MID, FOLD_OUT): the middle up and over the hull about fold one, the outer back down about the knee
         **({f"rig_glide_{sd}": {"position": [0, 0, f"-{mids} * 8"]} for sd in ("l", "r")} if b.get("glider") else {}),
         **({f"rig_glide_{sd}_mid": {"rotation": [0, 0, f"{-sx * FOLD_MID:.3f} * {P('fold')}"]} for sd, sx in (("l", 1), ("r", -1))} if b.get("glider") and b.get("wings") == "kestrel" else {}),
         **({f"rig_glide_{sd}_out": {"rotation": [0, 0, f"{sx * FOLD_OUT:.3f} * {P('fold')}"]} for sd, sx in (("l", 1), ("r", -1))} if b.get("glider") and b.get("wings") != "fold" else {}),
-        # the hull-folding wing (fold_wings): root about the keel, middle about the chine, tip about the shoulder
+        # the folding wing (fold_wings, wing_pose): each hinge runs straight from open (fold 0) to folded (fold 1)
         **({f"rig_glide_{sd}{part}": {**({"position": [0, 0, f"-{mids} * 8"]} if not part else {}),
-                                      "rotation": [0, 0, f"{-sx * b['_fold'][k]:.3f} * {P('fold')}"]}
-            for sd, sx in (("l", 1), ("r", -1)) for k, part in enumerate(("", "_mid", "_out"))} if b.get("glider") and b.get("wings") == "fold" else {}),
+                                      "rotation": [f"{v0:.3f} + {v1 - v0:.3f} * {P('fold')}" for v0, v1 in zip(wing_pose(sx, 0, b["_wing"])[part], wing_pose(sx, 1, b["_wing"])[part])]}
+            for sd, sx in (("l", 1), ("r", -1)) for part in ("", "_turn", "_arch", "_mid", "_out", "_tip")} if b.get("glider") and b.get("wings") == "fold" and b.get("_wing") else {}),
         "amas": {"position": [0, 0, f"-{mids} * 8"], "scale": [1, 1, f"math.clamp(({mids} + 3) / {round(typical_length(b) / 16, 3)}, 0.6, 1.4)"]},
         "akas": {"position": [0, 0, f"-{mids} * 8"], "scale": [1, 1, f"math.clamp(({mids} + 3) / {round(typical_length(b) / 16, 3)}, 0.6, 1.4)"]},
         "nets": {"position": [0, 0, f"-{mids} * 8"], "scale": [1, 1, f"math.clamp(({mids} + 3) / {round(typical_length(b) / 16, 3)}, 0.6, 1.4)"]},

@@ -468,6 +468,12 @@
           "rig_glide_l": "q.property('shipwright:stage') >= 3"
         },
         {
+          "rig_glide_l_turn": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_l_arch": "q.property('shipwright:stage') >= 3"
+        },
+        {
           "rig_glide_l_skin": "q.property('shipwright:stage') >= 3"
         },
         {
@@ -483,7 +489,16 @@
           "rig_glide_l_out_skin": "q.property('shipwright:stage') >= 3"
         },
         {
+          "rig_glide_l_tip": "q.property('shipwright:stage') >= 3"
+        },
+        {
           "rig_glide_r": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_r_turn": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_r_arch": "q.property('shipwright:stage') >= 3"
         },
         {
           "rig_glide_r_skin": "q.property('shipwright:stage') >= 3"
@@ -499,6 +514,18 @@
         },
         {
           "rig_glide_r_out_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_r_tip": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_tailset": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_fin_l": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_fin_r": "q.property('shipwright:stage') >= 3"
         },
         {
           "rig_glide_l_strut": "q.property('shipwright:stage') >= 3 && q.property('shipwright:fold') < 0.5"
