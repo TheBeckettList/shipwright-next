@@ -55,3 +55,12 @@ fitting to any fleet (`world/league.js` PIECES).
 Decision: no ram drawn by default; the League's and Therans' ships carry theirs; any other ship shows one only when
 the ram fitting is fitted.
 Consequence: `RAM_OF` and the outfit render controller key on the fitting; a lens check: no unfitted rams.
+
+## D-006 — Thera's cone island: radius × 1.5, a ring waterfront carrying the cothon and the League's Mint  (accepted · Richard · 2026-11-12 · S003, for S004)
+Context: the Thera spec (`design/s004-specs/thera.md`) proposed doubling the cone island's area (radius × √2) because
+doubling the radius closed the lagoon round the cothon.
+Decision: the island's radius grows by half (1.08 → about 1.62 km), its height by a quarter. The cothon moves in to
+the island, and it and the League's Thera HQ and Mint (cothon-sized) both attach to a ring round the cone island that
+is its main waterfront.
+Consequence: `world/thera.js` (seat, cone, cothon placement), `theraplan.js`, `theracity.js` and the skyways move;
+the lagoon narrows; the grown towns' source closure is touched (one regrow, batched with the terraforming).
