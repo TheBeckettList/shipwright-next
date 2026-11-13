@@ -92,8 +92,12 @@ THERAN_STERN = dict(taper="fine", rise=0.05, floor=0.12, stem="transom")
 # deck level all the way to it, and a broad open transom with the bottom rocking up to it.
 AC_BOW = dict(taper="ac_bow", rise=0.02, floor=0.22, stem="ac_plumb")
 AC_STERN = dict(taper="ac_stern", rise=0, floor=0.34, stem="transom")
+# The catamaran's bow in the line of Motor Yacht A (Starck; Richard, S003: "i want the hulls to look like this more for
+# the medium"): the deck runs straight and level to a high knife point far forward, and the stem falls back from it in
+# one long straight line to the waterline, so the whole forefoot overhangs; full at the deck, fine at the water.
+YACHT_BOW = dict(taper="yacht", rise=0.06, floor=0.82, stem="knife")
 AC_ROUND = 2.2     # vision: a little fuller than a carved log (2.0): with the crown (X/phi) the AC72's upright oval section
-is_theran = lambda b: b.get("bow") is AC_BOW or b.get("bow") is PIERCE      # the Theran build (their pod, rudders, nets)
+is_theran = lambda b: any(b.get("bow") is x for x in (AC_BOW, PIERCE, YACHT_BOW))   # the Theran build (their pod, rudders, nets)
 BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, foils=True, bow=AC_BOW, stern=AC_STERN, round=AC_ROUND, crown=True)
 
 # Fitted modules drawn on the boat, as bits of the shipwright:mods property (mirrored in ship.js).
@@ -649,7 +653,7 @@ BOATS.update({
 
 BOATS.update({
     # depth 0.85: freeboard enough that the lee hull stays dry at the 3° a catamaran heels to before a hull lifts
-    "theran_ship": medium("v", 9, 0.85, oar=1.8, aspect=0.9, twin=True, bow=AC_BOW, stern=AC_STERN, round=AC_ROUND, crown=True, foils=True,
+    "theran_ship": medium("v", 9, 0.85, oar=1.8, aspect=0.9, twin=True, bow=YACHT_BOW, stern=AC_STERN, round=AC_ROUND, crown=True, foils=True,
                           # (z, size, hull side, cant out from the centre line, rake aft): a wing canted out on each hull,
                           # and behind them two small tail wings canted in toward each other, like a fighter's twin fins
                           masts=[(0.0, 1.0, -1, 14, 0), (0.0, 1.0, 1, 14, 0), (0.33, 0.42, -1, -14, 8), (0.33, 0.42, 1, -14, 8)]),
@@ -823,6 +827,9 @@ def end_shape(b, end, t):
         hw = max(0.8, F * (1 - t ** 1.2))
     elif taper == "blunt":
         hw = F * (1 - 0.5 * t ** 1.5)
+    elif taper == "yacht":                        # Yacht A: the bottom rising in one straight line to the deck's knife point
+        hw = max(0.5, F * (1 - t ** 1.3))         # (floor 0.82 of the side at the tip), the deck full until late, the sheer
+        return hw, b["fy"] + end["floor"] * side * t, side + end["rise"] * side * t   # lifting a little toward it
     elif taper == "ac_bow":                       # the AC72's entry: fine and long, narrowing almost straight to a knife,
         hw = max(0.5, F * (1 - t ** 0.85))        # the deck level to the stem, the forefoot lifting a little
         return hw, b["fy"] + end["floor"] * side * t ** 2, side + end["rise"] * side * t
@@ -863,6 +870,8 @@ def stem_curve(kind, s, hw, fy, sy):
     if kind in ("raked", "raked_short"):
         r, head = (0.75, 0.16) if kind == "raked" else (0.45, 0.08)
         return line(8, lambda t: (r * s * t ** 1.4, fy + (h + head * s) * t))
+    if kind == "knife":                         # Yacht A's tip: the short knife edge left between the risen floor and the deck
+        return line(2, lambda t: (0.06 * s * t, fy + (h + 0.02 * s) * t))
     if kind == "ac_plumb":                      # the AC72's stem: near plumb, its foot a touch forward of its head
         return line(3, lambda t: (0.05 * s * (1 - t), fy + (h + 0.02 * s) * t))
     if kind == "piercer":                       # the wave-piercer: the foot reaching furthest out, raked back as it rises
