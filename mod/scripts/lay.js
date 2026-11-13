@@ -148,10 +148,13 @@ function grownOf(cx, cz) {
 /** Bring a grown chunk's beasts out (once, as the folk). */
 function spawnBeasts(dim, cx, cz) { for (const k of BEAST_BY[`${cx},${cz}`] ?? []) { const [t, x, y, z] = BEASTS[k]; try { dim.spawnEntity(BEAST_TYPES[t], { x: x + 0.5, y, z: z + 0.5 }); } catch { fails++; } } }
 
-/** The columns a structure stands on (the deep pass leaves them as the surface laid them). */
+/** The columns a structure stands on (the deep pass leaves them as the surface laid them), each with the lowest block
+ *  of what stands there (its prototype's base): the body is filled only under that, so a house set lower than the
+ *  skin's foot (cut into a slope, or a floor under the hill) keeps its rooms. */
 function coveredOf(cx, cz) {
-  const x0 = cx * C, z0 = cz * C, covered = new Set();
-  for (const k of BY_CHUNK[`${cx},${cz}`] ?? []) { const a = PLACEMENTS[k]; for (let x = Math.max(a[6], x0); x <= Math.min(a[8], x0 + C - 1); x++) for (let z = Math.max(a[7], z0); z <= Math.min(a[9], z0 + C - 1); z++) covered.add((z - z0) * C + (x - x0)); }
+  const x0 = cx * C, z0 = cz * C, covered = new Map();
+  for (const k of BY_CHUNK[`${cx},${cz}`] ?? []) { const a = PLACEMENTS[k], base = a[5] & 4 ? Infinity : a[2] + PROTOS[a[0]].b[2];   // the prototype's bounds [x0, x1, y0, y1, z0, z1]: y doesn't turn; a free piece (a skyway's deck, the park) stands over the ground, not on it, so the body under it goes up to the skin as before   // given: the placement's flag bits (data/structures.js: 1 stilts, 2 carved, 4 free)
+    for (let x = Math.max(a[6], x0); x <= Math.min(a[8], x0 + C - 1); x++) for (let z = Math.max(a[7], z0); z <= Math.min(a[9], z0 + C - 1); z++) { const q = (z - z0) * C + (x - x0); covered.set(q, Math.min(covered.get(q) ?? Infinity, base)); } }
   return covered;
 }
 
@@ -245,7 +248,7 @@ export function* deepChunk(dim, cx, cz) {
   for (let j = 0; j < C; j++) { const tr = Date.now(); for (let i = 0; i < C; i++) { const c = cols[j * C + i]; rocks.push(columnRock({ x: c.x, z: c.z, top: c.top - 2 }, provinceOf(plan.climate, c.top, thera), rise, c.under)); } COUNT.js += Date.now() - tr; yield; }   // the rock reckoned a row a step
   fill(dim, x0, BOTTOM, z0, x0 + C - 1, BOTTOM, z0 + C - 1, "minecraft:bedrock"); mark(dim, cx, cz, LEVEL.life);   // the floor, and the corner's mark kept (a pass cut short lays again from life)
   { const P = PROVINCES[provinceOf(plan.climate, Math.min(...cols.map((c) => c.top)), thera)] ?? PROVINCES.temperate;   // the body under what stands on the ground (its columns keep their skin; the rock's beds go round them)
-    for (const c of cols) if (covered.has(c.j * C + c.i)) { const f = Math.max(BOTTOM + 1, footOf(c)) - 1; fill(dim, c.x, BOTTOM + 1, c.z, c.x, Math.min(f, DEEPSLATE - 1), c.z, P.deep); fill(dim, c.x, DEEPSLATE, c.z, c.x, f, c.z, P.beds[0]); } }
+    for (const c of cols) if (covered.has(c.j * C + c.i)) { const f = Math.min(Math.max(BOTTOM + 1, footOf(c)), covered.get(c.j * C + c.i)) - 1; fill(dim, c.x, BOTTOM + 1, c.z, c.x, Math.min(f, DEEPSLATE - 1), c.z, P.deep); fill(dim, c.x, DEEPSLATE, c.z, c.x, f, c.z, P.beds[0]); } }
   yield;
   for (let j = 0; j < C; j++) {
     const runs = new Map();   // "y0,y1,id" -> [start i, last i]
