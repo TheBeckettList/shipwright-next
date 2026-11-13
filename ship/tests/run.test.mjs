@@ -1970,7 +1970,10 @@ test("a 6-block faering's sail is about twice its beam, on a mast a bit over fou
   const rig = rigFor(r, p);
   const width = Math.sqrt(rig.area / 0.75);           // the Norse sail's aspect is 0.75
   assert.ok(width / p.baseBeam > 1.8 && width / p.baseBeam < 2.8, `width ${width.toFixed(2)} on beam ${p.baseBeam.toFixed(2)}`);
-  assert.ok(rig.mast > 3.8 && rig.mast < 5.6, `mast ${rig.mast.toFixed(2)}`);   // from a deck raised in 0.13
+  // rig.mast stands over the rail; D-004 draws her to the Norse law's depth (B / phi^2, 0.56: she was drawn 0.89), so
+  // her rail is lower and the mast over it shorter, though from its step on the keel it is still a bit over four
+  assert.ok(rig.mast > 3.2 && rig.mast < 5.6, `mast ${rig.mast.toFixed(2)}`);
+  assert.ok(rig.mast + p.baseDepth > 4 && rig.mast + p.baseDepth < 6, `mast from the keel ${(rig.mast + p.baseDepth).toFixed(2)}`);
 });
 
 test("each rig's mast reaches just above its own sail, not one height for all", async () => {
@@ -1985,12 +1988,15 @@ test("each rig's mast reaches just above its own sail, not one height for all", 
     const foot = mast.pivot[1], H = mast.cubes[0].size[1];
     for (const [style, name] of [["square", "rig_square"], ["lateen", "rig_lateen"], ["crab_claw", "rig_crab"], ["junk", "rig_junk"]]) {
       const top = Math.max(...bones.find((b) => b.name === name).cubes.map((c) => c.origin[1] + c.size[1]));
-      const factor = PROPORTIONS[pid].masts[style] / (H / 16) / ((1 + (PLANS[pid].modelScale - 1) * 0.4) / PLANS[pid].modelScale);
+      // PROPORTIONS.masts: each style's mast over the rail (D-004: the model is drawn at its scale every way, and the
+      // mast is stepped on the keel, so its foot is no longer the rail)
+      const pr = PROPORTIONS[pid], head = (pr.depth + pr.wash + pr.masts[style]) * 16;
+      assert.ok(foot < (pr.depth + pr.wash) * 16 && foot + H >= head - 0.5, `${pid}: the mast stepped under the rail and tall enough for every rig`);
       const cloth = bones.find((b) => b.name === name).cubes.map((c) => c.origin[1]);
       // a square sail and a junk's hang from the masthead; a lateen's yard and a crab claw's spars are hoisted
       // on a short mast that props them part way up, so their heads stand clear above it
       const need = ["square", "junk"].includes(style) ? top : (Math.min(...cloth) + top) / 2;
-      assert.ok(foot + factor * H > need - 0.5, `${pid} ${style}: masthead up to its sail (${(foot + factor * H).toFixed(1)} vs ${need.toFixed(1)})`);
+      assert.ok(head > need - 0.5, `${pid} ${style}: masthead up to its sail (${head.toFixed(1)} vs ${need.toFixed(1)})`);
     }
   }
 });
@@ -2693,14 +2699,21 @@ test("no frame ever passes through the planking, on any boat, anywhere along the
   assert.ok(checked > 300, `${checked} frames checked`);
 });
 
-test("plank thickness is the same in the world at any model scale", async () => {
+test("plank thickness in the world follows the wall law, whatever the model scale", async () => {
+  const { PROPORTIONS } = await import("../BP/scripts/config/proportions.js");
   const widths = async (pid, scale) => {
     const b = (await modelsOf(pid))[pid].find((x) => x.name === "mid_0_plank").cubes;
     // each strake is a slab laid on the hull's curve: its thickness is its size across (y)
-    return [...new Set(b.filter((c) => c.rotation).map((c) => Math.round(c.size[1] * scale * 1000) / 1000))].sort();
+    return [...new Set(b.filter((c) => c.rotation).map((c) => Math.round(c.size[1] * scale * 1000) / 1000))].sort((a, c) => a - c);
   };
-  assert.deepEqual(await widths("longship", 2), await widths("faering", 1), "clinker: the same strakes and gunwale at any scale");
-  assert.deepEqual(await widths("skeid", 4), await widths("faering", 1), "and on the great ships");
+  // D-004 (it was: the same in the world at every scale): w = max(CON, 16 L / K) world px, so a hull's walls grow with
+  // her length, not her model scale. A 15-block longship and a 6-block faering both stand on clinker's floor of 1 px
+  assert.deepEqual(await widths("longship", 2), await widths("faering", 1), "clinker: the same strakes and gunwale at the floor");
+  const PHI = (1 + Math.sqrt(5)) / 2, w = PROPORTIONS.skeid.wall, has = (xs, v) => xs.some((x) => Math.abs(x - v) < 0.01);   // given: slabs are stored to 1/1000 of a model px
+  assert.ok(w > PROPORTIONS.faering.wall, "a 33-block skeid's wall is thicker than a faering's");
+  const sk = await widths("skeid", 4);
+  assert.ok(has(sk, PHI * w), `her gunwale phi w (${sk})`);
+  assert.ok(has(sk, Math.max(1, w / PHI / PHI)), `her building planks w / phi^2 (${sk})`);
 });
 
 test("carved dugouts have no frames; the others do", async () => {
@@ -3438,7 +3451,7 @@ test("lab: every boat, shallow to deep, seats you over a hull, lets the helm see
   const { useBoat } = await import("../tools/lab/uselab.mjs");
   const bad = [];
   for (const pid of Object.keys(PLANS).filter((k) => k !== "testship")) {
-    for (const d of [0.8, 1.0, 1.35]) {
+    for (const d of [0.8, 1.0, 1.35]) {   // the deepest as deep as her plan allows (D-004: drawn true, a great ship built 1.35 deep falls under GM's floor)
       const r = useBoat(pid, d);
       for (const i of [...r.seats.issues, ...r.heel.issues, ...r.deck.issues, ...r.sail.issues]) bad.push(`${pid} @${d}: ${i}`);
     }

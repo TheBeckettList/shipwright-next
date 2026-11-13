@@ -10,7 +10,13 @@
 //             Shipwright plans' (themselves the historical hulls'); a single boat takes a length in its
 //             range by its seed, so no two harbours' fleets are the same size
 //   the hull  beam = length / (L:B); depth = beam / phi (a keel hull), beam / phi^2 (a flat one); draft =
-//             depth / phi. Masts: length / phi for the mainmast, the rest a step down each
+//             depth / phi. Masts: length / phi for the mainmast, the rest a step down each. The whole-block
+//             figures are the shore's (berths, quays, the hold's volume); `exact` carries the hull itself to
+//             the pixel (1/16 block, the model's own quantum: rounding a 2-block beam breaks the law), by its
+//             form (D-004): keel B/phi; flat, open (keel-less canoes) and norse (clinker, beam/depth 2.3-2.7)
+//             B/phi^2; freeboard = depth - draft = depth/phi^2, against the need of its reach: half the
+//             significant wave of the reach's design wind (core/sea.js), green water coming aboard when the
+//             crest clears the rail. Short of it, a washstrake or bulwark makes up the rest (wash)
 //   crew      rowers: a pair to each room (a metre's oar spacing) between the ends, an end a length / phi^3;
 //             paddlers: a file (two abreast past a beam of two); sailors: a hand to each 13 blocks of deck
 //   cargo     the hold, length x beam x depth x the hull's fullness, in chests of 13 blocks
@@ -18,6 +24,9 @@
 //             one roof), a slip (length + 3 by beam + 4), a quay's run (length + 2, the fender gap) and its
 //             depth alongside (draft + 1), a mooring's swing (length + 3 x the water's depth: the scope)
 import { FIB, PHI } from "../core/golden.js";
+import { VISION } from "../core/given.js";
+import { seaState } from "../core/sea.js";
+import { TRIAL } from "../core/boat.js";
 
 export const CLASSES = {
   small: { nominal: FIB[5], range: [4, 10], reach: "inshore", use: "fishing, ferrying, the canals and creeks" },   // given: Shipwright's small plans (4 to 10 blocks)
@@ -25,23 +34,32 @@ export const CLASSES = {
   great: { nominal: FIB[8], range: [28, 40], reach: "ocean", use: "the open sea: the long trade, the flagships" },   // given: Shipwright's great plans (28 to 40 blocks)
 };
 export const REACH = ["inshore", "coastal", "sea", "ocean"];   // inshore, along a coast, island to island across open sea, the open ocean
+// The design wind of each reach (m/s), from the world's own winds: inshore the trials' light breeze, coastal the
+// trades' working wind, sea the westerlies, ocean the westerlies in a gust (chief.md section 2)
+const belt = (name) => VISION.BELTS.find((b) => b[1] === name)[2];
+export const DESIGN_WIND = { inshore: TRIAL.WINDS[0], coastal: belt("trades"), sea: belt("westerlies"), ocean: belt("westerlies") * (1 + VISION.GUST) };
+/** The freeboard a reach asks (blocks): half its design wave, the crest that would clear the rail. */
+export const freeboardNeed = (reach) => seaState(DESIGN_WIND[reach] ?? DESIGN_WIND.ocean).Hs / 2;
+// Depth by form (D-004): the depth a beam gives, as a power of phi
+export const FORM_DEPTH = { keel: PHI, flat: PHI * PHI, open: PHI * PHI, norse: PHI * PHI };
+const px = (v) => Math.round(v * 16) / 16;   // given: 16 pixels to a block, the model's quantum
 
 // given: each people's boats (Shipwright's plans: range, typical L:B, fullness; the rig, the drive, the reach the
 // historical type kept). drive: oars, paddles, sail, or both ("oars+sail"); masts for the great ships' count
-const T = (name, cls, range, lb, full, drive, reach, more = {}) => ({ name, cls, range, lb, full, drive, reach, flat: false, masts: drive.includes("sail") ? 1 : 0, ...more });
+const T = (name, cls, range, lb, full, drive, reach, more = {}) => ({ name, cls, range, lb, full, drive, reach, flat: false, masts: drive.includes("sail") ? 1 : 0, ...more, form: more.form ?? (more.flat ? "flat" : "keel") });
 export const FLEETS = {
-  norse: [T("faering", "small", [4, 10], 4.25, 0.45, "oars", "inshore"), T("longship", "ship", [12, 20], 6.75, 0.45, "oars+sail", "sea"), T("skeid", "great", [28, 40], 7.5, 0.45, "oars+sail", "sea")],   // given: the Norse hulls (Skuldelev, Roskilde 6)
+  norse: [T("faering", "small", [4, 10], 4.25, 0.45, "oars", "inshore", { form: "norse" }), T("longship", "ship", [12, 20], 6.75, 0.45, "oars+sail", "sea", { form: "norse" }), T("skeid", "great", [28, 40], 7.5, 0.45, "oars+sail", "sea", { form: "norse" })],   // given: the Norse hulls (Skuldelev, Roskilde 6); their beam/depth runs 2.3-2.7 (northern.md)
   european: [T("rowboat", "small", [4, 7], 3.25, 0.55, "oars", "inshore"), T("cog", "ship", [12, 22], 3.15, 0.6, "sail", "coastal"), T("carrack", "great", [28, 40], 3, 0.6, "sail", "ocean", { masts: 3 })],   // given: the cog (Bremen), the carrack
   therans: [T("skiff", "small", [4, 8], 4, 0.45, "paddles", "inshore"), T("Theran ship", "ship", [14, 22], 6, 0.5, "oars+sail", "sea"), T("flagship", "great", [28, 35], 7, 0.5, "oars+sail", "sea")],   // given: the Ship Procession fresco (Akrotiri): the hulls' estimated lengths and paddled crews
   indian_ocean: [T("sewn boat", "small", [5, 10], 3.75, 0.5, "sail", "inshore"), T("dhow", "ship", [12, 22], 3.75, 0.55, "sail", "sea"), T("baghlah", "great", [28, 40], 3.5, 0.6, "sail", "ocean", { masts: 2 })],   // given: the sewn boat, the dhow, the baghlah
   east_asian: [T("sampan", "small", [4, 8], 3.25, 0.6, "oars", "inshore", { flat: true }), T("junk", "ship", [12, 22], 3.25, 0.65, "sail", "sea", { flat: true, masts: 3 }), T("fuchuan", "great", [28, 40], 3.2, 0.65, "sail", "ocean", { masts: 5 })],   // given: the sampan, the junk, the Fujian ship
-  japanese: [T("wasen", "small", [5, 9], 4.5, 0.5, "oars", "inshore"), T("bezaisen", "ship", [12, 22], 3.75, 0.6, "sail", "coastal"), T("shuinsen", "great", [28, 40], 3.4, 0.6, "sail", "ocean", { masts: 2 })],   // given: the wasen, the bezaisen, the red-seal ship
-  pacific: [T("outrigger", "small", [5, 9], 7, 0.35, "paddles+sail", "coastal"), T("voyaging canoe", "ship", [12, 22], 7.5, 0.35, "paddles+sail", "ocean"), T("drua", "great", [28, 40], 8, 0.35, "sail", "ocean")],   // given: the outrigger, the double voyaging canoe, the Fijian drua
-  dugout: [T("dugout", "small", [4, 9], 6, 0.45, "paddles", "inshore"), T("war canoe", "ship", [12, 20], 8, 0.4, "paddles", "coastal")],   // given: the Northwest Coast canoes (no great ship: they cross in others')
-  birchbark: [T("bark canoe", "small", [4, 8], 5.75, 0.4, "paddles", "inshore"), T("freight canoe", "ship", [12, 18], 6, 0.4, "paddles", "coastal")],   // given: the bark canoe, the canot du maître
+  japanese: [T("wasen", "small", [5, 9], 4.5, 0.5, "oars", "inshore"), T("bezaisen", "ship", [12, 22], 3.75, 0.6, "sail", "coastal", { form: "flat" }), T("shuinsen", "great", [28, 40], 3.4, 0.6, "sail", "ocean", { masts: 2 })],   // given: the wasen, the bezaisen (its broad shiki bottom: flat in form, eastasian_pacific.md), the red-seal ship
+  pacific: [T("outrigger", "small", [5, 9], 7, 0.35, "paddles+sail", "coastal"), T("voyaging canoe", "ship", [12, 22], 7.5, 0.35, "paddles+sail", "ocean", { hullReach: "coastal" }), T("drua", "great", [28, 40], 8, 0.35, "sail", "ocean", { hullReach: "coastal" })],   // given: the outrigger, the double voyaging canoe, the Fijian drua; vision: the twins' closed hulls are held to the working sea (coastal), wet by design, the platform riding over the ocean's (chief.md section 2, eastasian_pacific.md L3)
+  dugout: [T("dugout", "small", [4, 9], 6, 0.45, "paddles", "inshore", { form: "open" }), T("war canoe", "ship", [12, 20], 8, 0.4, "paddles", "coastal", { form: "open" })],   // given: the Northwest Coast canoes (no great ship: they cross in others'); open keel-less hulls, beam/depth 2.4-2.9 (inland.md)
+  birchbark: [T("bark canoe", "small", [4, 8], 5.75, 0.4, "paddles", "inshore", { form: "open" }), T("freight canoe", "ship", [12, 18], 6, 0.4, "paddles", "coastal", { form: "open" })],   // given: the bark canoe, the canot du maître (open, keel-less)
   shallow: [T("punt", "small", [4, 8], 4.5, 0.7, "poles", "inshore", { flat: true }), T("flatboat", "ship", [12, 20], 3.5, 0.75, "poles", "inshore", { flat: true })],   // given: the punt, the flatboat (river and lagoon only)
   league: [T("monoreme", "small", [6, 10], 6, 0.42, "oars+sail", "coastal"), T("bireme", "ship", [14, 22], 7, 0.42, "oars+sail", "sea"), T("trireme", "great", [30, 38], 8, 0.4, "oars+sail", "sea")],   // given: the oared galleys (the penteconter, the Phoenician bireme, the Olympias trireme: 37 m by 5.5, three banks)
-  arctic: [T("kayak", "small", [4, 6], 6.5, 0.4, "paddles", "coastal"), T("umiak", "ship", [12, 16], 4, 0.45, "paddles+sail", "coastal")],   // given: the kayak, the umiak
+  arctic: [T("kayak", "small", [4, 6], 6.5, 0.4, "paddles", "coastal", { form: "flat" }), T("umiak", "ship", [12, 16], 4, 0.45, "paddles+sail", "coastal", { form: "flat" })],   // given: the kayak, the umiak (hard-chine skin boats: flat in form, northern.md)
 };
 
 /** A boat's measure: a type of a people's, its length the seed's within the range (or the typical: the range's geometric mean). */
@@ -55,7 +73,17 @@ export function sizeOf(type, seed = null) {
   const sailors = type.drive.includes("sail") ? Math.max(2, Math.round((L * B) / FIB[6])) : 0;   // derived: a hand to each 13 blocks of deck
   const crew = Math.max(1, rowers + paddlers + (rowers || paddlers ? Math.ceil(sailors / PHI ** 2) : sailors));   // derived: a pulled boat's sail is worked by its own rowers, with a few hands more
   const cargo = Math.max(1, Math.round((L * B * depth * type.full) / FIB[6]));   // derived: chests of 13 blocks of hold
-  return { name: type.name, cls: type.cls, L, B, depth, draft, masts, crew, cargo, drive: type.drive, reach: type.reach, ...berthOf({ L, B, draft }) };
+  return { name: type.name, cls: type.cls, L, B, depth, draft, masts, crew, cargo, drive: type.drive, reach: type.reach, form: type.form, exact: exactOf(type, L), ...berthOf({ L, B, draft }) };
+}
+
+// D-004: the hull to the pixel, by its form
+/** The hull itself at a length, to the pixel: beam, depth by form, draught, freeboard, the reach's need, and the
+ * washstrake that makes up any shortfall (none on a decked kayak: the sea runs off her). */
+export function exactOf(type, L) {
+  const B = px(L / type.lb), depth = px(B / (FORM_DEPTH[type.form] ?? PHI)), draft = px(depth / PHI), freeboard = px(depth - draft);   // derived: the law's proportions
+  const need = px(freeboardNeed(type.hullReach ?? type.reach));
+  const wash = type.name === "kayak" ? 0 : Math.max(0, px(need - freeboard));   // given: the kayak's deck sheds the sea (chief.md section 2)
+  return { L, B, depth, draft, freeboard, need, wash, form: type.form };
 }
 
 /** What a boat asks of the shore. */

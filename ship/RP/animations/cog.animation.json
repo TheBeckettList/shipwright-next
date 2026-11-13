@@ -19,12 +19,12 @@
           ],
           "position": [
             0,
-            5,
+            "q.property('shipwright:stage') >= 5 ? -24.6 : 5",
             "-8 * 2"
           ],
           "scale": [
             "2",
-            "1 + (2 - 1) * 0.4",
+            "2",
             "2"
           ]
         },
@@ -32,7 +32,7 @@
           "position": [
             0,
             0,
-            "(7 - q.property('shipwright:mids')) * 16"
+            "(8 - q.property('shipwright:mids')) * 16"
           ],
           "scale": [
             "q.property('shipwright:beam')",
@@ -105,7 +105,7 @@
         "pennant": {
           "position": [
             0,
-            "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? (q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.525 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.678 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.789 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.764)))) - 1) * 184.044 : -156.616",
+            "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? (q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.581 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.716 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.814 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.791)))) - 1) * 185.7 : -115.173",
             "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? -q.property('shipwright:mids') * 8 : 20"
           ],
           "rotation": [
@@ -130,16 +130,16 @@
         },
         "furnace": {
           "scale": [
-            0.5128,
-            0.7326,
-            0.5128
+            0.4,
+            0.4,
+            0.4
           ]
         },
         "sea_chest": {
           "scale": [
-            0.3989,
-            0.814,
-            0.7179
+            0.4444,
+            0.4444,
+            0.8
           ]
         },
         "mid_0": {
@@ -190,6 +190,13 @@
             "q.property('shipwright:mids') > 6 ? q.property('shipwright:depth') : 0",
             "q.property('shipwright:mids') > 6 ? 1 : 0"
           ]
+        },
+        "mid_7": {
+          "scale": [
+            "q.property('shipwright:mids') > 7 ? q.property('shipwright:beam') : 0",
+            "q.property('shipwright:mids') > 7 ? q.property('shipwright:depth') : 0",
+            "q.property('shipwright:mids') > 7 ? 1 : 0"
+          ]
         }
       }
     },
@@ -203,15 +210,15 @@
             "-q.property('shipwright:mids') * 8"
           ],
           "scale": [
-            "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.755 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.873 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.53 : 0.836))))",
-            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.525 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.678 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.789 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.764))))",
-            "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.755 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.873 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.53 : 0.836))))"
+            "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.755 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.873 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.529 : 0.836))))",
+            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.581 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.716 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.814 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.791))))",
+            "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.755 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.873 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.529 : 0.836))))"
           ]
         },
         "rig_square": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 130.592",
+            "(q.property('shipwright:rig_scale') - 1) * 138.073",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -228,7 +235,7 @@
         "rig_lateen": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 77.198",
+            "(q.property('shipwright:rig_scale') - 1) * 90.585",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -245,8 +252,8 @@
         "rig_crab": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 6.878",
-            "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * -44.218"
+            "(q.property('shipwright:rig_scale') - 1) * 28.058",
+            "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * -56.181"
           ],
           "rotation": [
             0,
@@ -262,7 +269,7 @@
         "rig_wing": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 0.0",
+            "(q.property('shipwright:rig_scale') - 1) * 21.927",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -279,7 +286,7 @@
         "rig_junk": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 18.742",
+            "(q.property('shipwright:rig_scale') - 1) * 38.595",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -371,96 +378,96 @@
         "oar_0_r": {
           "rotation": [
             0,
-            "-1 * ((1 - math.min(1, math.abs(v.r) * 3)) * 80 - v.r * math.sin(v.po + 0 * (1 - v.pw)) * 24.8)",
-            "-1 * math.min(1, math.abs(v.r) * 3) * (math.cos(v.po + 0 * (1 - v.pw)) > 0 ? 11.1 : -5.0)"
+            "-1 * ((1 - math.min(1, math.abs(v.r) * 3)) * 80 - v.r * math.sin(v.po + 0 * (1 - v.pw)) * 27.2)",
+            "-1 * math.min(1, math.abs(v.r) * 3) * (math.cos(v.po + 0 * (1 - v.pw)) > 0 ? 12.2 : -5.4)"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         },
         "oar_0_l": {
           "rotation": [
             0,
-            "1 * ((1 - math.min(1, math.abs(v.l) * 3)) * 80 - v.l * math.sin(v.po + 0 * (1 - v.pw)) * 24.8)",
-            "1 * math.min(1, math.abs(v.l) * 3) * (math.cos(v.po + 0 * (1 - v.pw)) > 0 ? 11.1 : -5.0)"
+            "1 * ((1 - math.min(1, math.abs(v.l) * 3)) * 80 - v.l * math.sin(v.po + 0 * (1 - v.pw)) * 27.2)",
+            "1 * math.min(1, math.abs(v.l) * 3) * (math.cos(v.po + 0 * (1 - v.pw)) > 0 ? 12.2 : -5.4)"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         },
         "oar_1_r": {
           "rotation": [
             0,
-            "-1 * ((1 - math.min(1, math.abs(v.r) * 3)) * 80 - v.r * math.sin(v.po + 25 * (1 - v.pw)) * 24.8)",
-            "-1 * math.min(1, math.abs(v.r) * 3) * (math.cos(v.po + 25 * (1 - v.pw)) > 0 ? 11.1 : -5.0)"
+            "-1 * ((1 - math.min(1, math.abs(v.r) * 3)) * 80 - v.r * math.sin(v.po + 25 * (1 - v.pw)) * 27.2)",
+            "-1 * math.min(1, math.abs(v.r) * 3) * (math.cos(v.po + 25 * (1 - v.pw)) > 0 ? 12.2 : -5.4)"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         },
         "oar_1_l": {
           "rotation": [
             0,
-            "1 * ((1 - math.min(1, math.abs(v.l) * 3)) * 80 - v.l * math.sin(v.po + 25 * (1 - v.pw)) * 24.8)",
-            "1 * math.min(1, math.abs(v.l) * 3) * (math.cos(v.po + 25 * (1 - v.pw)) > 0 ? 11.1 : -5.0)"
+            "1 * ((1 - math.min(1, math.abs(v.l) * 3)) * 80 - v.l * math.sin(v.po + 25 * (1 - v.pw)) * 27.2)",
+            "1 * math.min(1, math.abs(v.l) * 3) * (math.cos(v.po + 25 * (1 - v.pw)) > 0 ? 12.2 : -5.4)"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         },
         "oar_2_r": {
           "rotation": [
             0,
-            "-1 * ((1 - math.min(1, math.abs(v.r) * 3)) * 80 - v.r * math.sin(v.po + 50 * (1 - v.pw)) * 24.8)",
-            "-1 * math.min(1, math.abs(v.r) * 3) * (math.cos(v.po + 50 * (1 - v.pw)) > 0 ? 11.1 : -5.0)"
+            "-1 * ((1 - math.min(1, math.abs(v.r) * 3)) * 80 - v.r * math.sin(v.po + 50 * (1 - v.pw)) * 27.2)",
+            "-1 * math.min(1, math.abs(v.r) * 3) * (math.cos(v.po + 50 * (1 - v.pw)) > 0 ? 12.2 : -5.4)"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         },
         "oar_2_l": {
           "rotation": [
             0,
-            "1 * ((1 - math.min(1, math.abs(v.l) * 3)) * 80 - v.l * math.sin(v.po + 50 * (1 - v.pw)) * 24.8)",
-            "1 * math.min(1, math.abs(v.l) * 3) * (math.cos(v.po + 50 * (1 - v.pw)) > 0 ? 11.1 : -5.0)"
+            "1 * ((1 - math.min(1, math.abs(v.l) * 3)) * 80 - v.l * math.sin(v.po + 50 * (1 - v.pw)) * 27.2)",
+            "1 * math.min(1, math.abs(v.l) * 3) * (math.cos(v.po + 50 * (1 - v.pw)) > 0 ? 12.2 : -5.4)"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         },
         "oar_3_r": {
           "rotation": [
             0,
-            "-1 * ((1 - math.min(1, math.abs(v.r) * 3)) * 80 - v.r * math.sin(v.po + 75 * (1 - v.pw)) * 24.8)",
-            "-1 * math.min(1, math.abs(v.r) * 3) * (math.cos(v.po + 75 * (1 - v.pw)) > 0 ? 11.1 : -5.0)"
+            "-1 * ((1 - math.min(1, math.abs(v.r) * 3)) * 80 - v.r * math.sin(v.po + 75 * (1 - v.pw)) * 27.2)",
+            "-1 * math.min(1, math.abs(v.r) * 3) * (math.cos(v.po + 75 * (1 - v.pw)) > 0 ? 12.2 : -5.4)"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         },
         "oar_3_l": {
           "rotation": [
             0,
-            "1 * ((1 - math.min(1, math.abs(v.l) * 3)) * 80 - v.l * math.sin(v.po + 75 * (1 - v.pw)) * 24.8)",
-            "1 * math.min(1, math.abs(v.l) * 3) * (math.cos(v.po + 75 * (1 - v.pw)) > 0 ? 11.1 : -5.0)"
+            "1 * ((1 - math.min(1, math.abs(v.l) * 3)) * 80 - v.l * math.sin(v.po + 75 * (1 - v.pw)) * 27.2)",
+            "1 * math.min(1, math.abs(v.l) * 3) * (math.cos(v.po + 75 * (1 - v.pw)) > 0 ? 12.2 : -5.4)"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         }
@@ -476,9 +483,9 @@
             "(1 - v.a) * 70"
           ],
           "scale": [
-            0.2709,
-            0.387,
-            0.2709
+            0.2113,
+            0.2113,
+            0.2113
           ]
         },
         "dpaddle": {
@@ -488,9 +495,9 @@
             "math.sin(v.p_dp) * (math.sin(v.p_dp) > 0 ? math.abs(v.l) : math.abs(v.r)) * 28"
           ],
           "scale": [
-            0.2686,
-            0.3837,
-            0.2686
+            0.2444,
+            0.2444,
+            0.2444
           ]
         },
         "scull": {
@@ -501,7 +508,7 @@
           ],
           "scale": [
             0.625,
-            0.8929,
+            0.625,
             1
           ]
         },
@@ -545,11 +552,11 @@
           "position": [
             0,
             0,
-            "math.sin(v.po) * 3.922 * v.a"
+            "math.sin(v.po) * 3.842 * v.a"
           ],
           "scale": [
             0.625,
-            0.8929,
+            0.625,
             "math.max(0.05, (math.min(q.property('shipwright:oar_pairs'), q.property('shipwright:mids')) - 0.5) / 3.5)"
           ]
         },
@@ -557,11 +564,11 @@
           "position": [
             0,
             0,
-            "math.sin(v.po) * 3.922 * v.a"
+            "math.sin(v.po) * 3.842 * v.a"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         },
@@ -569,11 +576,11 @@
           "position": [
             0,
             0,
-            "math.sin(v.po) * 3.922 * v.a"
+            "math.sin(v.po) * 3.842 * v.a"
           ],
           "scale": [
             0.625,
-            0.8929,
+            0.625,
             "math.max(0.05, (math.min(q.property('shipwright:oar_pairs'), q.property('shipwright:mids')) - 0.5) / 3.5)"
           ]
         },
@@ -581,11 +588,11 @@
           "position": [
             0,
             0,
-            "math.sin(v.po) * 3.922 * v.a"
+            "math.sin(v.po) * 3.842 * v.a"
           ],
           "scale": [
             1,
-            0.8929,
+            0.625,
             0.625
           ]
         }

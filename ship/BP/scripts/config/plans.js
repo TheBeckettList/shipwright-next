@@ -12,6 +12,8 @@
 
 import { PROPORTIONS } from "./proportions.js";
 import { FLEETS } from "../../world/boatsizes.js";
+import { hullOf } from "../../core/boat.js";
+import { PHI } from "../../core/golden.js";
 
 const base = {
   yardLevel: 1,
@@ -29,15 +31,17 @@ const base = {
 };
 
 // Beam and depth come from the model itself (outside the planking), so physics matches what you see.
-// A longship's model is drawn at twice the size, and 1.4 times as tall.
+// A longship's model is drawn at twice the size every way (D-004: true depth); a ship-class model shows up to 8
+// mid sections, so the ship class reaches its plans' 22 blocks.
 const plan = (p) => {
   const full = { ...base, ...p, entity: `shipwright:${p.id}` };
   const m = full.modelScale;
   const dims = PROPORTIONS[p.id];
   if (dims) {
     full.baseBeam = dims.beam * m;
-    full.baseDepth = dims.depth * (1 + (m - 1) * 0.4);
+    full.baseDepth = dims.depth * m;
   }
+  full.maxMids = p.maxMids ?? (m === 2 ? 8 : base.maxMids);   // derived: ceil(22 / 2) - 3 (tools/gen_boats.py max_mids)
   return full;
 };
 
@@ -228,6 +232,21 @@ for (const [tradition, fleet] of Object.entries(FLEETS)) for (const t of fleet) 
 }
 
 for (const p of Object.values(PLANS)) p.sailAllowed = !!p.rigFamily;
+
+// How deep a hull may be built (D-004, chief.md section 4): drawn to the law's depth, a monohull's metacentric height
+// falls as she is built deeper (her weight rises with her depth, her waterplane does not), so the plan stops where
+// GM falls to B / phi^6, the least a sailing ship kept (given: about 5% of beam; atlantic_indian.md section 5). Twins
+// and outriggers stand on their second hull's lever, not their depth.
+const GM_LEAST = PHI ** 6;   // given: beam over this, the least metacentric height of a working sailing hull
+for (const p of Object.values(PLANS)) {
+  if (!p.baseDepth || p.twin || p.tri || p.outrigger) continue;
+  const L = Math.sqrt(p.lengthRange[0] * p.lengthRange[1]), B = p.baseBeam;   // derived: her typical length (the range's geometric mean)
+  const gm = (d) => hullOf({ L, lb: L / B, full: p.fullness, depth: p.baseDepth * d }).gm - B / GM_LEAST;
+  let [lo, hi] = [1, p.depthScale[1]];
+  if (gm(hi) >= 0) continue;
+  for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (gm(m) >= 0) lo = m; else hi = m; }   // given: thirty halvings, past the slider's step
+  p.depthScale = [p.depthScale[0], Math.max(1, Math.floor(lo * 20) / 20)];   // given: the build slider's 5% steps
+}
 
 export const STAGES = {
   NONE: 0,

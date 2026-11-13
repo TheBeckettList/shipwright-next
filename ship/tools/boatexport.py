@@ -133,6 +133,8 @@ def export(pid, with_uv=False):
     hs = b.get("scale", 1)
     mids = max(1, round((G.TYPICAL_BLOCKS[hs] * 16 / hs - 2 * G.END) / G.SEG))   # drawn at her typical length
     ys = G.y_scale(hs)
+    lift = G.root_lift(b)                            # world px: the keel the law's draught under the water (launched)
+    foot = G.mast_foot(b)                            # the mast's step, which its height grows from
     plan = G.mast_plan(b)
     rig = None if pid in SAILLESS else RIG_OF.get(pid, "square")
     geo = {g["description"]["identifier"].replace(f"geometry.shipwright.{pid}", ""): g for g in
@@ -141,8 +143,8 @@ def export(pid, with_uv=False):
     for gid in (".launched", ".fittings", ".rig", ".outfit"):
         for bone in geo[gid]["bones"]:
             n = bone["name"]
-            if gid == ".outfit" and n != "ram":
-                continue
+            if gid == ".outfit" and (n != "ram" or not pid.startswith(("league_", "theran_"))):
+                continue                                 # D-005: a ram only where it was used (unfitted ships show none)
             rows = (b.get("ports") or b.get("banks")) and re.match(r"oar_(\d+)_[rl]$", n) and int(n.split("_")[1]) < mids
             if gid == ".fittings" and not (n.startswith(("mast", "rudder", "foils", "amas", "akas", "nets")) or n in ("staff",) or rows):
                 continue
@@ -162,19 +164,18 @@ def export(pid, with_uv=False):
             if n.startswith(("mast", "rig_", "pennant")):
                 dz = -mids * 8 + (plan[k][0] * (mids + 3) * 16 if k < len(plan) else 0)
             if n.startswith("pennant") and rig:          # the pennant flies from the masthead, wherever the mast was trimmed
-                foot = G.parts(b)[0]["pivot"][1]
                 dy = (mf[rig] - 1) * (bone["pivot"][1] - foot)
                 bone = dict(bone, pivot=[bone["pivot"][0], bone["pivot"][1] + dy, bone["pivot"][2]],
                             cubes=[dict(c, origin=[c["origin"][0], c["origin"][1] + dy, c["origin"][2]]) for c in bone["cubes"]])
             if n.startswith(("foils", "amas", "akas", "nets")):
                 dz = -mids * 8
             elif n.startswith("bow") or n == "ram":
-                dz = (G.MAX_MIDS - mids) * G.SEG   # the bow slides aft to close up on the last mid section
+                dz = (G.max_mids(b) - mids) * G.SEG   # the bow slides aft to close up on the last mid section
             piv, rot = bone.get("pivot", [0, 0, 0]), bone.get("rotation", [0, 0, 0])
             for c in bone.get("cubes", []):
                 grow = None
                 if n.startswith("mast") and rig:            # the mast: its own rig's height and thickness
-                    grow = lambda v: (v - 2) * mf[rig] + 2
+                    grow = lambda v: v * mf[rig]                 # the mast grows from its step (its cube starts there)
                     w = c["size"][0] * tf[rig]
                     c = dict(c, origin=[c["origin"][0] + (c["size"][0] - w) / 2, c["origin"][1], c["origin"][2] + (c["size"][2] - w) / 2],
                              size=[w, c["size"][1], w])
@@ -194,14 +195,14 @@ def export(pid, with_uv=False):
                         q = [-q[0], q[1], q[2]]
                         if R:
                             q = turn(q, [-piv[0], piv[1], piv[2]], R)
-                        flat += [round(q[0] * hs / 16, 3), round((q[1] + G.HULL_LIFT) * ys / 16, 3), round((q[2] + dz) * hs / 16, 3)]
+                        flat += [round(q[0] * hs / 16, 3), round((q[1] * ys + lift) / 16, 3), round((q[2] + dz) * hs / 16, 3)]
                     face = c["uv"]["west" if axis == "z" else "north"]
                     out.append(["cloth", k_, u0, u1] + flat + ([[*face["uv"], *face["uv_size"]]] if with_uv else []))
                     continue
                 pts = corners(c, piv, rot, grow)
                 flat = []
                 for (x, y, z) in pts:
-                    flat += [round(x * hs / 16, 3), round((y + G.HULL_LIFT) * ys / 16, 3), round((z + dz) * hs / 16, 3)]
+                    flat += [round(x * hs / 16, 3), round((y * ys + lift) / 16, 3), round((z + dz) * hs / 16, 3)]
                 spar_uv = isinstance(c.get("uv"), dict) and c["uv"].get("up", {}).get("uv") == list(SC.SPAR[:2])
                 out.append(flat + ["spar" if spar_uv else kind(n)] + (["s" if gid == ".rig" else "h", face_uvs(c)] if with_uv else []))
     pal = THERAN if pid.startswith("theran_") else dict(PART)

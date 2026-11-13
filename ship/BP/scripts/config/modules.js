@@ -118,7 +118,7 @@ export const SLOTS = { small: 2, medium: 3, large: 4 };
 /** Shields a shield rail hangs: one each side of every mid-section station the hull has. */
 export function shieldsFor(rec) {
   const scale = PLANS[rec?.plan]?.modelScale ?? 1;
-  const mids = Math.max(1, Math.min(7, Math.round((rec?.dims?.length ?? 6) / scale - 3)));
+  const mids = Math.max(1, Math.min(PLANS[rec?.plan]?.maxMids ?? 7, Math.round((rec?.dims?.length ?? 6) / scale - 3)));
   return 2 * mids;
 }
 

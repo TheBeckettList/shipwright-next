@@ -1,5 +1,6 @@
 import { bodyOf } from "./body.js";
-import { decksFor, topDeckUp, hullDepth } from "./grid.js";
+import { decksFor, topDeckUp, hullDepth, WATERLINE } from "./grid.js";
+import { PHI } from "../core/golden.js";
 // Turns a ship record into handling numbers. Everything comes from how the
 // boat was built: length, beam, depth, the wood in each zone, and the rig.
 // Units: speeds in blocks per tick, turn rates in degrees per tick.
@@ -54,11 +55,7 @@ export const propulsionFor = (rec, plan) => rec.propulsion ?? plan.propulsion ??
 export const hands = (plan, L) => ((plan.modelScale ?? 1) >= 4 ? Math.max(1, L / 8) : 1);
 
 /** The rail's height above the origin for this build (blocks), from the model. */
-export const railOf = (rec, plan) => {
-  const r = PROPORTIONS[plan.id]?.rail ?? 1;
-  return 5 / 16 + (r - 5 / 16) * (rec.dims?.depth ?? 1);
-};
-const WATERLINE = 0.4;
+export const railOf = hullDepth;
 const FLOAT_FREEBOARD = 0.3;   // vision: how far a float's top stands over the water at rest (blocks)
 /** Heel at which the lee rail would reach the water (with a margin), degrees, 3 to 25. */
 export function heelLimitFor(rec, plan, halfWidth) {
@@ -81,7 +78,7 @@ export const SAIL_RATIO = { square: 5.5, lateen: 6.5, crab_claw: 7, junk: 6, win
 const SAIL_RATIO_REF = 6;   // the ratio that sails at "standard" drive
 export const SAIL_PER_L2 = { square: 0.18, lateen: 0.22, crab_claw: 0.24, junk: 0.2, wing: 0.15 };   // vision: the least cloth for a length
 export const SAIL_EFF = { wing: 1.45 };   // vision: a rigid slotted wing draws more from each square block
-const IMMERSED = 0.55;         // share of the hull's depth below the waterline
+const IMMERSED = 1 / PHI;      // derived: the share of the hull's depth below the waterline, the law's draught D / phi (D-004)
 
 /** Displacement in cubic blocks: length x beam x draft x fullness (block coefficient). */
 export function displacement(rec, plan) {
@@ -220,7 +217,7 @@ export function computeHandling(rec, load = 0, crew = 0) {
     turnFalloff: clamp((0.4 + 0.02 * (ratio - 4)) * (2 - rudder.high), 0.25, 0.6), // how much turning fades at full speed
     restTurn: 0.6 * prop.pivot,                        // pivoting at a standstill, set by the propulsion style
     grip: clamp(0.2 + 0.3 * (D / 0.8) + (outrigger ? 0.15 : 0), 0.15, 0.8),   // share of sideways skid removed per tick
-    draft: D * 0.6 + 0.2 + rudder.draft,               // blocks of water needed under the hull and rudder
+    draft: D / PHI + rudder.draft,                     // blocks of water needed under the hull and rudder: the law's draught (D-004)
   };
   // Waterworld's math (ourmath.js, core/boat.js): her crew's speed, her sail's, the water's drag and her heel
   // come from the core hull built from these same numbers, so the helm sails as the trials say she should

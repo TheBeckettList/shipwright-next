@@ -12,6 +12,7 @@
 import { world } from "@minecraft/server";
 import { PLANS } from "./config/plans.js";
 import { PROPORTIONS } from "./config/proportions.js";
+import { hullDepth, keelDepth } from "./grid.js";
 import { ShipFrame } from "./frame.js";
 import { warnOnce } from "./warn.js";
 
@@ -27,7 +28,7 @@ export function pegSlots(rec, plan = PLANS[rec.plan]) {
   const half = (plan.baseBeam * rec.dims.beam) / 2;
   const pr = PROPORTIONS[plan.id] ?? {};
   const twin = plan.twin ? ((pr.twin_gap ?? 0) * scale) / 2 : 0;    // twin hulls: on the outer sides
-  const up = (pr.depth ?? 0.7) * (1 + (scale - 1) * 0.4) * rec.dims.depth * 0.7;
+  const up = hullDepth(rec, plan) - 0.3 * keelDepth(rec, plan);   // vision: hung over the top strakes, a third of her depth under the rail
   const out = [];
   for (let i = 0; i < mids; i++) {
     // over the middle of each mid section: the stern section ends a block (scaled) forward of the helm
