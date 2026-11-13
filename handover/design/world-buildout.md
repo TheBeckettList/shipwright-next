@@ -174,6 +174,17 @@ Across the world:
 The plan stands, with fallback 1 (shared seeds) as the rule rather than the fallback. Shipping `buildOf` to the game
 (3.8 ms a building in Node, likely several times that in the game) stays the second choice.
 
+## Agreed on Olympus (2026-11-13)
+
+- **The shore line** (the Mover, `0001609268-mover`): the line runs along the quay's face. What stands is land (the
+  Builder's), including a mole to its tip; what floats is sea (the Mover's).
+- **Stilts and fairways** (the Mover): a stilt floor may stand over water 3 deep or less, but never on a fairway.
+  Phase 4 keeps φ × the widest berthing beam clear to every berth.
+- **Shared seeds** (the Bounty, `0001609289-bounty`): every shallow and fishing kind may draw from the shared seeds.
+  Reefs and wrecks are not buildings and stay out of the count.
+- **Water fronts** (the Bounty): a building whose front is on the water faces the shore's normal, not its seed, so a
+  quay row reads as one street. It goes into `growth.js` in phase 4.
+
 ## For Richard
 
 1. **The phase 4 window.** If S003's ship work touches the closure, it should land before the grow or wait for it.
