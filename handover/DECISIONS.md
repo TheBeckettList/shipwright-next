@@ -64,3 +64,12 @@ the island, and it and the League's Thera HQ and Mint (cothon-sized) both attach
 is its main waterfront.
 Consequence: `world/thera.js` (seat, cone, cothon placement), `theraplan.js`, `theracity.js` and the skyways move;
 the lagoon narrows; the grown towns' source closure is touched (one regrow, batched with the terraforming).
+
+## D-007 — Two streams at once, on GitHub  (accepted · Richard · 2026-11-13 · S003)
+Context: a second developer is building the cities and the landscape while the ships are worked on; one baton at a
+time would leave one of them idle.
+Decision: the repo lives at github.com/TheBeckettList/shipwright-next (public; authors on the GitHub no-reply
+address). Two streams run at once: ships on `s003/*`, the world on `world/<topic>`, each into the stage branch by pull
+request. The stage branch is the default and takes pull requests only. `COLLABORATING.md` is the working agreement.
+Consequence: the baton rule (handover/README) holds per stream, and the hand-off merges both streams first.
+
