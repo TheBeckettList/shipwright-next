@@ -1925,11 +1925,53 @@ def glider_parts(b):
                   {"name": n + "_skin", "parent": n, "pivot": rp(p1), "cubes": c1},
                   {"name": n + "_out", "parent": n, "pivot": rp(p2), "cubes": f2},
                   {"name": n + "_out_skin", "parent": n + "_out", "pivot": rp(p2), "cubes": c2}]
+    # her sail (b["sail"]), in place of the Therans' rigid wing rig: she runs on her asterion core, and sails when she
+    # would rather not spend it; gold frame, cloth skin, like her wings
+    sail = b.get("sail")
+    sf, sc = [], []
+    if sail == "dorsal":                  # a flying fish's dorsal fin: a raked spar from her back, gold rays fanned from its
+        ts = 0.3                          # foot, cloth between; it lies flat along her spine to fly
+        z0, y0 = -half + 2 * half * ts, cy(ts) + H * fat(ts)
+        hgt, rake = Lt / PHI, 1 / PHI
+        foot_aft = Lt / PHI ** 1.5
+        rays = 6
+        tips = [(0, y0 + hgt * math.cos(a_), z0 + hgt * math.sin(a_) * 1.0) for a_ in (math.atan(rake) + k * (math.pi / 2 - math.atan(rake)) / rays * 0.9 for k in range(rays + 1))]
+        feet = [(0, y0, z0 + foot_aft * k / rays) for k in range(rays + 1)]
+        for (f_, t_) in zip(feet, tips):
+            sf += slab((f_[0] - 0.25, f_[1], f_[2]), (f_[0] + 0.25, f_[1], f_[2]), (t_[0] - 0.25, t_[1], t_[2]), (t_[0] + 0.25, t_[1], t_[2]), 0.45, (9, 0, f_[2]))
+        for (fa, ta), (fb, tb) in zip(zip(feet, tips), zip(feet[1:], tips[1:])):
+            sc += slab(fa, ta, fb, tb, 0.2, (9, 0, fa[2]))
+    elif sail == "kite":                  # a crescent foil kite, high ahead of her on two gold lines
+        kz, ky = -half - Lt / PHI, side + PHI * Lt
+        kspan, kc = Lt * PHI, Lt / PHI ** 3
+        segs = 6
+        arc = [(kspan / 2 * math.sin(math.pi / 2 * (2 * k / segs - 1)), ky - kspan / PHI ** 3 * (1 - math.cos(math.pi / 2 * (2 * k / segs - 1))) * 1.6) for k in range(segs + 1)]
+        for (xa, ya), (xb, yb) in zip(arc, arc[1:]):
+            sc += slab((xa, ya, kz - kc / 2), (xb, yb, kz - kc / 2), (xa, ya, kz + kc / 2), (xb, yb, kz + kc / 2), 0.25, (0, ky - 99, kz))
+            sf += slab((xa, ya + 0.3, kz - kc / 2 - 0.3), (xb, yb + 0.3, kz - kc / 2 - 0.3), (xa, ya + 0.3, kz - kc / 2 + 0.3), (xb, yb + 0.3, kz - kc / 2 + 0.3), 0.5, (0, ky - 99, kz))
+        bow = (0, cy(0.05) + 0.3, -half + 2 * half * 0.05)
+        for (xa, ya) in (arc[1], arc[-2]):              # the two lines, down to her nose
+            sf += slab((bow[0] - 0.15, bow[1], bow[2]), (bow[0] + 0.15, bow[1], bow[2]), (xa - 0.15, ya, kz), (xa + 0.15, ya, kz), 0.3, (0, 0, -999))
+    elif sail == "claw":                  # the Pacific crab-claw redrawn: two gold spars from a tack on her foredeck opening
+        ts = 0.18                         # into a V, the cloth a crescent between them
+        tack = (0, cy(ts) + H * fat(ts), -half + 2 * half * ts)
+        L1, L2 = Lt / PHI * 1.3, Lt / PHI * 1.15
+        up = (0, tack[1] + L1 * math.cos(math.atan(1 / PHI ** 2)), tack[2] + L1 * math.sin(math.atan(1 / PHI ** 2)))
+        aft = (0, tack[1] + L2 * math.cos(math.atan(PHI)), tack[2] + L2 * math.sin(math.atan(PHI)))
+        for e in (up, aft):
+            sf += slab((-0.3, tack[1], tack[2]), (0.3, tack[1], tack[2]), (-0.3, e[1], e[2]), (0.3, e[1], e[2]), 0.55, (9, 0, tack[2]))
+        n_ = 6
+        pts = [(0, up[1] + (aft[1] - up[1]) * k / n_ - math.sin(math.pi * k / n_) * Lt / PHI ** 3, up[2] + (aft[2] - up[2]) * k / n_ + math.sin(math.pi * k / n_) * Lt / PHI ** 4) for k in range(n_ + 1)]
+        for pa, pb in zip(pts, pts[1:]):
+            sc += slab(tack, tack, pa, pb, 0.2, (9, 0, tack[2]))
+    if sail:
+        bones += [{"name": "rig_glide_sail", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(sf)},
+                  {"name": "rig_glide_sail_skin", "parent": "rig_glide_sail", "pivot": [0, 0, 0], "cubes": skin(sc)}]
     # the cubes slab() fits come with their own uv; frames and skins above take the sheet's regions
     return bones
 
 
-GLIDE_BONES = ("rig_glide_body", "rig_glide_body_skin", "rig_glide_core", "rig_glide_tail", "rig_glide_tail_skin",
+GLIDE_BONES = ("rig_glide_body", "rig_glide_body_skin", "rig_glide_core", "rig_glide_tail", "rig_glide_tail_skin", "rig_glide_sail", "rig_glide_sail_skin",
                "rig_glide_l", "rig_glide_l_skin", "rig_glide_l_out", "rig_glide_l_out_skin",
                "rig_glide_r", "rig_glide_r_skin", "rig_glide_r_out", "rig_glide_r_out_skin")
 
@@ -2225,7 +2267,7 @@ def animation(pid, b):
         "rig_wing": {"position": [0, lift("rig_wing"), slide("rig_wing")], "rotation": [0, "v.ftrim * 0.5", 0], "scale": [rs, f"{rs} * (0.3 + 0.7 * v.furl)", rs]},
         "foils": {"position": [0, 0, f"-{mids} * 8"]},
         # the Exokoitos's wings ride amidships with her foils (the fold, by v.glide, comes with her flight)
-        **({w: {"position": [0, 0, f"-{mids} * 8"]} for w in ("rig_glide_body", "rig_glide_tail", "rig_glide_l", "rig_glide_r")} if b.get("glider") else {}),
+        **({w: {"position": [0, 0, f"-{mids} * 8"]} for w in ("rig_glide_body", "rig_glide_tail", "rig_glide_l", "rig_glide_r", "rig_glide_sail")} if b.get("glider") else {}),
         "amas": {"position": [0, 0, f"-{mids} * 8"], "scale": [1, 1, f"math.clamp(({mids} + 3) / {round(typical_length(b) / 16, 3)}, 0.6, 1.4)"]},
         "akas": {"position": [0, 0, f"-{mids} * 8"], "scale": [1, 1, f"math.clamp(({mids} + 3) / {round(typical_length(b) / 16, 3)}, 0.6, 1.4)"]},
         "nets": {"position": [0, 0, f"-{mids} * 8"], "scale": [1, 1, f"math.clamp(({mids} + 3) / {round(typical_length(b) / 16, 3)}, 0.6, 1.4)"]},

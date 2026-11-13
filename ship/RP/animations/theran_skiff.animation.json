@@ -304,6 +304,13 @@
             "-q.property('shipwright:mids') * 8"
           ]
         },
+        "rig_glide_sail": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
         "rig_junk": {
           "position": [
             0,
