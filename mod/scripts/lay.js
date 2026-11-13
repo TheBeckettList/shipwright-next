@@ -44,6 +44,7 @@ export const MARKS = ["minecraft:bedrock", "minecraft:structure_void", "minecraf
 import { LEVEL } from "./rings.js";
 export { LEVEL };
 const C = 16;   // given: a chunk's side
+const PEZOULA = ["minecraft:smooth_basalt", "minecraft:red_sandstone", "waterworld:theran_marble_ashlar"];   // given: Thera's three stones, black, red and white (Plato, Critias 116a)
 const PILE = 3;   // derived: a stilt house's piles every three blocks, FIB[3] (the stilt peoples' shallows are three deep)
 const BEHIND = { 2: [0, 1], 3: [0, -1], 4: [1, 0], 5: [-1, 0] };   // given: a ladder facing north (2), south (3), west (4) or east (5) hangs on the block behind it
 const perms = new Map();
@@ -208,6 +209,10 @@ export function* lifeChunk(dim, cx, cz, { folk = true } = {}) {
       const pile = ((x - pl.b[0]) % PILE === 0 || x === pl.b[2]) && ((z - pl.b[1]) % PILE === 0 || z === pl.b[3]);   // a stilt house's piles: a grid every PILE, its edges always
       if (!pl.s) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp); else if (pile && under.get(`${x},${z}`) <= under.floor + 1) fill(dim, x, top + 1, z, x, under.get(`${x},${z}`) - 1, z, fp);   // piles only under the floor (not under an eave, nor where the box is empty)
       if (pl.c) fill(dim, x, pl.y + 1, z, x, top, z, "minecraft:air");   // cut into the slope
+    }
+    if (a[5] & 32 && theraUV(pl.x, pl.z)) for (let x = pl.b[0] - 1; x <= pl.b[2] + 1; x++) for (let z = pl.b[1] - 1; z <= pl.b[3] + 1; z++) {   // a footing's cut on Thera faced as a pezoula: the ring round the box, where the ground stands over the floor, walled in the three stones
+      if (x >= pl.b[0] && x <= pl.b[2] && z >= pl.b[1] && z <= pl.b[3]) continue; if (x < x0 || x >= x0 + C || z < z0 || z >= z0 + C) continue;
+      const top = cols[(z - z0) * C + (x - x0)].top; for (let y = pl.y + 1; y <= top; y++) set(dim, x, y, z, perm(y === top ? PEZOULA[2] : PEZOULA[y & 1]));   // banded black and red, a white coping (Critias 116a)
     }
     yield;
     const f = flatOf(P), turn = (a[5] >> 3) & 3, rot = turn ? ROT[turn - 1] : null;   // the base proto turned as it's laid (its block states by ROT)
