@@ -2310,61 +2310,89 @@ def glider_parts(b):
             def quad(za_, ya0, ya1, zb_, yb0, yb1, x_=None):                     # a face in the rudder's plane, as a quad
                 x_ = out if x_ is None else x_
                 return ((x_, ya0, za_), (x_, ya1, za_), (x_, yb1, zb_), (x_, yb0, zb_))
+            # (Richard: "rework the rudder as a whole: leading edge gold, curls back to the rear kind of; sweep the gold"):
+            # the gold runs down the leading edge and sweeps back from it in three tongues, each thinning aft along the
+            # rake and ending in a curl, as a wave breaks: the head's tongue (all above her waterline and a little
+            # under), two below it, and a fine line along the foot. No edge of it is straight
+            sm = lambda v: v * v * (3 - 2 * v)
+            vwl = lambda z_: min(0.6, max(0.05, ywl(z_) / min(-1.0, yfoot(z_))))   # her waterline, as a share of the depth
+            TONGUES = [(0.62, 0.78, 0.075), (0.82, 0.6, 0.055)]                 # vision: (its root's depth share, where it ends, half its root)
+            def gold_spans(z_):
+                u = max(0.0, min(1.0, (z_ - Fl[2]) / C)); D_ = -yfoot(z_)
+                sp = [(0.0, vwl(z_) + 0.09 * (1 - u) ** 1.4 + 0.05 * sm(1 - u) + 0.035 * math.sin(math.pi * 1.5 * u) ** 2)]     # the head's tongue
+                le = 0.16 - 0.05 * sm(u * 3) if u < 1 / 3 else 0.0
+                if u < 0.16:
+                    sp.append((0.0, 1.0))                                        # the leading edge, head to foot
+                for v0, ue, h0 in TONGUES:
+                    if u < ue:
+                        c_ = v0 + 0.16 * (u / ue) ** 1.2                         # swept down aft, with the rake
+                        h_ = h0 * (1 - u / ue) ** 0.6 + (0.04 if u < 0.2 else 0.0) * sm(1 - u / 0.2)
+                        sp.append((c_ - h_, c_ + h_))
+                sp.append((1.0 - 0.045 - 0.02 * sm(1 - u), 1.0))                 # the foot's line
+                sp.sort(); merged = []
+                for a_, b_ in sp:
+                    a_, b_ = max(0.0, a_), min(1.0, b_)
+                    if merged and a_ <= merged[-1][1]:
+                        merged[-1] = (merged[-1][0], max(merged[-1][1], b_))
+                    else:
+                        merged.append((a_, b_))
+                return [(-a_ * D_, -b_ * D_) for a_, b_ in merged]               # as local y, head 0 down to the foot
             def cols(z0, z1, n):                                                 # a strip's piece from z0 to z1, in n columns
                 g_, c_ = [], []
                 for j in range(n):
                     za_, zb_ = z0 + (z1 - z0) * j / n, z0 + (z1 - z0) * (j + 1) / n
+                    zm2 = (za_ + zb_) / 2
+                    sa, sb = gold_spans(za_), gold_spans(zb_)
+                    if len(sa) != len(sb):                                       # a tongue ends inside this column: take its middle's
+                        sa = sb = gold_spans(zm2)
                     fa, fb = yfoot(za_), yfoot(zb_)
-                    wa, wb = min(0.0, max(ywl(za_), fa)), min(0.0, max(ywl(zb_), fb))
-                    le = zb_ <= Fl[2] + gLE + 1e-6
-                    if le:                                                       # the leading edge: gold, head to foot
-                        g_.append(quad(za_, 0.0, fa, zb_, 0.0, fb)); continue
-                    if wa < -0.05 or wb < -0.05:
-                        g_.append(quad(za_, 0.0, wa, zb_, 0.0, wb))
-                    ca, cb = min(wa, fa + hbF), min(wb, fb + hbF)
-                    if wa - ca > 0.05 or wb - cb > 0.05:
-                        c_.append(quad(za_, wa, ca, zb_, wb, cb))
-                    g_.append(quad(za_, ca, fa, zb_, cb, fb))                    # the foot's band
+                    sca, scb = -fa, -fb
+                    prev_a, prev_b = 0.0, 0.0
+                    for (ga0, ga1), (gb0, gb1) in zip(sa, sb):
+                        ga0 *= 1; gb0 *= 1
+                        if prev_a - ga0 > 0.05 or prev_b - gb0 > 0.05:
+                            c_.append(quad(za_, prev_a, ga0, zb_, prev_b, gb0))
+                        g_.append(quad(za_, ga0, ga1, zb_, gb0, gb1))
+                        prev_a, prev_b = ga1, gb1
+                    if prev_a - fa > 0.05 or prev_b - fb > 0.05:
+                        c_.append(quad(za_, prev_a, fa, zb_, prev_b, fb))
                 return g_, c_
             # the mark's ribbons, as quads on both faces (a hair proud of the cloth), each laid in the strip it lies in
-            def ribbon(pts):
+            def ribbon(pts, w0=None, w1=None):                                   # a brush stroke: its width running w0 to w1
                 out_ = []
-                for (za_, ya_), (zb_, yb_) in zip(pts, pts[1:]):
-                    dz, dy_ = zb_ - za_, yb_ - ya_
+                w0 = RIB if w0 is None else w0; w1 = w0 if w1 is None else w1
+                m_ = max(1, len(pts) - 1)
+                nrm = []                                                         # a normal at each point, shared by both its quads
+                for i_ in range(len(pts)):
+                    a_, c2 = pts[max(0, i_ - 1)], pts[min(len(pts) - 1, i_ + 1)]
+                    dz, dy_ = c2[0] - a_[0], c2[1] - a_[1]
                     n_ = math.hypot(dz, dy_) or 1
-                    nz, ny = -dy_ / n_ * RIB / 2, dz / n_ * RIB / 2
+                    w_ = (w0 + (w1 - w0) * i_ / m_) / 2
+                    nrm.append((-dy_ / n_ * w_, dz / n_ * w_))
+                for i_, ((za_, ya_), (zb_, yb_)) in enumerate(zip(pts, pts[1:])):
+                    (nza, nya), (nzb, nyb) = nrm[i_], nrm[i_ + 1]
                     for xo in (out + sx * 0.06, out - sx * 0.06):
-                        out_.append(((za_ + zb_) / 2, ((xo, ya_ + ny, za_ + nz), (xo, ya_ - ny, za_ - nz), (xo, yb_ - ny, zb_ - nz), (xo, yb_ + ny, zb_ + nz))))
+                        out_.append(((za_ + zb_) / 2, ((xo, ya_ + nya, za_ + nza), (xo, ya_ - nya, za_ - nza), (xo, yb_ - nyb, zb_ - nzb), (xo, yb_ + nyb, zb_ + nzb))))
                 return out_
-            zw0, zw1 = Fl[2] + gLE + 0.6, Rl[2] - 0.4                          # the window's run along the chord
-            zm_ = (zw0 + zw1) / 2
-            wave = [(zw0 + (zw1 - zw0) * k / 16, ywl(zw0 + (zw1 - zw0) * k / 16) - 1.4 - 0.9 * math.sin(2 * math.pi * k / 8)) for k in range(17)]
-            # the running spirals over the foot's band: three linked, the frieze of Akrotiri's walls
-            def scroll(zc_, yc2, r_, turns=1.25, sgn=1):
-                return [(zc_ + sgn * r_ * PHI ** (-(t_ / (math.pi / 2))) * math.cos(t_), yc2 + r_ * PHI ** (-(t_ / (math.pi / 2))) * math.sin(t_))
-                        for t_ in [k * math.pi / 6 for k in range(int(turns * 12) + 1)]]
-            yfr = yfoot(zm_) + hbF + 2.2
-            rS = (zw1 - zw0) / 7
-            frieze = []
-            for k in range(3):
-                zk_ = zw0 + rS * 1.2 + k * (zw1 - zw0 - 2.4 * rS) / 2
-                frieze += ribbon(scroll(zk_, yfoot(zk_) + hbF + rS + 0.4, rS, 1.6, 1 if k % 2 == 0 else -1))
-            # the golden spiral, as big as the window holds, its outer arm sweeping down to the frieze
-            ytop_w = ywl(zm_) - 3.2
-            ybot_w = yfr + rS + 1.0
-            R0 = min((ytop_w - ybot_w) / 2, (zw1 - zw0) / 2) * 0.95
-            yc_ = (ytop_w + ybot_w) / 2
-            spiral = [(zm_ + R0 * PHI ** (-(t_ / (math.pi / 2))) * math.cos(t_), yc_ + R0 * PHI ** (-(t_ / (math.pi / 2))) * math.sin(t_))
-                      for t_ in [k * math.pi / 10 for k in range(46)]]
-            RIB = 0.9
-            marks = ribbon(wave) + (ribbon(spiral) if R0 > 1.5 else []) + frieze
+            # each tongue ends in a curl turning back up toward its root, a golden spiral, as a wave's lip does
+            marks = []
+            zm_ = Fl[2] + C / 2
+            for v0, ue, h0 in TONGUES + [(None, 0.0, 0.0)]:
+                if v0 is None:                                                   # the head's tongue: its curl where it thins aft
+                    zt2 = Fl[2] + C * 0.8; D_ = -yfoot(zt2); vc = vwl(zt2) + 0.03; r_ = 0.06 * D_
+                else:
+                    zt2 = Fl[2] + C * ue; D_ = -yfoot(zt2); vc = v0 + 0.16; r_ = h0 * D_ * 1.3
+                yc2 = -vc * D_ + r_                                             # the curl turns up, back toward the head
+                pts = [(zt2 + r_ * PHI ** (-(t_ / (math.pi / 2))) * math.sin(t_), yc2 - r_ * PHI ** (-(t_ / (math.pi / 2))) * math.cos(t_))
+                       for t_ in [k * math.pi / 8 for k in range(30)]]
+                marks += ribbon(pts, max(0.5, r_ * 0.55), 0.2)
             to_file = lambda pcs: [dict(c, origin=[round(c["origin"][0] + H1[0], 3), round(c["origin"][1] + H1[1], 3), round(c["origin"][2] + H1[2], 3)],
                                          **({"pivot": [round(c["pivot"][0] + H1[0], 3), round(c["pivot"][1] + H1[1], 3), round(c["pivot"][2] + H1[2], 3)]} if "pivot" in c else {}))
                                    for c in pcs]                                 # the hinge frame's origin at H1, in the file
             hp = [round(v, 3) for v in H1]
             th = math.radians(rud_pre / PHI) * Ls / (C * (ws[1] + 2 * ws[2]))    # each hinge's turn for the stab's swing
             z0_, z3_ = Fl[2], Rl[2]
-            nc = lambda w_: max(1, round(w_ / 1.0))                              # columns about a pixel wide (the waterline's slope fine)
+            nc = lambda w_: max(1, round(w_ / 0.4))                              # narrow columns, so the gold's curves run smooth
             p2 = [round(H1[0], 3), round(H1[1], 3), round(H1[2] + z2, 3)]
             spans = [(z0_, z1), (z1, z2), (z2, z3_)]
             qf = lambda qs: [tuple((P_[0] + H1[0], P_[1] + H1[1], P_[2] + H1[2]) for P_ in q) for q in qs]   # the hinge frame's origin at H1
