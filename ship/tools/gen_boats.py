@@ -1401,10 +1401,12 @@ def parts(b):
         g = glider_frame(b)
         # The Exokoitos steers with her tail fin: hung at the end of the boom, back and down, deepest of all in the water
         # (deeper than the tailplane's tips), standing over the boom as her vertical stabiliser when she flies. It turns.
-        # twin fins, one at each boom's end (the booms splay to phi of her breadth), turning together
-        zf, ye, xb = END + g["Lb"], g["ye"], PHI * g["F"]
-        bones.append({"name": "rudder", "parent": "root", "pivot": [0, ye, zf], "cubes": theran_uv([
-            c for sx in (-1, 1) for c in slab((sx * xb, 1 - side, zf - g["cf"] / 2), (sx * xb, ye + 0.9 * side, zf - 0.3 * g["cf"]), (sx * xb, 1 - side, zf + g["cf"] / 2), (sx * xb, ye + 0.9 * side, zf + 0.5 * g["cf"]), 0.8, (99 * sx, 0, zf))], "gold")})
+        # one fin on the centre line, hung from the middle of the tailplane like a T (Richard: "one in the middle like a
+        # T off the horizontal stabiliser"): deepest of all in the water as her rudder, standing over the tailplane as
+        # her fin; it turns
+        zf, ye = END + g["Lb"], g["ye"]
+        bones.append({"name": "rudder", "parent": "root", "pivot": [0, ye, zf], "cubes": theran_uv(
+            slab((0, 1 - side, zf - g["cf"] / 2), (0, ye + 0.7 * side, zf - 0.2 * g["cf"]), (0, 1 - side, zf + g["cf"] / 2), (0, ye + 0.7 * side, zf + 0.5 * g["cf"]), 0.8, (99, 0, zf)), "gold")})
     elif b.get("foils"):
         # A foiler steers with a T-rudder hung on the centre of her transom: the blade reaches as deep as the main
         # foil (depth 0.8 of the strut's, so it flies a little higher, trimming her bow up), a small T-wing at its
