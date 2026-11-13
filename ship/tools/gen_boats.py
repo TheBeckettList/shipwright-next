@@ -2316,18 +2316,14 @@ def glider_parts(b):
             # under), two below it, and a fine line along the foot. No edge of it is straight
             sm = lambda v: v * v * (3 - 2 * v)
             vwl = lambda z_: min(0.6, max(0.05, ywl(z_) / min(-1.0, yfoot(z_))))   # her waterline, as a share of the depth
-            TONGUES = [(0.62, 0.78, 0.075), (0.82, 0.6, 0.055)]                 # vision: (its root's depth share, where it ends, half its root)
+            TONGUES = [(0.44, 0.74, 0.0), (0.7, 0.58, 0.0)]                    # vision: (its root's depth share, where its curl begins)
             def gold_spans(z_):
                 u = max(0.0, min(1.0, (z_ - Fl[2]) / C)); D_ = -yfoot(z_)
-                sp = [(0.0, vwl(z_) + 0.09 * (1 - u) ** 1.4 + 0.05 * sm(1 - u) + 0.035 * math.sin(math.pi * 1.5 * u) ** 2)]     # the head's tongue
-                le = 0.16 - 0.05 * sm(u * 3) if u < 1 / 3 else 0.0
+                # the head: gold to under her waterline, its lower edge one smooth sweep, deep at the leading edge
+                # and running fine aft, where it turns down into a curl (below)
+                sp = [(0.0, vwl(z_) + 0.02 + 0.13 * (1 - sm(u)) ** 1.3)]
                 if u < 0.16:
                     sp.append((0.0, 1.0))                                        # the leading edge, head to foot
-                for v0, ue, h0 in TONGUES:
-                    if u < ue:
-                        c_ = v0 + 0.16 * (u / ue) ** 1.2                         # swept down aft, with the rake
-                        h_ = h0 * (1 - u / ue) ** 0.6 + (0.04 if u < 0.2 else 0.0) * sm(1 - u / 0.2)
-                        sp.append((c_ - h_, c_ + h_))
                 sp.append((1.0 - 0.045 - 0.02 * sm(1 - u), 1.0))                 # the foot's line
                 sp.sort(); merged = []
                 for a_, b_ in sp:
@@ -2374,18 +2370,39 @@ def glider_parts(b):
                     for xo in (out + sx * 0.06, out - sx * 0.06):
                         out_.append(((za_ + zb_) / 2, ((xo, ya_ + nya, za_ + nza), (xo, ya_ - nya, za_ - nza), (xo, yb_ - nyb, zb_ - nzb), (xo, yb_ + nyb, zb_ + nzb))))
                 return out_
-            # each tongue ends in a curl turning back up toward its root, a golden spiral, as a wave's lip does
+            # the strokes: each sweeps back from the leading edge along the rake and, without a break, winds into a
+            # golden spiral turned up toward the head, as a wave's lip curls; the stroke thins all the way in
+            def stroke(path_pts, r0, turns, w0, w1, up=True):
+                (za_, ya_), (zb_, yb_) = path_pts[-2], path_pts[-1]
+                hz, hy = zb_ - za_, yb_ - ya_; hn = math.hypot(hz, hy) or 1; hz, hy = hz / hn, hy / hn
+                nz, ny = (-hy, hz) if hz > 0 else (hy, -hz)                     # the normal toward the head (+y)
+                if (ny < 0) == up: nz, ny = -nz, -ny
+                cz, cy2 = zb_ + nz * r0, yb_ + ny * r0
+                vz, vy = -nz, -ny                                                # from the curl's centre to where it starts
+                sg = 1 if (vz * hy - vy * hz) < 0 else -1                        # turn so that it carries on along its heading
+                curl = []
+                for k in range(1, int(turns * 16) + 1):
+                    t_ = k * math.pi / 8; r_ = r0 * PHI ** (-(t_ / (math.pi / 2)))
+                    c_, s_ = math.cos(sg * t_), math.sin(sg * t_)
+                    curl.append((cz + r_ * (vz * c_ - vy * s_), cy2 + r_ * (vz * s_ + vy * c_)))
+                pts = path_pts + curl
+                return ribbon(pts, w0, w1)
             marks = []
-            zm_ = Fl[2] + C / 2
-            for v0, ue, h0 in TONGUES + [(None, 0.0, 0.0)]:
-                if v0 is None:                                                   # the head's tongue: its curl where it thins aft
-                    zt2 = Fl[2] + C * 0.8; D_ = -yfoot(zt2); vc = vwl(zt2) + 0.03; r_ = 0.06 * D_
-                else:
-                    zt2 = Fl[2] + C * ue; D_ = -yfoot(zt2); vc = v0 + 0.16; r_ = h0 * D_ * 1.3
-                yc2 = -vc * D_ + r_                                             # the curl turns up, back toward the head
-                pts = [(zt2 + r_ * PHI ** (-(t_ / (math.pi / 2))) * math.sin(t_), yc2 - r_ * PHI ** (-(t_ / (math.pi / 2))) * math.cos(t_))
-                       for t_ in [k * math.pi / 8 for k in range(30)]]
-                marks += ribbon(pts, max(0.5, r_ * 0.55), 0.2)
+            for v0, ue, h0 in TONGUES:
+                path_pts = []
+                for k in range(13):
+                    u = 0.1 + (ue - 0.1) * k / 12
+                    z_ = Fl[2] + C * u; D_ = -yfoot(z_)
+                    path_pts.append((z_, -(v0 + 0.1 * ((u - 0.1) / (ue - 0.1)) ** 1.4) * D_))
+                marks += stroke(path_pts, 2.6, 1.6, 1.5, 0.3)                    # vision: a fine stroke, a curl of 2.6 px
+            # the head's curl: from the fine end of its lower edge, winding down and back up
+            zh = Fl[2] + C * 0.86
+            hp_ = []
+            for k in range(7):
+                z_ = Fl[2] + C * (0.55 + 0.31 * k / 6)
+                u = (z_ - Fl[2]) / C
+                hp_.append((z_, -(vwl(z_) + 0.02 + 0.13 * (1 - sm(u)) ** 1.3) * (-yfoot(z_)) - 0.3 - 2.2 * sm(k / 6)))
+            # (the head's own curl crowded the first tongue's: its edge sweeps clean instead)
             to_file = lambda pcs: [dict(c, origin=[round(c["origin"][0] + H1[0], 3), round(c["origin"][1] + H1[1], 3), round(c["origin"][2] + H1[2], 3)],
                                          **({"pivot": [round(c["pivot"][0] + H1[0], 3), round(c["pivot"][1] + H1[1], 3), round(c["pivot"][2] + H1[2], 3)]} if "pivot" in c else {}))
                                    for c in pcs]                                 # the hinge frame's origin at H1, in the file
