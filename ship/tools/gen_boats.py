@@ -103,7 +103,7 @@ XBOW = dict(taper="xbow", rise=0.18, floor=0.06, stem="xhead")
 FLY_TAIL = dict(taper="fly_tail", rise=0, floor=0.45, stem="raked_short")
 AC_ROUND = 2.2     # vision: a little fuller than a carved log (2.0): with the crown (X/phi) the AC72's upright oval section
 is_theran = lambda b: any(b.get("bow") is x for x in (AC_BOW, PIERCE, YACHT_BOW, XBOW))   # the Theran build (their pod, rudders, nets)
-BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, glider=True, keel=False, bow=XBOW, stern=FLY_TAIL, round=AC_ROUND, crown=True)
+BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, glider=True, keel=False, wings="corsair", bow=XBOW, stern=FLY_TAIL, round=AC_ROUND, crown=True)
 
 # Fitted modules drawn on the boat, as bits of the shipwright:mods property (mirrored in ship.js).
 MODULE_BITS = {"shield_rail": 0, "ram": 1, "ice_runners": 3, "crossbow": 4, "full_deck": 5, "sewn_hull": 6, "bulkheads": 7, "light_hull": 8,
@@ -1404,9 +1404,13 @@ def parts(b):
         # one fin on the centre line, hung from the middle of the tailplane like a T (Richard: "one in the middle like a
         # T off the horizontal stabiliser"): deepest of all in the water as her rudder, standing over the tailplane as
         # her fin; it turns
-        zf, ye = END + g["Lb"], g["ye"]
+        # a T, not a t (Richard): the blade hangs only below the tailplane, down to the keel foil's depth, a fine chord
+        # (cf/phi), with an inverted-V foil at its foot level with the keel's, so the two fly together
+        zf, ye, cr_ = END + g["Lb"], g["ye"], g["cf"] / PHI
+        yfoil = 1 - side
         bones.append({"name": "rudder", "parent": "root", "pivot": [0, ye, zf], "cubes": theran_uv(
-            slab((0, 1 - side, zf - g["cf"] / 2), (0, ye + 0.7 * side, zf - 0.2 * g["cf"]), (0, 1 - side, zf + g["cf"] / 2), (0, ye + 0.7 * side, zf + 0.5 * g["cf"]), 0.8, (99, 0, zf)), "gold")})
+            slab((0, yfoil, zf - cr_ / 2), (0, ye, zf - cr_ / 2), (0, yfoil, zf + cr_ / 2), (0, ye, zf + cr_ / 2), 0.7, (99, 0, zf))
+            + lambda_foil(0, yfoil, zf - cr_ * 0.8, cr_ * 1.6, PHI * g["F"], 0.5), "gold")})
     elif b.get("foils"):
         # A foiler steers with a T-rudder hung on the centre of her transom: the blade reaches as deep as the main
         # foil (depth 0.8 of the strut's, so it flies a little higher, trimming her bow up), a small T-wing at its
@@ -1820,9 +1824,9 @@ def glider_parts(b):
     # she rises onto before she flies, her tail riding on the tailplane's canted tips
     tk = TMAX - 0.06
     zk, yk = -half + 2 * half * tk, cy(tk) - H * fat(tk)
-    ck = Lt / PHI ** 4
-    frame += slab((-0.45, yk + 0.5, zk - ck / 2), (0.45, yk + 0.5, zk - ck / 2), (-0.45, 1 - side, zk - ck / 3), (0.45, 1 - side, zk - ck / 3), ck * 0.8, (0, 0, zk + ck))
-    frame += lambda_foil(0, 1 - side, zk - ck / 2, ck, PHI ** 2 * W, 0.6)
+    ck = Lt / PHI ** 5                                    # a fine chord, bow to stern (Richard: "less thick")
+    frame += slab((0, yk + 0.5, zk - ck / 2), (0, 1 - side, zk - ck / 2), (0, yk + 0.5, zk + ck / 2), (0, 1 - side, zk + ck / 2), 0.7, (99, 0, zk))
+    frame += lambda_foil(0, 1 - side, zk - ck, 2 * ck, PHI ** 2 * W, 0.6)
     bones = [{"name": "rig_glide_body", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(frame)},
              {"name": "rig_glide_body_skin", "parent": "rig_glide_body", "pivot": [0, 0, 0], "cubes": skin(cloth)}]
     # the core: an asterion crystal turned on its corners (three cubes, an icosahedron's look), at her heart
@@ -1847,34 +1851,80 @@ def glider_parts(b):
         tail += slab((sx * xb, ye + 0.2, ze - cs / 2 - 0.3), (sx * hs, ytip + 0.2, ze - 0.4 * cs - 0.3), (sx * xb, ye + 0.2, ze - cs / 2 + 0.3), (sx * hs, ytip + 0.2, ze - 0.4 * cs + 0.3), 0.5, (0, -99, ze))
     bones.append({"name": "rig_glide_tail", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(tail)})
     bones.append({"name": "rig_glide_tail_skin", "parent": "rig_glide_tail", "pivot": [0, 0, 0], "cubes": skin(tcloth)})
-    # the wings
+    # the wings, by style (b["wings"]): each side a root panel hinged at her flank and an outer panel hinged to it (to
+    # fold), each a gold frame bone with its cloth in a child *_skin bone
+    style = b.get("wings", "corsair")
     yw, zw, hsw = ymid, -half + 2 * half * TMAX, g["wspan"] / 2
     s1, s2 = hsw / PHI, hsw / PHI ** 2
-    a1, a2 = math.atan(1 / PHI ** 2), math.atan(1 / PHI ** 2)   # the gull eased (Richard: "angle the wings less down")
-    sweep = 1 / PHI ** 2                                  # swept tan 1/phi^2 (about 21 degrees; Richard: "little less swept")
     cr = Lt / PHI ** 2.5
-    co, ct = cr / PHI, cr / PHI ** 3
-    def panel(x0, y0, x1, y1, c0, c1, l0, l1):
+    def panel(x0, y0, x1, y1, c0, c1, l0, l1, t=0.6):
         """A wing panel: its gold frame (leading spar, trailing edge, ribs) and its cloth."""
-        fr = slab((x0, y0 + 0.3, l0 - 0.3), (x1, y1 + 0.3, l1 - 0.3), (x0, y0 + 0.3, l0 + 0.5), (x1, y1 + 0.3, l1 + 0.5), 0.6, (x0, y0 - 9, l0 + c0 / 2))
+        fr = slab((x0, y0 + 0.3, l0 - 0.3), (x1, y1 + 0.3, l1 - 0.3), (x0, y0 + 0.3, l0 + 0.5), (x1, y1 + 0.3, l1 + 0.5), t, (x0, y0 - 9, l0 + c0 / 2))
         fr += slab((x0, y0 + 0.2, l0 + c0 - 0.4), (x1, y1 + 0.2, l1 + c1 - 0.4), (x0, y0 + 0.2, l0 + c0), (x1, y1 + 0.2, l1 + c1), 0.4, (x0, y0 - 9, l0 + c0 / 2))
         for x, y, l, c in ((x0, y0, l0, c0), (x1, y1, l1, c1)):
             fr.append({"origin": [round(x - 0.25, 3), round(y - 0.2, 3), round(l, 3)], "size": [0.5, 0.6, round(c, 3)]})
         cl = slab((x0, y0, l0), (x1, y1, l1), (x0, y0, l0 + c0), (x1, y1, l1 + c1), 0.2, (x0, y0 - 9, l0 + c0 / 2))
         return gold(fr), skin(cl)
+    def fan(x0, y0, l0, c0, x1, y1, l1, c1, rays):
+        """A fin panel: gold rays fanning from its root edge to its outer edge, cloth between each pair (a fish's fin)."""
+        fr, cl = [], []
+        pts = [((x0, y0, l0 + c0 * k / rays), (x1, y1, l1 + c1 * k / rays)) for k in range(rays + 1)]
+        for (r0, r1) in pts:
+            fr += slab((r0[0], r0[1] + 0.2, r0[2] - 0.2), (r1[0], r1[1] + 0.2, r1[2] - 0.2), (r0[0], r0[1] + 0.2, r0[2] + 0.2), (r1[0], r1[1] + 0.2, r1[2] + 0.2), 0.45, (x0, y0 - 9, l0))
+        for (a0_, a1_), (b0_, b1_) in zip(pts, pts[1:]):
+            cl += slab(a0_, a1_, b0_, b1_, 0.2, (x0, y0 - 9, l0))
+        return gold(fr), skin(cl)
     for side_, sx in (("l", 1), ("r", -1)):
         rx = sx * W * fat(TMAX) * 0.95
-        kx, ky = rx + sx * s1 * math.cos(a1), yw - s1 * math.sin(a1)
-        tx, ty = kx + sx * s2 * math.cos(a2), ky + s2 * math.sin(a2)
-        lr = zw - cr / 2
-        lk, lt = lr + sweep * s1, lr + sweep * (s1 + s2)
-        f1, c1 = panel(rx, yw, kx, ky, cr, co, lr, lk)
-        f2, c2 = panel(kx, ky, tx, ty, co, ct, lk, lt)
+        if style == "corsair":            # an F4U Corsair's inverted gull: the inner panel down to the knee, the outer up
+            a1, a2, sweep = math.atan(1 / PHI ** 2), math.atan(1 / PHI ** 2), 1 / PHI ** 2
+            co, ct = cr / PHI, cr / PHI ** 3
+            kx, ky = rx + sx * s1 * math.cos(a1), yw - s1 * math.sin(a1)
+            tx, ty = kx + sx * s2 * math.cos(a2), ky + s2 * math.sin(a2)
+            lr = zw - cr / 2
+            lk, lt = lr + sweep * s1, lr + sweep * (s1 + s2)
+            (f1, c1), (f2, c2) = panel(rx, yw, kx, ky, cr, co, lr, lk), panel(kx, ky, tx, ty, co, ct, lk, lt)
+            p1, p2 = (rx, yw, zw), (kx, ky, lk + co / 2)
+        elif style == "kestrel":          # a seagull's (the Corsair turned over): the inner panel lifting to the knee, the
+            a1, a2 = math.atan(1 / PHI ** 2), math.atan(1 / PHI)   # outer swept hard down and back to a hawk's raked point
+            co, ct = cr / PHI ** 0.5, cr / PHI ** 4
+            kx, ky = rx + sx * s1 * math.cos(a1), yw + s1 * math.sin(a1)
+            tx, ty = kx + sx * s2 * math.cos(a2), ky - s2 * math.sin(a2)
+            lr = zw - cr / 2
+            lk, lt = lr + s1 / PHI ** 3, lr + s1 / PHI ** 3 + s2 / PHI   # swept little inboard, hard at the hand
+            (f1, c1), (f2, c2) = panel(rx, yw, kx, ky, cr, co, lr, lk), panel(kx, ky, tx, ty, co, ct, lk, lt)
+            p1, p2 = (rx, yw, zw), (kx, ky, lk + co / 2)
+        elif style == "pectoral":         # the flying fish's own: one long broad fin a side, gold rays fanned from the root,
+            span = hsw * 1.05             # cloth between; a little dihedral, the outer half hinged to fold back over the inner
+            a = math.atan(1 / PHI ** 3)
+            kx, ky = rx + sx * span / 2 * math.cos(a), yw + span / 2 * math.sin(a)
+            tx, ty = rx + sx * span * math.cos(a), yw + span * math.sin(a)
+            lr = zw - cr / 2
+            ck, ct = cr * 1.15, cr / PHI          # broadest at the middle of the fin, rounding off to the tip
+            lk, lt = lr + span / 2 / PHI ** 3, lr + span / PHI ** 2.2
+            (f1, c1), (f2, c2) = fan(rx, yw, lr, cr, kx, ky, lk, ck, 5), fan(kx, ky, lk, ck, tx, ty, lt, ct, 5)
+            p1, p2 = (rx, yw, zw), (kx, ky, lk + ck / 2)
+        else:                             # elytra (the firefly's): a hard gold-framed wing case lifted off her back (as a
+            ex_, ey_ = rx * 0.4, g["top"] if "top" in g else yw + H   # beetle's is in flight), and from under it the long
+            el, ew = Lt / PHI ** 1.5, W * 1.1                           # narrow cloth wing reaching out, a little swept
+            up = math.atan(1 / PHI)
+            ox, oy = ex_ + sx * ew * math.cos(up), ey_ + ew * math.sin(up)
+            lr = zw - el / 2
+            case_f = gold(slab((ex_, ey_, lr), (ox, oy, lr + el / PHI ** 4), (ex_, ey_, lr + el), (ox, oy, lr + el * 0.92), 0.5, (0, ey_ - 9, zw)))
+            case_c = skin(slab((ex_, ey_ + 0.4, lr + 0.6), (ox, oy + 0.4, lr + el / PHI ** 4 + 0.6), (ex_, ey_ + 0.4, lr + el - 0.6), (ox, oy + 0.4, lr + el * 0.92 - 0.6), 0.3, (0, ey_ - 9, zw)))   # its glazed panel
+            kx, ky = ox, oy - 0.6
+            tx, ty = kx + sx * hsw * math.cos(math.atan(1 / PHI ** 3)), ky - hsw * math.sin(math.atan(1 / PHI ** 3))
+            lk = lr + el / PHI ** 2
+            co, ct = cr * 0.9, cr / PHI ** 2
+            f2, c2 = panel(kx, ky, tx, ty, co, ct, lk, lk + hsw / PHI ** 2)
+            f1, c1 = case_f, case_c
+            p1, p2 = (ex_, ey_, zw), (kx, ky, lk + co / 2)
         n = f"rig_glide_{side_}"
-        bones += [{"name": n, "parent": "root", "pivot": [round(rx, 3), round(yw, 3), round(zw, 3)], "cubes": f1},
-                  {"name": n + "_skin", "parent": n, "pivot": [round(rx, 3), round(yw, 3), round(zw, 3)], "cubes": c1},
-                  {"name": n + "_out", "parent": n, "pivot": [round(kx, 3), round(ky, 3), round(lk + co / 2, 3)], "cubes": f2},
-                  {"name": n + "_out_skin", "parent": n + "_out", "pivot": [round(kx, 3), round(ky, 3), round(lk + co / 2, 3)], "cubes": c2}]
+        rp = lambda P: [round(v, 3) for v in P]
+        bones += [{"name": n, "parent": "root", "pivot": rp(p1), "cubes": f1},
+                  {"name": n + "_skin", "parent": n, "pivot": rp(p1), "cubes": c1},
+                  {"name": n + "_out", "parent": n, "pivot": rp(p2), "cubes": f2},
+                  {"name": n + "_out_skin", "parent": n + "_out", "pivot": rp(p2), "cubes": c2}]
     # the cubes slab() fits come with their own uv; frames and skins above take the sheet's regions
     return bones
 
