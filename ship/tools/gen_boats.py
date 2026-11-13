@@ -1909,17 +1909,22 @@ def glider_parts(b):
     # span/phi^2 and chord the front's/phi; the fuselage 0.7 of the span long (the photograph's), its nose just ahead
     # of the front wing, the stabiliser at its tail well clear of the wing; the
     # mast a straight blade down from her keel line, chord the front wing's/phi, standing over the front wing's rear
+    # sized by her lift (Richard: "the keel needs to be way bigger, do some rough physics"): her law's displacement,
+    # 6 x 1.5 x 0.5625 m at a block coefficient of 0.45, is about 2.3 t, 22.9 kN; the front wing carries nine tenths of
+    # it at a lift coefficient of 0.5, so to fly at her design wind (7 m/s) it needs about 1.6-1.9 m^2. The keel foil's
+    # old span (phi^2 of her breadth) gave 0.28 m^2; phi^2 times as large in every measure gives 1.9 m^2, flying her at
+    # 6.5 m/s (12-13 knots)
     yb = 1 - side
-    span_f = PHI ** 2 * W
+    span_f = PHI ** 4 * W
     c0 = span_f / PHI ** 3
     cm = c0 / PHI
     zf0 = zk - c0 / PHI                                   # the fuselage's nose
     zf1 = zf0 + 0.7 * span_f                              # its tail (vision: the photograph's)
-    zm = zf0 + 0.4 + c0 / 2                               # the mast's leading edge, over the front wing's rear half
-    frame += slab((0, yk + 0.5, zm), (0, yb, zm), (0, yk + 0.5, zm + cm), (0, yb, zm + cm), 0.5, (99, 0, zk))
-    frame += slab((-0.3, yb, zf0), (0.3, yb, zf0), (-0.3, yb, zf1), (0.3, yb, zf1), 0.6, (0, yb + 99, (zf0 + zf1) / 2))
-    frame += swept_wing(yb - 0.3, zf0 + 0.4, c0, span_f, "lambda", 0.45)
-    frame += swept_wing(yb - 0.3, zf1 - c0 / PHI * 1.4, c0 / PHI, span_f / PHI ** 2, "tips", 0.4)
+    zm = zf0 + 1.0 + c0 / 2                               # the mast's leading edge, over the front wing's rear half
+    frame += slab((0, yk + 0.5, zm), (0, yb, zm), (0, yk + 0.5, zm + cm), (0, yb, zm + cm), 0.9, (99, 0, zk))
+    frame += slab((-0.6, yb, zf0), (0.6, yb, zf0), (-0.6, yb, zf1), (0.6, yb, zf1), 1.1, (0, yb + 99, (zf0 + zf1) / 2))
+    frame += swept_wing(yb - 0.55, zf0 + 1.0, c0, span_f, "lambda", 0.8)
+    frame += swept_wing(yb - 0.55, zf1 - c0 / PHI * 1.4, c0 / PHI, span_f / PHI ** 2, "tips", 0.6)
     bones = [{"name": "rig_glide_body", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(frame + gskin)},
              {"name": "rig_glide_body_skin", "parent": "rig_glide_body", "pivot": [0, 0, 0], "cubes": skin(cloth)}]
     # the core: an asterion crystal turned on its corners (three cubes, an icosahedron's look), at her heart
@@ -1951,12 +1956,32 @@ def glider_parts(b):
     s1, s2 = hsw / PHI, hsw / PHI ** 2
     cr = Lt / PHI ** 2.5
     def panel(x0, y0, x1, y1, c0, c1, l0, l1, t=0.6):
-        """A wing panel: its gold frame (leading spar, trailing edge, ribs) and its cloth."""
-        fr = slab((x0, y0 + 0.3, l0 - 0.3), (x1, y1 + 0.3, l1 - 0.3), (x0, y0 + 0.3, l0 + 0.5), (x1, y1 + 0.3, l1 + 0.5), t, (x0, y0 - 9, l0 + c0 / 2))
-        fr += slab((x0, y0 + 0.2, l0 + c0 - 0.4), (x1, y1 + 0.2, l1 + c1 - 0.4), (x0, y0 + 0.2, l0 + c0), (x1, y1 + 0.2, l1 + c1), 0.4, (x0, y0 - 9, l0 + c0 / 2))
-        for x, y, l, c in ((x0, y0, l0, c0), (x1, y1, l1, c1)):
-            fr.append({"origin": [round(x - 0.25, 3), round(y - 0.2, 3), round(l, 3)], "size": [0.5, 0.6, round(c, 3)]})
-        cl = slab((x0, y0, l0), (x1, y1, l1), (x0, y0, l0 + c0), (x1, y1, l1 + c1), 0.2, (x0, y0 - 9, l0 + c0 / 2))
+        """A wing panel with an airfoil (Richard: "a bit more believable, like have a bit of an airfoil to them and some
+        more gold struts"): a cambered section 12% thick (NACA's four-digit form; vision), the cloth stretched over it
+        top and bottom in strips across the chord; gold ribs at the root, the tip and the thirds between, each shaped to
+        the section; a gold leading edge, a main spar's web at a quarter chord, and a gold trailing edge."""
+        TT, CAM = 0.12, 0.04                              # vision: thickness and camber, of the chord
+        yt = lambda v: 5 * TT * (0.2969 * math.sqrt(v) - 0.126 * v - 0.3516 * v * v + 0.2843 * v ** 3 - 0.1015 * v ** 4)
+        cam = lambda v: CAM * 4 * v * (1 - v)
+        def P(u, v, up):                                  # a point of the panel: u of the span, v of the chord, up or under
+            x, y, l, c = x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, l0 + (l1 - l0) * u, c0 + (c1 - c0) * u
+            return (x, y + c * (cam(v) + (yt(v) if up else -yt(v))), l + v * c)
+        mid = lambda u: (x0 + (x1 - x0) * u, y0 + (y1 - y0) * u + cam(0.3) * (c0 + (c1 - c0) * u), l0 + (l1 - l0) * u + 0.3 * (c0 + (c1 - c0) * u))
+        inside = mid(0.5)
+        VU, VL = (0, 0.07, 0.22, 0.45, 0.72, 1), (0, 0.3, 0.65, 1)
+        cl, fr = [], []
+        for vs, up in ((VU, True), (VL, False)):          # the cloth, top and bottom
+            for va, vb in zip(vs, vs[1:]):
+                cl += slab(P(0, va, up), P(1, va, up), P(0, vb, up), P(1, vb, up), 0.2, inside)
+        for u in (0, 1 / 3, 2 / 3, 1):                     # the ribs, shaped to the section
+            cin = mid(u)
+            for vs, up in ((VU, True), (VL, False)):
+                for va, vb in zip(vs, vs[1:]):
+                    A, B = P(u, va, up), P(u, vb, up)
+                    fr += slab((A[0] - 0.25, A[1], A[2]), (A[0] + 0.25, A[1], A[2]), (B[0] - 0.25, B[1], B[2]), (B[0] + 0.25, B[1], B[2]), 0.4, cin)
+        fr += slab(P(0, 0, True), P(1, 0, True), P(0, 0.07, True), P(1, 0.07, True), t, inside)          # the leading edge
+        fr += slab(P(0, 0.94, True), P(1, 0.94, True), P(0, 1, True), P(1, 1, True), 0.4, inside)       # the trailing edge
+        fr += slab(P(0, 0.25, False), P(1, 0.25, False), P(0, 0.25, True), P(1, 0.25, True), 0.5, (inside[0], inside[1], inside[2] + 99))   # the spar's web
         return gold(fr), skin(cl)
     def fan(x0, y0, l0, c0, x1, y1, l1, c1, rays):
         """A fin panel: gold rays fanning from its root edge to its outer edge, cloth between each pair (a fish's fin)."""
@@ -1986,6 +2011,18 @@ def glider_parts(b):
             lr = zw - cr / 2
             lk, lt = lr + s1 / PHI ** 3, lr + s1 / PHI ** 3 + s2 / PHI   # swept little inboard, hard at the hand
             (f1, c1), (f2, c2) = panel(rx, yw, kx, ky, cr, co, lr, lk), panel(kx, ky, tx, ty, co, ct, lk, lt)
+            # her lift struts: a gold V from her flank under the wing root out to the knee's underside, at a quarter
+            # and three quarters of the knee's chord (a high wing's, braced)
+            hy, hz = yw - hd(TMAX) / PHI ** 2, zw
+            for v_ in (0.25, 0.75):
+                kz_ = lk + v_ * co
+                f1 += gold(rod((rx, hy, hz), (kx, ky - 0.06 * co, kz_), 0.35))
+            # and a jury strut from each strut's middle up to the wing, as a braced wing has
+            for v_ in (0.25, 0.75):
+                kz_ = lk + v_ * co
+                m_ = ((rx + kx) / 2, (hy + ky) / 2, (hz + kz_) / 2)
+                w_ = (rx + (kx - rx) / 2, yw + (ky - yw) / 2 - 0.06 * (cr + co) / 2, lr + (lk - lr) / 2 + v_ * (cr + co) / 2)
+                f1 += gold(rod(m_, w_, 0.25))
             p1, p2 = (rx, yw, zw), (kx, ky, lk + co / 2)
         elif style == "pectoral":         # the flying fish's own: one long broad fin a side, gold rays fanned from the root,
             span = hsw * 1.05             # cloth between; a little dihedral, the outer half hinged to fold back over the inner
@@ -2067,6 +2104,21 @@ def glider_parts(b):
 GLIDE_BONES = ("rig_glide_body", "rig_glide_body_skin", "rig_glide_core", "rig_glide_tail", "rig_glide_tail_skin", "rig_glide_sail", "rig_glide_sail_skin",
                "rig_glide_l", "rig_glide_l_skin", "rig_glide_l_out", "rig_glide_l_out_skin",
                "rig_glide_r", "rig_glide_r_skin", "rig_glide_r_out", "rig_glide_r_out_skin")
+
+
+def rod(A, B, r):
+    """A gold strut from A to B, about 2r square: its width laid square to its run in the plane across her (so a
+    strut running out and up keeps its climb; a width along z would turn the box a quarter about y, where the file's
+    angles lock)."""
+    d = [B[i] - A[i] for i in range(3)]
+    w = [d[1], -d[0], 0.0]
+    n = math.hypot(w[0], w[1])
+    w = [r * v / n for v in w] if n > 1e-6 else [r, 0.0, 0.0]
+    nrm = [w[1] * d[2] - w[2] * d[1], w[2] * d[0] - w[0] * d[2], w[0] * d[1] - w[1] * d[0]]
+    nn = math.sqrt(sum(v * v for v in nrm)) or 1
+    mid = [(A[i] + B[i]) / 2 + 99 * nrm[i] / nn for i in range(3)]
+    return slab(tuple(A[i] - w[i] for i in range(3)), tuple(A[i] + w[i] for i in range(3)),
+                tuple(B[i] - w[i] for i in range(3)), tuple(B[i] + w[i] for i in range(3)), 2 * r, mid)
 
 
 def swept_wing(y, le, c0, span, mode, t, n=10):
