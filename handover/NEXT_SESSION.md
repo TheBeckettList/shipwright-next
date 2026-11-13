@@ -37,7 +37,33 @@ This also bears on D-003: the *sim* side (Node, the world viewer) is the part th
 is one more reason to grow it into a place you can adventure in.
 
 ## Paste this as the first message in the new project
-> I'm continuing Waterworld + Shipwright. The repo is `~/Desktop/shipwright simuldev/shipwright-next/` (local git,
-> `main` @ `v0.9.13`). Read `handover/NEXT_SESSION.md`, then `handover/STATE.md`, `handover/README.md`, and the
-> newest stage file. Then tell me what you see as the next stage and start it with
-> `bash handover/bin/new-stage.sh R "<title>"`. Follow `handover/AI_BRIEF.md` and `handover/CONVENTIONS.md`.
+
+```
+This project is Waterworld + Shipwright: a Minecraft Bedrock add-on where the world is laid from our own math
+(the golden law), plus a Node sim of the same world. I work on it with two other devs (and their AIs), one stage
+at a time, passing a baton. The long-term aim (decision D-003): the sim and Minecraft are two ways into one
+world. I want to adventure in the sim, drop into Minecraft when I want to play, and keep the server's sim running
+in parallel on purpose.
+
+The repo is on my Mac at ~/Desktop/shipwright simuldev/shipwright-next/ (local git, main @ tag v0.9.13).
+Builds sit beside it in ~/Desktop/shipwright simuldev/. Reach both through my computer.
+
+Before anything else, read in this order:
+  1. handover/NEXT_SESSION.md   (what the last session did and didn't verify)
+  2. handover/STATE.md          (the baton: build, tests, priorities)
+  3. handover/README.md and handover/CONVENTIONS.md
+  4. handover/stages/S001-2026-11-12-R.md and S001-HANDOVER-0.9.13.md
+  5. handover/ISSUES.md, handover/DECISIONS.md, handover/math-feed/INDEX.md
+Follow handover/AI_BRIEF.md for the house rules (inherency, never hand-edit baked data, the ship-model hazards,
+version in two places, work on a stage branch, builds stay out of git).
+
+Then:
+  - Tell me in a few lines what state the project is in and what you think the next stage should be. STATE.md's
+    first priority is loading 0.9.13 in game and checking the hulls, stems, sails and wings.
+  - Give me the exact Terminal commands to run what you can't (npm install, npm test, npm run ship:test,
+    npm run modtest, the 3.5-minute bake), because long jobs don't finish through the remote shell.
+  - Once I agree on the stage, start it with: bash handover/bin/new-stage.sh R "<title>"
+    and keep the stage file current as we go.
+
+Ask me before running `ww new` or anything else that deletes worlds or files.
+```
