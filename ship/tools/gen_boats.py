@@ -103,7 +103,7 @@ XBOW = dict(taper="xbow", rise=0.18, floor=0.06, stem="xhead")
 FLY_TAIL = dict(taper="fly_tail", rise=0, floor=0.45, stem="raked_short")
 AC_ROUND = 2.2     # vision: a little fuller than a carved log (2.0): with the crown (X/phi) the AC72's upright oval section
 is_theran = lambda b: any(b.get("bow") is x for x in (AC_BOW, PIERCE, YACHT_BOW, XBOW))   # the Theran build (their pod, rudders, nets)
-BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, glider=True, keel=False, wings="corsair", bow=XBOW, stern=FLY_TAIL, round=AC_ROUND, crown=True)
+BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, glider=True, keel=False, wings="kestrel", bow=XBOW, stern=FLY_TAIL, round=AC_ROUND, crown=True)
 
 # Fitted modules drawn on the boat, as bits of the shipwright:mods property (mirrored in ship.js).
 MODULE_BITS = {"shield_rail": 0, "ram": 1, "ice_runners": 3, "crossbow": 4, "full_deck": 5, "sewn_hull": 6, "bulkheads": 7, "light_hull": 8,
