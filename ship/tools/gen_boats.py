@@ -2750,15 +2750,21 @@ def glider_parts(b):
         # surface starts inside the body it grows from
         LAP = 0.3                                                           # vision: how far each piece laps the next, px
         def cast_surface(stations, t, inside):
+            # (Richard: "eliminate the X joints on the wings and tail"): a piece laps its neighbour only where the
+            # surface runs straight on; at a bend it stops at the shared station, so no two pieces cross
             out_ = []
-            for (xa, ya, la, ca), (xb_, yb2, lb, cb) in zip(stations, stations[1:]):
-                dx, dy_ = xb_ - xa, yb2 - ya
-                n_ = math.hypot(dx, dy_) or 1
-                ex, ey = dx / n_ * LAP, dy_ / n_ * LAP
+            dirs = []
+            for (xa, ya, *_a), (xb_, yb2, *_b) in zip(stations, stations[1:]):
+                n_ = math.hypot(xb_ - xa, yb2 - ya) or 1
+                dirs.append(((xb_ - xa) / n_, (yb2 - ya) / n_))
+            straight = lambda i, j: 0 <= i < len(dirs) and 0 <= j < len(dirs) and dirs[i][0] * dirs[j][0] + dirs[i][1] * dirs[j][1] > math.cos(math.radians(3))
+            for i, ((xa, ya, la, ca), (xb_, yb2, lb, cb)) in enumerate(zip(stations, stations[1:])):
+                d0, d1 = (LAP if straight(i - 1, i) else 0), (LAP if straight(i, i + 1) else 0)
+                ex0, ey0, ex1, ey1 = dirs[i][0] * d0, dirs[i][1] * d0, dirs[i][0] * d1, dirs[i][1] * d1
                 # the piece follows its own leading and trailing edges (no steps), padded a little fore and aft so the
                 # box fitted to it still covers both ends
                 pad = abs((lb - la) - ((lb + cb) - (la + ca))) / 2 + 0.15
-                out_ += slab((xa - ex, ya - ey, la - pad), (xb_ + ex, yb2 + ey, lb - pad), (xa - ex, ya - ey, la + ca + pad), (xb_ + ex, yb2 + ey, lb + cb + pad), t, inside)
+                out_ += slab((xa - ex0, ya - ey0, la - pad), (xb_ + ex1, yb2 + ey1, lb - pad), (xa - ex0, ya - ey0, la + ca + pad), (xb_ + ex1, yb2 + ey1, lb + cb + pad), t, inside)
             return out_
         c0m, c1m, Lm = km_ * pl["c0"], km_ * pl["c1"], km_ * (pl["L"] + W)
         swq = math.atan(1 / PHI ** 2)                                       # vision: swept back a tad more, atan 1/phi^2 (20.9 degrees)
@@ -2782,20 +2788,27 @@ def glider_parts(b):
         zt_ = z0b + Lb * (1 - 1 / PHI ** 2)
         hsm, csm = Lm / PHI ** 2, c0m / PHI                                 # vision: half span 1/phi^2 of the wing's, chord 1/phi
         cft = csm / PHI                                                     # the tip's chord, and the fins'
-        for sx in (-1, 1):
-            st_ = [(sx * hsm * u, ybk, zt_ + hsm * u * math.tan(swq), csm + (cft - csm) * u) for u in (0.0, 0.5, 1.0)]
-            mini += cast_surface(st_, 0.5, (0, ybk - 99, zt_))
+        # (Richard: "one piece, not three"): the stab and its fins are one band, bent round two rounded corners: from
+        # one fin's foot up to the stab's tip, across, and down the other fin, its chord running from the fins' at the
+        # feet and corners to the stab's at the middle, cast as one surface
         hf = max(3.0, km_ * 22)                                             # vision: the fins' depth, her rudders' at 1/phi^3
         cant_, rake_ = math.atan(1 / PHI ** 3), math.atan(1 / PHI ** 2)
-        for sx in (-1, 1):
-            x0_, z0_ = sx * hsm, zt_ + hsm * math.tan(swq)
-            fin = [(x0_ + sx * hf * (k / 5) * math.tan(cant_), ybk + 0.3 - hf * (k / 5), z0_ + hf * (k / 5) * math.tan(rake_), cft) for k in range(6)]
-            for (xa, ya, la, ca), (xb_, yb2, lb, cb) in zip(fin, fin[1:]):
-                mini += slab((xa, ya + LAP, la), (xb_, yb2 - LAP, lb), (xa, ya + LAP, la + ca), (xb_, yb2 - LAP, lb + cb), 0.5, (0, ybk, la - 99))
-        # fillets: where the wing and the stab grow from the drop, a wedge each side over their roots
-        for (zl0, cl0) in ((zle, c0m), (zt_, csm)):
-            for sx in (-1, 1):
-                mini += slab((0, ybk + rb * 0.9, zl0 + cl0 * 0.1), (sx * rb * 2.2, ybk + 0.2, zl0 + cl0 * 0.1), (0, ybk + rb * 0.9, zl0 + cl0 * 0.85), (sx * rb * 2.2, ybk + 0.2, zl0 + cl0 * 0.85), 0.5, (0, ybk - 99, zl0))
+        def fin_pt(sx, f):                                                  # f of the way down a fin from its corner
+            return (sx * (hsm + hf * f * math.tan(cant_)), ybk - hf * f, zt_ + hsm * math.tan(swq) + hf * f * math.tan(rake_), cft)
+        def stab_pt(sx, u):                                                 # u of the way out the stab
+            return (sx * hsm * u, ybk, zt_ + hsm * u * math.tan(swq), csm + (cft - csm) * u)
+        rr = min(hsm, hf) / PHI ** 3                                        # vision: the corners' radius
+        def corner(sx):                                                     # a quarter round from the stab into the fin
+            out_ = []
+            for k in range(1, 4):
+                th_ = math.pi / 2 * k / 4
+                x_ = sx * (hsm - rr + rr * math.sin(th_)); y_ = ybk - rr + rr * math.cos(th_)
+                out_.append((x_, y_, zt_ + abs(x_) * math.tan(swq), cft))
+            return out_
+        band = ([fin_pt(-1, f) for f in (1.0, 0.5, 0.0)] + [stab_pt(-1, 0.5), stab_pt(1, 0.0), stab_pt(1, 0.5)]
+                + [fin_pt(1, f) for f in (0.0, 0.5, 1.0)])                  # (the corners lapped, not fanned)
+        mini += cast_surface(band, 0.5, (0, ybk - hf / 2, zt_ + csm / 2))
+        # (no fillets: their two wedges crossed over the drop's back; the surfaces start inside the drop instead)
         yr_, tail_y, tail_z = ybk, ybk, z0b + Lb                            # the mast meets its axis; the emitter at its tail
         b["_bulb_rb"] = rb
     # dropped (Richard: "drop the keel and foil and resize in turn with the rudders as they are"): its midline down to
@@ -2822,9 +2835,23 @@ def glider_parts(b):
         dn = [0, -math.cos(rk), math.sin(rk)]                               # down the blade: raked aft
         ch = [0, math.sin(rk), math.cos(rk)]                                # along its chord, square to the rake
         hk = (ytop + 1.5 - ybot) / math.cos(rk)                             # its length, from inside her hull to the bulb
-        foot = (0, ybot, zc - ck / 2)
+        # (Richard: "join the keel flush"): its foot follows the drop's back, so it meets it along a line, not through
+        # it; laid in narrow chordwise strips, raked, each ending on the drop and inside her hull
+        def drop_top(z_):                                                   # the drop's back at z_, from its profile
+            f = (z_ - z0b) / Lb
+            for (f0, r0), (f1, r1) in zip(prof, prof[1:]):
+                if f0 <= f <= f1:
+                    return ybot + rb * (r0 + (r1 - r0) * (f - f0) / (f1 - f0)) * 0.95
+            return ybot
+        # one true raked blade (no strips), its foot's leading corner on the drop's back; under its foot, which rises
+        # aft square to the rake, one level filler down to the drop, so blade and drop meet along a line, flush
+        zle_k = zc - ck / 2
+        foot = (0, drop_top(zle_k), zle_k)
+        tfoot = tuple(foot[i] + ck * ch[i] for i in range(3))
+        hk = (ytop + 1.5 - foot[1]) / math.cos(rk)
         head = tuple(foot[i] - hk * dn[i] for i in range(3))
-        mini += slab(head, foot, tuple(head[i] + ck * ch[i] for i in range(3)), tuple(foot[i] + ck * ch[i] for i in range(3)), 0.9, (99, 0, zc))
+        mini += slab(head, foot, tuple(head[i] + ck * ch[i] for i in range(3)), tfoot, 0.9, (99, 0, zc))
+        mini += slab((0, drop_top(zle_k) - 0.4, zle_k + 0.3), (0, tfoot[1] + 0.3, zle_k + 0.3), (0, drop_top(tfoot[2]) - 0.4, tfoot[2]), (0, tfoot[1] + 0.3, tfoot[2]), 0.9, (99, 0, zc))
     else:
         for (ya, ca, ta), (yb2, cb, tb) in (((ytop, cm * 1.3, 1.0), (ymid_m, cm, 0.8)), ((ymid_m, cm, 0.8), (ybot, cm * 0.85, 0.65))):
             mini += slab((0, ya, zc - ca / 2), (0, yb2, zc - cb / 2), (0, ya, zc + ca / 2), (0, yb2, zc + cb / 2), (ta + tb) / 2, (99, 0, zc))
