@@ -20,18 +20,34 @@ That makes 38k blocks in four podiums, and the library alone is 73% of it. In `t
 
 **"Diorite"** (reading: A). No diorite is laid. It is calcite plus tuff risers. On the cone, the side faces are 25% tuff and 13% calcite, and 18.7% of the top faces are calcite. The tuff comes from `surfaceChunk`: it lays 2 blocks of `under`, then the volcanic `beds[0]` (tuff), so every riser of 3 or more shows grey.
 
-## 2. The cone: area doubled, 25% higher, open at the top
+## 2. The cone: radius × 1.5, 25% higher, open at the top (D-006)
 
-I swept a patched copy of `world/thera.js` (M):
+I swept a patched copy of `world/thera.js` (M; scratch: `/tmp/thx/w`). Slopes are in blocks per block, rays every 2°.
 
-| dome | land | summit | median slope (blocks/block) | narrowest lagoon |
-|---|---|---|---|---|
-| now: r 1.08 km, 230 m | 2.68 km² | 59.1 | 0.46 | 1.37 km |
-| **r·√2, 287.5 m** | **5.54 km²** | **73.5** | **0.39** | **0.96 km** |
-| r·φ | 7.45 km² | 73.5 | 0.33 | 0.75 km |
-| r·2 | 11.5 km² | 73.5 | 0.27 | **0.22 km**: no room for the cothon |
+| dome | land | summit (blocks) | median slope | p90 slope | shore radius | narrowest lagoon |
+|---|---|---|---|---|---|---|
+| now: r 1.08 km, 230 m | 2.68 km² | 59.1 | 0.46 | 0.78 | 0.70–1.17 km | 1.36 km |
+| r·√2 (my first draft) | 5.54 km² | 73.5 | 0.39 | – | – | 0.96 km |
+| **r·1.5 = 1.62 km, 287.5 m (D-006)** | **6.27 km²** (2.3×) | **73.5** | **0.36** | **0.64** | **1.04–1.71 km**, median 1.42 | **0.86 km** at 280° |
+| r·2 | 11.5 km² | 73.5 | 0.27 | – | – | 0.22 km |
 
-Set **`dome.r = 1.08·√2` (305 blocks)** and **`dome.top = 287.5 m`**. Both are vision (the owner's word), with "double" read as double the area. Doubling the radius does not fit in the Cape Riva bay.
+**The decision.** Set **`dome.r = 1.62`** and **`dome.top = 287.5`** (vision: the owner's word).
+
+**The lobes.** I tried `lobes / φ²`. It barely rounds the shore (1.08–1.77 km), because the island's warp makes the wander, not the lobes. Keep 0.35.
+
+**The passages out.** The strait is unchanged. Its inner mouth lies 3.36 km from the cone. Toward it there is **1.87 km of open water**, measured from the island's shore at 1.48 km.
+
+**The narrowest lagoon.**
+
+| measured to | narrowest | where |
+|---|---|---|
+| the ×1.5 island's raw shore | 0.86 km (172 blocks) | 280° |
+| the ring (§2a) | 0.87 km (172 blocks) | 282° |
+| the ring, other side | 187 blocks | 192° |
+
+Every passage is more than five great-ship lanes.
+
+Bearings are measured with 0° east and 90° north. The cothon stands at 81.8°.
 
 **The crater** (a new term in `theraMetres`, inside the dome branch). Within `FIB[8]` (34) blocks of the summit, subtract `FIB[7]·M·(1−(rc/34)²)`: a bowl 21 deep, its floor near y 114. A throat of radius `FIB[4]` stays open in the floor for the `vent` node (§4): the dormant volcano, open at the top.
 
@@ -52,11 +68,77 @@ The great temple moves to the crater's rim on the mouth side, `site("great templ
 - fill ≤ 3 per column, so the library goes from 27,889 to ≤ 1,000.
 
 **More paths** (the cone park in `buildmod`). All keep today's grade, a fall of at most 1/φ² a block.
-- **Rings** at every Fibonacci height: 5, 8, 13, 21, 34, 55, and the crater rim. Seven rings, up from 4.
-- **Serpentines:** `FIB[5]` = 8 of them from the rim, up from 5.
-- **Spurs:** one to every cone tube-mouth, the **Sacred Way** (cothon to temple, switchbacked), and the **Mint Road**.
+- **Rings: six, up from 4.**
+  - the quay at +3;
+  - the stoa's roof at **+13**;
+  - the contours at 21, 34 and 55;
+  - the crater rim, about 70.
 
-**Closure.** `thera.js` and `city.js` are in the grown towns' closure. A Thera-only change needs only `bakegrown --restamp`: regrow the 2 smallest towns, prove them identical, restamp the rest (A).
+  The old rings at 5 and 8 fall inside the waterfront ring's band, so they go.
+- **Serpentines:** `FIB[5]` = 8, up from 5. They run from the crater rim down to the stoa's stairs.
+- **Spurs:** one to every cone tube-mouth.
+- **Two processional ways:** the **Sacred Way** (cothon to temple, switchbacked) and the **Mint Road** (Mint to the crater rim).
+
+## 2a. The ring: the cone island's main waterfront (D-006)
+
+**Its line.** The plain ×1.5 shore wanders from 1.04 to 1.71 km. I fitted the ring to the shore's own Fourier series and measured how far the shore strays from each fit (M):
+
+| harmonics kept | ring radius | land beyond the ring (cut) | water inside the ring (fill) |
+|---|---|---|---|
+| 0: a true circle | 1.40 km | 63 blocks | 70 blocks |
+| 3 | 1.10–1.62 km | 49 blocks | 37 blocks |
+| **5** | **1.01–1.65 km** | **23 blocks** | **19 blocks** |
+| 8 | 1.06–1.67 km | 19 blocks | 14 blocks |
+
+- **The ring is the shore's first `FIB[4]` = 5 harmonics.** This is derived, and is the least that keeps both the cut and the fill inside the ring's own width.
+- Its quay face runs about **1,760 blocks** round.
+- It is a new term in `theraMetres`, applied after the dome:
+  - beyond the ring's line: water;
+  - in the band `[R5 − 34, R5]`: quay height;
+  - inside the band: the dome.
+
+  It is evaluated in the real plane, so its line is the true harbour line.
+- **What it replaces:** `city.js`'s "ring canal" (`rings.inner`). The berth pocket takes its place.
+
+**Its levels.** Width `FIB[8]` = 34, seaward to landward:
+
+| level | height | what |
+|---|---|---|
+| berth pocket | water dredged to **SEA − 6** | D-004 draughts up to about 4.2. `harbourOf`'s rule is draught + 1, which gives 6. The pocket is 21 wide, which takes the Theran trimaran's 21 beam. Beyond it the lagoon's own floor (−7.5) is already deep enough. |
+| quay face | −6 to +3 | dressed `smooth_basalt` with one marble coping course: no cube of marble |
+| quay apron | **+3** (as the cothon's floor), 13 wide | bollards every 8, a crane (scaffolding and chain) at every berth, lamps |
+| landing stages | **+1**, every 89 | for skiffs (draught ≤ 1) |
+| stoa | 21 deep, two storeys | its back wall retains the cut, at most about 23 blocks (the table above), terraced in the three stones |
+| stoa roof | **+13** | the ring path; stairs to the quay every 55 |
+
+**The berths.**
+- Free quay = 1,760 less the two harbours (about 190 each), so about 1,380 blocks.
+- At one great ship a `FIB[9]` = 55 (34 long, 21 for lines and the gap), that is **about 25 berths alongside** (A).
+- Small craft moor stern-to at the stages.
+
+**The two harbours anchor it.** Each is centred **on the ring's quay line**: half in the island, half out on its own moles.
+- **The cothon** stays at its bearing (81.8°, `CITY.cothon.turn` kept), with its mouth outward.
+  - Wholly inland would mean a 188-wide basin cutting a bluff of about 55 blocks, which does not fit.
+  - So the basin's landward half is cut open to the sky. Its back wall stands about 22–25 blocks high on the bigger slope (ground 18 at 26 in, 25 at 52 in).
+  - The landward shipsheds are **rock-cut galleries under the cone**, roofed by the living rock (*Critias* 116b: docks "roofed by the native rock").
+  - `CITY.cothon.inset` becomes the ring's share of the radius.
+- **The Koinon House and Mint** stand at `IMPACT.bearing` = **261.8°**, still opposite the cothon.
+  - The lagoon there is 1.33 km wide.
+  - After the House reaches 94 out, about **170 blocks of water** are left at its centre line and about **140** at its edge toward the narrowest point (282°) (A: the lens must confirm).
+
+**The skyways.**
+- **Roots move** to where the cone's ground reaches the deck (`DECK` 30), not `top/3`, so each trunk leaves the ground level.
+- **Each trunk crosses the ring at 30**, 17 over the stoa's roof, with a stair pylon down to the stoa roof.
+- **Spans** from root to wall foot (M, warped plane, per quarter from the mouth):
+
+| | spans (blocks) |
+|---|---|
+| today | 487, 365, 374, 408, 498 |
+| ×1.5 | **407, 282, 313, 341, 426** |
+
+- `theraplan.js skyways()` `crosses()` must keep clear of the Mint as well as the cothon.
+
+**Closure.** `thera.js`, `city.js` (new kinds "quay ring", "stoa", "Koinon house"; the cothon's inset) and `ground.js` (`SET` for the new kinds) are in the grown towns' closure. That means **one regrow, batched with the terraforming** (D-006). `theraplan.js`, `theracity.js`, `buildmod` and `lay.js` are outside it.
 
 ## 3. The Fallen Star: `world/impact.js` (new, pure)
 
@@ -65,7 +147,7 @@ The great temple moves to the crater's rim on the mouth side, `site("great templ
 ```js
 export const IMPACT = Object.freeze({
   bearing,                 // derived: cothon's bearing + π (cothonWorld 81.8° now → 261.8°): "a side not the cothon"
-  r: R / PHI, y: -FIB[7],  // derived: under the flank, 189 out; vision: y -21, the homeports' lode floor
+  r: R / PHI, y: -FIB[7],  // derived: under the flank, 200 out (R = 324: dome.r 1.62 km), about 100 inside the ring; vision: y -21, the homeports' lode floor
   body: FIB[6], breccia: FIB[8],
   splash: { y: GIVEN.SEA - FIB[9], thick: FIB[4], R0: FIB[8], R1: FIBS[12], aspect: PHI },   // S001's "~50 under the water": y 7–11, out 233 downrange
   LODE:   [["ancient_debris", 21], ["raw_iron_block", 89], ["deepslate_iron_ore", 377], ["deepslate_copper_ore", 144], ["deepslate_gold_ore", 55]],
@@ -104,15 +186,17 @@ edge = { id, a, b, kind: "lava"|"ruin"|"works"|"haul"|"shaft"|"breach"|"flooded"
   - `vent`: the throat's foot.
   - `lode`: y −8.
   - `refinery`: over the lode at `SEA−FIB[7]` (41).
-  - `mint`: the House's undercroft (54).
+  - `mint`: the House's undercroft (54). The haul from the refinery is about 100 blocks, about half the √2 draft's.
   - `bullroom`: by the lode.
   - `oldtown`: behind the wall's *cliff* quarter (`theranQuarters`).
 - **Wall mouths:** `FIB[3]` per wall quarter (15), set along the arc by the golden angle.
   - Each sits at `y = SEA+5+8·golden(k)`, at the first wall column with ≥ 5 of rock above it.
   - No mouth goes on a placement.
-- **Cone mouths:** one per path ring.
+- **Ring mouths:** `FIB[5]` = 8 in the stoa's back wall at quay level (+3), at bearings `IMPACT.bearing + k·GOLDEN_ANGLE`. These are the network's sea gates on the main waterfront.
+- **The cothon's rock-cut sheds** open into the works layer at their back galleries.
+- **Cone mouths:** one on each contour ring (21, 34, 55).
 - **Lava chambers** lie on a **Vogel spiral**, `r_k = s√k`, `a_k = k·GOLDEN_ANGLE`.
-  - Spacing: `s = FIB[8]` under the cone (~80 nodes), `FIB[9]` under the lagoon (~60).
+  - Spacing: `s = FIB[8]` under the cone (R 284 to the ring: about 70 nodes), `FIB[9]` under the lagoon (~60).
   - Depth under land: 8–13 under the surface (`top−FIB[5]−FIB[4]·golden(k)`), where `strata.js`'s tubes lie.
   - Depth under water: `floor−FIB[4]−3`.
 - **Ruins:** a honeycomb on an 8-grid round `oldtown` and `bullroom`.
@@ -204,7 +288,7 @@ This lore goes in `world/theranlore.js`, outside the closure.
 
 ## 6. The League's HQ and Mint, and the economy
 
-**The Koinon House: the cothon's twin.** It stands at `IMPACT.bearing` on the cone's shore, inset as the cothon is, half on land and half on piers. Its sizes come from the cothon's own numbers:
+**The Koinon House: the cothon's twin.** It stands at `IMPACT.bearing` (261.8°), centred on the ring's quay line (§2a): half cut into the island, its twelve halls stepping up the slope, and half out on moles. Its sizes come from the cothon's own numbers:
 - outer radius `round+sheds+quay` = **94 blocks**;
 - a ring of **12 state halls** (`LEAGUE.STATES`), 38 deep;
 - a counting court of radius 52;
@@ -235,8 +319,9 @@ The star has no emerald, so the Mint is where **the world's emerald becomes the 
 
 1. **Lens baseline.** The numbers above are it.
 2. **Footing rule, site scoring, the cone's skin.** Rebake; the library goes from 27,889 to ≤ 1,000.
-3. **The cone at ×√2 area and 287.5 m, the crater, the temple on the rim.**
-   - Run `bakegrown --restamp`.
+3. **The cone ×1.5 and 287.5 m, the five-harmonic ring and its stoa, the cothon onto the ring line, the crater, the temple on the rim.**
+   - One grown-town regrow, batched with the terraforming (D-006); not just a restamp, since the ring adds `city.js`/`ground.js` kinds.
+   - Lens: cut and fill each ≤ the ring's 34; lagoon ≥ 140 blocks past each harbour.
    - Re-check that the cothon, skyways, pools, fairway and lagoon gap stay ≥ the fairway's width.
 4. **The path refresh.**
 5. **`impact.js` and the strata hook**, with the ore lens.
@@ -250,10 +335,11 @@ The star has no emerald, so the Mint is where **the world's emerald becomes the 
 - **Bake:** the graph (~170 nodes, ~220 edges) under 1 s; the voxel lens 10–30 s; the House about the cothon's size.
 - **Data:** ~10 KB.
 - **Game:** 0–233 fills per chunk, only within 5 chunks of a player.
-- **Grown towns:** one restamp, for `thera.js`, `city.js` and `ground.js`.
+- **Grown towns:** one regrow (batched), for `thera.js`, `city.js` and `ground.js`.
+- **Thera's own bake:** the cone's land is 2.3×, so its park, paths and houses grow by about that (A: the Thera part of the bake about 1.5–2× today's).
 
 **The grown towns' closure.** I computed it with `sourceHash`'s own rule (M). It excludes `strata.js`, `theraplan.js`, `coinage.js` and `carvings.js`. Keep `impact.js`, `undercone.js` and `theranlore.js` out of it.
 
 **What I verified:** the footing source and its volumes, the face shares, the dome sweep, the cothon's bearing, the closure, and the burial of life-pass structures under the deep pass.
 
-**What I assumed:** the "diorite" reading, the historical citations (from memory), the runtime costs, and that a restamp proves the towns identical.
+**What I assumed:** the "diorite" reading, the historical citations (from memory), the runtime costs, the berth count, the water left past the Mint's edge, and that the towns outside Thera's reach regrow unchanged.
