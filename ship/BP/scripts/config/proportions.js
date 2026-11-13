@@ -3,43 +3,41 @@
 export const PROPORTIONS = {
   "faering": {
     "beam": 1.75,
-    "depth": 0.8125,
-    "mast": 2.6,
+    "depth": 0.5625,
+    "draft": 0.375,
+    "wash": 0.0,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 1.0,
+    "mast": 1.8,
     "masts": {
-      "square": 4.11,
-      "lateen": 3.071,
-      "crab_claw": 3.97,
-      "junk": 4.615,
-      "wing": 5.872
+      "square": 3.853,
+      "lateen": 2.927,
+      "crab_claw": 3.809,
+      "junk": 4.368,
+      "wing": 5.559
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
+      "": [
         0.35,
         0.35
-      ],
-      "": [
-        0.5,
-        0.35
-      ],
-      "hi": [
-        0.828,
-        0.578
       ]
     },
-    "rail": 1.25,
+    "rail": 0.588,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 1.25,
+    "oar": 1.375,
     "sail": {
-      "square": 10.032,
-      "lateen": 11.856,
-      "crab_claw": 12.768,
-      "junk": 10.944,
-      "wing": 8.208
+      "square": 8.82,
+      "lateen": 10.78,
+      "crab_claw": 11.76,
+      "junk": 9.8,
+      "wing": 7.35
     },
     "twin_gap": 0.0,
     "pod_half": 0,
@@ -49,37 +47,43 @@ export const PROPORTIONS = {
   },
   "longship": {
     "beam": 1.5,
-    "depth": 0.8125,
-    "mast": 2.6,
+    "depth": 0.4375,
+    "draft": 0.2812,
+    "wash": 0.375,
+    "deck": "biti",
+    "sheds": false,
+    "decks": 0,
+    "wall": 1.0,
+    "mast": 1.4,
     "masts": {
-      "square": 4.681,
-      "lateen": 3.558,
-      "crab_claw": 4.62,
-      "junk": 5.306,
-      "wing": 6.725
+      "square": 4.679,
+      "lateen": 3.555,
+      "crab_claw": 4.624,
+      "junk": 5.304,
+      "wing": 6.74
     },
     "scale": 2,
     "mast_count": 1,
     "seats": {
       "lo": [
-        0.473,
-        0.35
+        0.5,
+        0.4
       ],
       "": [
-        0.7,
-        0.45
+        0.712,
+        0.462
       ],
       "hi": [
-        1.098,
-        0.848
+        1.084,
+        0.834
       ]
     },
-    "rail": 1.45,
+    "rail": 1.462,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 1.375,
+    "oar": 1.444,
     "sail": {
       "square": 13.005,
       "lateen": 15.895,
@@ -94,84 +98,80 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "rowboat": {
-    "beam": 1.5625,
-    "depth": 0.75,
-    "mast": 2.4,
+    "beam": 1.592,
+    "depth": 0.9375,
+    "draft": 0.5625,
+    "wash": 0.0,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 3.0,
     "masts": {
-      "square": 4.391,
-      "lateen": 3.079,
-      "crab_claw": 3.979,
-      "junk": 4.627,
-      "wing": 5.886
+      "square": 4.949,
+      "lateen": 3.468,
+      "crab_claw": 4.483,
+      "junk": 5.215,
+      "wing": 6.627
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
+      "": [
         0.35,
         0.35
-      ],
-      "": [
-        0.437,
-        0.35
-      ],
-      "hi": [
-        0.744,
-        0.494
       ]
     },
-    "rail": 1.188,
+    "rail": 0.775,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 1.017,
+    "oar": 0.92,
     "sail": {
-      "square": 10.081,
-      "lateen": 11.914,
-      "crab_claw": 12.83,
-      "junk": 10.997,
-      "wing": 8.248
+      "square": 12.802,
+      "lateen": 15.13,
+      "crab_claw": 16.294,
+      "junk": 13.966,
+      "wing": 10.475
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 1.96,
+    "float_out": 1.99,
     "float_len": 4.55,
     "typical_len": 7.0
   },
   "bark_canoe": {
     "beam": 1.3125,
-    "depth": 0.625,
-    "mast": 2.0,
+    "depth": 0.375,
+    "draft": 0.25,
+    "wash": 0.0625,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 1.0,
+    "mast": 1.2,
     "masts": {
       "square": 4.108,
-      "lateen": 2.93,
-      "crab_claw": 3.808,
-      "junk": 4.37,
+      "lateen": 2.927,
+      "crab_claw": 3.809,
+      "junk": 4.368,
       "wing": 5.559
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
-        0.35,
-        0.35
-      ],
       "": [
         0.35,
         0.35
-      ],
-      "hi": [
-        0.533,
-        0.35
       ]
     },
-    "rail": 1.031,
+    "rail": 0.588,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 0.956,
+    "oar": 0.9,
     "sail": {
       "square": 8.82,
       "lateen": 10.78,
@@ -186,38 +186,36 @@ export const PROPORTIONS = {
     "typical_len": 7.0
   },
   "outrigger": {
-    "beam": 1.0625,
+    "beam": 1.0534,
     "depth": 0.625,
+    "draft": 0.375,
+    "wash": 0.25,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 1.5,
     "mast": 2.0,
     "masts": {
       "square": 4.108,
-      "lateen": 2.93,
-      "crab_claw": 3.808,
-      "junk": 4.37,
+      "lateen": 2.927,
+      "crab_claw": 3.809,
+      "junk": 4.368,
       "wing": 5.559
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
-        0.35,
-        0.35
-      ],
       "": [
         0.35,
         0.35
-      ],
-      "hi": [
-        0.533,
-        0.35
       ]
     },
-    "rail": 1.031,
+    "rail": 0.9,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 0.787,
+    "oar": 0.675,
     "sail": {
       "square": 8.82,
       "lateen": 10.78,
@@ -232,44 +230,42 @@ export const PROPORTIONS = {
     "typical_len": 7.0
   },
   "sewn_boat": {
-    "beam": 1.5,
-    "depth": 0.75,
-    "mast": 2.4,
+    "beam": 1.5295,
+    "depth": 1.1875,
+    "draft": 0.75,
+    "wash": 0.0,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 3.8,
     "masts": {
-      "square": 4.198,
-      "lateen": 2.943,
-      "crab_claw": 3.81,
-      "junk": 4.423,
-      "wing": 5.627
+      "square": 5.118,
+      "lateen": 3.587,
+      "crab_claw": 4.636,
+      "junk": 5.393,
+      "wing": 6.852
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
+      "": [
         0.35,
         0.35
-      ],
-      "": [
-        0.437,
-        0.35
-      ],
-      "hi": [
-        0.744,
-        0.494
       ]
     },
-    "rail": 1.188,
+    "rail": 0.838,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 1.125,
+    "oar": 1.012,
     "sail": {
-      "square": 9.206,
-      "lateen": 10.88,
-      "crab_claw": 11.76,
-      "junk": 10.043,
-      "wing": 7.533
+      "square": 13.694,
+      "lateen": 16.184,
+      "crab_claw": 17.429,
+      "junk": 14.939,
+      "wing": 11.205
     },
     "twin_gap": 0.0,
     "pod_half": 0,
@@ -278,125 +274,119 @@ export const PROPORTIONS = {
     "typical_len": 7.0
   },
   "sampan": {
-    "beam": 1.6875,
+    "beam": 1.717,
     "depth": 0.6875,
+    "draft": 0.4375,
+    "wash": 0.0,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
     "mast": 2.2,
     "masts": {
-      "square": 4.504,
-      "lateen": 3.158,
-      "crab_claw": 4.082,
-      "junk": 4.746,
-      "wing": 6.038
+      "square": 4.711,
+      "lateen": 3.302,
+      "crab_claw": 4.268,
+      "junk": 4.964,
+      "wing": 6.311
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
-        0.35,
-        0.35
-      ],
       "": [
         0.35,
         0.35
-      ],
-      "hi": [
-        0.617,
-        0.367
       ]
     },
-    "rail": 1.094,
+    "rail": 0.65,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
     "oar": 1.05,
     "sail": {
-      "square": 10.612,
-      "lateen": 12.541,
-      "crab_claw": 13.506,
-      "junk": 11.576,
-      "wing": 8.682
+      "square": 11.603,
+      "lateen": 13.712,
+      "crab_claw": 14.767,
+      "junk": 12.658,
+      "wing": 9.493
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 2.1094,
+    "float_out": 2.1463,
     "float_len": 4.55,
     "typical_len": 7.0
   },
   "wasen": {
-    "beam": 1.5625,
-    "depth": 0.75,
-    "mast": 2.4,
+    "beam": 1.592,
+    "depth": 0.9375,
+    "draft": 0.5625,
+    "wash": 0.0,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 3.0,
     "masts": {
-      "square": 4.649,
-      "lateen": 2.983,
-      "crab_claw": 3.856,
-      "junk": 4.483,
-      "wing": 5.704
+      "square": 5.238,
+      "lateen": 3.36,
+      "crab_claw": 4.343,
+      "junk": 5.052,
+      "wing": 6.421
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
+      "": [
         0.35,
         0.35
-      ],
-      "": [
-        0.437,
-        0.35
-      ],
-      "hi": [
-        0.744,
-        0.494
       ]
     },
-    "rail": 1.188,
+    "rail": 0.775,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
     "oar": 1.009,
     "sail": {
-      "square": 9.461,
-      "lateen": 11.181,
-      "crab_claw": 12.041,
-      "junk": 10.321,
-      "wing": 7.74
+      "square": 12.014,
+      "lateen": 14.199,
+      "crab_claw": 15.291,
+      "junk": 13.106,
+      "wing": 9.83
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 1.96,
+    "float_out": 1.99,
     "float_len": 4.55,
     "typical_len": 7.0
   },
   "dugout": {
     "beam": 1.4375,
-    "depth": 0.6875,
-    "mast": 2.2,
+    "depth": 0.375,
+    "draft": 0.25,
+    "wash": 0.0625,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 3.0,
+    "mast": 1.2,
     "masts": {
       "square": 4.108,
-      "lateen": 2.93,
-      "crab_claw": 3.808,
-      "junk": 4.37,
+      "lateen": 2.927,
+      "crab_claw": 3.809,
+      "junk": 4.368,
       "wing": 5.559
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
-        0.35,
-        0.35
-      ],
       "": [
         0.35,
         0.35
-      ],
-      "hi": [
-        0.617,
-        0.367
       ]
     },
-    "rail": 1.094,
+    "rail": 0.588,
     "helm": "oar",
     "mast_at": [
       0.0
@@ -416,15 +406,21 @@ export const PROPORTIONS = {
     "typical_len": 7.0
   },
   "punt": {
-    "beam": 1.75,
+    "beam": 1.7795,
     "depth": 0.5,
+    "draft": 0.3125,
+    "wash": 0.0,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
     "mast": 1.6,
     "masts": {
-      "square": 4.318,
-      "lateen": 3.027,
-      "crab_claw": 3.913,
-      "junk": 4.549,
-      "wing": 5.788
+      "square": 4.514,
+      "lateen": 3.163,
+      "crab_claw": 4.089,
+      "junk": 4.756,
+      "wing": 6.049
     },
     "scale": 1,
     "mast_count": 1,
@@ -434,34 +430,40 @@ export const PROPORTIONS = {
         0.35
       ]
     },
-    "rail": 0.875,
+    "rail": 0.588,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
     "oar": 0.962,
     "sail": {
-      "square": 9.744,
-      "lateen": 11.515,
-      "crab_claw": 12.401,
-      "junk": 10.63,
-      "wing": 7.972
+      "square": 10.65,
+      "lateen": 12.587,
+      "crab_claw": 13.555,
+      "junk": 11.618,
+      "wing": 8.714
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 2.1875,
+    "float_out": 2.2244,
     "float_len": 4.55,
     "typical_len": 7.0
   },
   "kayak": {
     "beam": 1.0,
-    "depth": 0.5,
-    "mast": 1.6,
+    "depth": 0.3125,
+    "draft": 0.1875,
+    "wash": 0.0,
+    "deck": "open",
+    "sheds": true,
+    "decks": 0,
+    "wall": 0.5,
+    "mast": 1.0,
     "masts": {
       "square": 4.108,
-      "lateen": 2.93,
-      "crab_claw": 3.808,
-      "junk": 4.37,
+      "lateen": 2.927,
+      "crab_claw": 3.809,
+      "junk": 4.368,
       "wing": 5.559
     },
     "scale": 1,
@@ -472,12 +474,12 @@ export const PROPORTIONS = {
         0.35
       ]
     },
-    "rail": 0.875,
+    "rail": 0.525,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 0.875,
+    "oar": 0.75,
     "sail": {
       "square": 8.82,
       "lateen": 10.78,
@@ -492,40 +494,38 @@ export const PROPORTIONS = {
     "typical_len": 7.0
   },
   "theran_skiff": {
-    "beam": 1.125,
-    "depth": 0.5938,
-    "mast": 1.9,
+    "beam": 1.1159,
+    "depth": 0.9375,
+    "draft": 0.5625,
+    "wash": 0.0,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 1.5,
+    "mast": 3.0,
     "masts": {
-      "square": 4.108,
-      "lateen": 2.93,
-      "crab_claw": 3.808,
-      "junk": 4.37,
+      "square": 4.111,
+      "lateen": 2.927,
+      "crab_claw": 3.809,
+      "junk": 4.368,
       "wing": 5.559
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
-        0.35,
-        0.35
-      ],
       "": [
         0.35,
         0.35
-      ],
-      "hi": [
-        0.491,
-        0.35
       ]
     },
-    "rail": 1.0,
+    "rail": 0.775,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 0.844,
+    "oar": 0.731,
     "sail": {
-      "square": 8.82,
+      "square": 8.837,
       "lateen": 10.78,
       "crab_claw": 11.76,
       "junk": 9.8,
@@ -538,84 +538,88 @@ export const PROPORTIONS = {
     "typical_len": 7.0
   },
   "cog": {
-    "beam": 2.6875,
-    "depth": 1.2188,
-    "mast": 3.9,
+    "beam": 2.6784,
+    "depth": 1.5625,
+    "draft": 0.9688,
+    "wash": 0.0,
+    "deck": "full",
+    "sheds": false,
+    "decks": 1,
+    "wall": 3.0,
+    "mast": 5.0,
     "masts": {
-      "square": 6.152,
-      "lateen": 4.227,
-      "crab_claw": 5.459,
-      "junk": 6.353,
-      "wing": 8.052
+      "square": 7.813,
+      "lateen": 5.371,
+      "crab_claw": 6.938,
+      "junk": 8.076,
+      "wing": 10.236
     },
     "scale": 2,
     "mast_count": 1,
     "seats": {
       "lo": [
-        1.427,
-        0.677
+        1.1,
+        0.4
       ],
       "": [
-        1.769,
-        1.019
+        1.337,
+        0.587
       ],
       "hi": [
-        2.366,
-        1.616
+        1.753,
+        1.003
       ]
     },
-    "rail": 2.019,
+    "rail": 1.587,
     "helm": "tiller",
     "mast_at": [
       0.0
     ],
-    "oar": 1.95,
+    "oar": 1.75,
     "sail": {
-      "square": 19.021,
-      "lateen": 22.48,
-      "crab_claw": 24.209,
-      "junk": 20.75,
-      "wing": 15.563
+      "square": 30.705,
+      "lateen": 36.288,
+      "crab_claw": 39.08,
+      "junk": 33.497,
+      "wing": 25.123
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 3.3594,
+    "float_out": 3.348,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "freight_canoe": {
     "beam": 1.4375,
     "depth": 0.4688,
+    "draft": 0.2812,
+    "wash": 0.0625,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 1.0,
     "mast": 1.5,
     "masts": {
-      "square": 4.99,
-      "lateen": 3.558,
-      "crab_claw": 4.62,
-      "junk": 5.306,
-      "wing": 6.725
+      "square": 4.988,
+      "lateen": 3.555,
+      "crab_claw": 4.624,
+      "junk": 5.304,
+      "wing": 6.74
     },
     "scale": 2,
     "mast_count": 1,
     "seats": {
-      "lo": [
-        0.35,
-        0.35
-      ],
       "": [
         0.35,
         0.35
-      ],
-      "hi": [
-        0.448,
-        0.35
       ]
     },
-    "rail": 0.969,
+    "rail": 0.9,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 1.181,
+    "oar": 1.153,
     "sail": {
       "square": 13.005,
       "lateen": 15.895,
@@ -630,39 +634,37 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "voyaging_canoe": {
-    "beam": 1.1562,
-    "depth": 0.4375,
-    "mast": 1.4,
+    "beam": 1.1517,
+    "depth": 0.6562,
+    "draft": 0.4062,
+    "wash": 0.0,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 1.5,
+    "mast": 2.1,
     "masts": {
       "square": 3.527,
-      "lateen": 2.511,
-      "crab_claw": 3.269,
-      "junk": 3.75,
-      "wing": 4.766
+      "lateen": 2.513,
+      "crab_claw": 3.272,
+      "junk": 3.751,
+      "wing": 4.781
     },
     "scale": 2,
     "mast_count": 2,
     "seats": {
-      "lo": [
-        0.35,
-        0.35
-      ],
       "": [
         0.35,
         0.35
-      ],
-      "hi": [
-        0.389,
-        0.35
       ]
     },
-    "rail": 0.925,
+    "rail": 0.9,
     "helm": "oar",
     "mast_at": [
       -0.22,
       0.2
     ],
-    "oar": 0.956,
+    "oar": 0.9,
     "sail": {
       "square": 13.005,
       "lateen": 15.895,
@@ -677,80 +679,92 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "dhow": {
-    "beam": 2.25,
-    "depth": 0.75,
-    "mast": 2.4,
+    "beam": 2.2648,
+    "depth": 1.3125,
+    "draft": 0.8125,
+    "wash": 0.0312,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 4.2,
     "masts": {
-      "square": 4.277,
-      "lateen": 3.047,
-      "crab_claw": 3.965,
-      "junk": 4.548,
-      "wing": 5.772
+      "square": 5.696,
+      "lateen": 3.992,
+      "crab_claw": 5.158,
+      "junk": 6.002,
+      "wing": 7.62
     },
     "scale": 2,
     "mast_count": 2,
     "seats": {
       "lo": [
-        0.402,
+        0.5,
         0.35
       ],
       "": [
-        0.612,
-        0.362
+        0.712,
+        0.462
       ],
       "hi": [
-        0.98,
-        0.73
+        1.084,
+        0.834
       ]
     },
-    "rail": 1.362,
+    "rail": 1.462,
     "helm": "oar",
     "mast_at": [
       -0.12,
       0.3
     ],
-    "oar": 1.913,
+    "oar": 1.856,
     "sail": {
-      "square": 13.005,
-      "lateen": 15.895,
-      "crab_claw": 17.34,
-      "junk": 14.45,
-      "wing": 10.838
+      "square": 23.066,
+      "lateen": 27.26,
+      "crab_claw": 29.357,
+      "junk": 25.163,
+      "wing": 18.872
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 2.8125,
+    "float_out": 2.8309,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "junk": {
-    "beam": 2.625,
-    "depth": 0.7188,
-    "mast": 2.3,
+    "beam": 2.6398,
+    "depth": 0.9375,
+    "draft": 0.5938,
+    "wash": 0.1875,
+    "deck": "full",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 3.0,
     "masts": {
-      "square": 4.126,
-      "lateen": 2.89,
-      "crab_claw": 3.734,
-      "junk": 4.346,
-      "wing": 5.516
+      "square": 5.285,
+      "lateen": 3.704,
+      "crab_claw": 4.787,
+      "junk": 5.57,
+      "wing": 7.075
     },
     "scale": 2,
     "mast_count": 2,
     "seats": {
       "lo": [
-        0.367,
-        0.35
+        0.5,
+        0.4
       ],
       "": [
-        0.569,
-        0.35
+        0.712,
+        0.462
       ],
       "hi": [
-        0.921,
-        0.671
+        1.084,
+        0.834
       ]
     },
-    "rail": 1.319,
+    "rail": 1.462,
     "helm": "oar",
     "mast_at": [
       0.02,
@@ -758,28 +772,34 @@ export const PROPORTIONS = {
     ],
     "oar": 1.95,
     "sail": {
-      "square": 13.89,
-      "lateen": 16.416,
-      "crab_claw": 17.679,
-      "junk": 15.153,
-      "wing": 11.365
+      "square": 22.819,
+      "lateen": 26.967,
+      "crab_claw": 29.042,
+      "junk": 24.893,
+      "wing": 18.67
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 3.2812,
+    "float_out": 3.2997,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "bezaisen": {
-    "beam": 2.25,
-    "depth": 0.625,
-    "mast": 2.0,
+    "beam": 2.2648,
+    "depth": 0.8125,
+    "draft": 0.5,
+    "wash": 0.0,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 2.6,
     "masts": {
-      "square": 5.447,
-      "lateen": 3.558,
-      "crab_claw": 4.62,
-      "junk": 5.306,
-      "wing": 6.725
+      "square": 6.368,
+      "lateen": 4.084,
+      "crab_claw": 5.277,
+      "junk": 6.141,
+      "wing": 7.795
     },
     "scale": 2,
     "mast_count": 1,
@@ -789,43 +809,49 @@ export const PROPORTIONS = {
         0.35
       ],
       "": [
-        0.437,
+        0.35,
         0.35
       ],
       "hi": [
-        0.744,
-        0.494
+        0.494,
+        0.35
       ]
     },
-    "rail": 1.188,
+    "rail": 1.025,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
     "oar": 1.753,
     "sail": {
-      "square": 13.005,
-      "lateen": 15.895,
-      "crab_claw": 17.34,
-      "junk": 14.45,
-      "wing": 10.837
+      "square": 17.755,
+      "lateen": 20.983,
+      "crab_claw": 22.597,
+      "junk": 19.369,
+      "wing": 14.527
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 2.8125,
+    "float_out": 2.8309,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "war_canoe": {
     "beam": 1.0625,
-    "depth": 0.3125,
-    "mast": 1.0,
+    "depth": 0.3438,
+    "draft": 0.2188,
+    "wash": 0.125,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 3.0,
+    "mast": 1.1,
     "masts": {
-      "square": 3.798,
-      "lateen": 2.71,
-      "crab_claw": 3.521,
-      "junk": 4.039,
-      "wing": 5.132
+      "square": 3.8,
+      "lateen": 2.708,
+      "crab_claw": 3.525,
+      "junk": 4.042,
+      "wing": 5.147
     },
     "scale": 2,
     "mast_count": 2,
@@ -835,7 +861,7 @@ export const PROPORTIONS = {
         0.35
       ]
     },
-    "rail": 0.75,
+    "rail": 0.9,
     "helm": "oar",
     "mast_at": [
       -0.2,
@@ -856,15 +882,21 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "flatboat": {
-    "beam": 2.4375,
-    "depth": 0.4375,
-    "mast": 1.4,
+    "beam": 2.4523,
+    "depth": 0.8125,
+    "draft": 0.5,
+    "wash": 0.0,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 2.6,
     "masts": {
-      "square": 4.99,
-      "lateen": 3.558,
-      "crab_claw": 4.62,
-      "junk": 5.306,
-      "wing": 6.725
+      "square": 6.447,
+      "lateen": 4.518,
+      "crab_claw": 5.837,
+      "junk": 6.793,
+      "wing": 8.618
     },
     "scale": 2,
     "mast_count": 1,
@@ -878,62 +910,60 @@ export const PROPORTIONS = {
         0.35
       ],
       "hi": [
-        0.389,
+        0.494,
         0.35
       ]
     },
-    "rail": 0.925,
+    "rail": 1.025,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
     "oar": 1.575,
     "sail": {
-      "square": 13.005,
-      "lateen": 15.895,
-      "crab_claw": 17.34,
-      "junk": 14.45,
-      "wing": 10.837
+      "square": 21.725,
+      "lateen": 25.675,
+      "crab_claw": 27.65,
+      "junk": 23.7,
+      "wing": 17.775
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 3.0469,
+    "float_out": 3.0653,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "umiak": {
     "beam": 2.0938,
-    "depth": 0.5625,
-    "mast": 1.8,
+    "depth": 0.6562,
+    "draft": 0.4062,
+    "wash": 0.0,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 1.0,
+    "mast": 2.1,
     "masts": {
-      "square": 4.99,
-      "lateen": 3.558,
-      "crab_claw": 4.62,
-      "junk": 5.306,
-      "wing": 6.725
+      "square": 4.988,
+      "lateen": 3.555,
+      "crab_claw": 4.624,
+      "junk": 5.304,
+      "wing": 6.74
     },
     "scale": 2,
     "mast_count": 1,
     "seats": {
-      "lo": [
-        0.35,
-        0.35
-      ],
       "": [
         0.35,
         0.35
-      ],
-      "hi": [
-        0.626,
-        0.376
       ]
     },
-    "rail": 1.1,
+    "rail": 0.9,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 1.7,
+    "oar": 1.62,
     "sail": {
       "square": 13.005,
       "lateen": 15.895,
@@ -948,25 +978,39 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "theran_ship": {
-    "beam": 0.9688,
-    "depth": 0.375,
-    "mast": 1.2,
+    "beam": 0.9835,
+    "depth": 0.9375,
+    "draft": 0.5938,
+    "wash": 0.1875,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 3.0,
     "masts": {
-      "square": 3.425,
-      "lateen": 2.493,
-      "crab_claw": 3.192,
-      "junk": 3.631,
-      "wing": 4.572
+      "square": 3.578,
+      "lateen": 2.507,
+      "crab_claw": 3.243,
+      "junk": 3.77,
+      "wing": 4.805
     },
     "scale": 2,
     "mast_count": 4,
     "seats": {
-      "": [
-        0.35,
+      "lo": [
+        0.5,
         0.35
+      ],
+      "": [
+        0.712,
+        0.462
+      ],
+      "hi": [
+        1.084,
+        0.834
       ]
     },
-    "rail": 0.837,
+    "rail": 1.462,
     "helm": "oar",
     "mast_at": [
       0.0,
@@ -974,45 +1018,59 @@ export const PROPORTIONS = {
       0.33,
       0.33
     ],
-    "oar": 0.787,
+    "oar": 0.703,
     "sail": {
-      "square": 13.005,
-      "lateen": 15.895,
-      "crab_claw": 17.34,
-      "junk": 14.45,
-      "wing": 10.837
+      "square": 15.745,
+      "lateen": 18.608,
+      "crab_claw": 20.039,
+      "junk": 17.177,
+      "wing": 12.882
     },
     "twin_gap": 2.55,
-    "pod_half": 0.1842,
+    "pod_half": 0.1946,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "skeid": {
-    "beam": 1.125,
-    "depth": 0.3125,
-    "mast": 1.0,
+    "beam": 1.1264,
+    "depth": 0.4219,
+    "draft": 0.2656,
+    "wash": 0.1094,
+    "deck": "biti",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.5,
+    "mast": 1.35,
     "masts": {
-      "square": 4.682,
-      "lateen": 3.554,
-      "crab_claw": 4.622,
-      "junk": 5.307,
-      "wing": 6.718
+      "square": 4.679,
+      "lateen": 3.555,
+      "crab_claw": 4.624,
+      "junk": 5.304,
+      "wing": 6.74
     },
     "scale": 4,
     "mast_count": 1,
     "seats": {
+      "lo": [
+        0.5,
+        0.4
+      ],
       "": [
-        0.35,
-        0.35
+        0.712,
+        0.462
+      ],
+      "hi": [
+        1.084,
+        0.834
       ]
     },
-    "rail": 0.863,
+    "rail": 1.462,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 1.1,
+    "oar": 1.014,
     "sail": {
       "square": 13.005,
       "lateen": 15.895,
@@ -1027,229 +1085,259 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "carrack": {
-    "beam": 2.8125,
-    "depth": 1.5,
-    "mast": 4.8,
+    "beam": 2.819,
+    "depth": 1.7031,
+    "draft": 1.0469,
+    "wash": 0.0,
+    "deck": "full",
+    "sheds": false,
+    "decks": 2,
+    "wall": 6.0,
+    "mast": 5.45,
     "masts": {
-      "square": 3.228,
-      "lateen": 2.22,
-      "crab_claw": 2.868,
-      "junk": 3.338,
-      "wing": 4.236
+      "square": 4.276,
+      "lateen": 2.94,
+      "crab_claw": 3.801,
+      "junk": 4.42,
+      "wing": 5.625
     },
     "scale": 4,
     "mast_count": 3,
     "seats": {
       "lo": [
-        2.818,
-        1.568
+        3.0,
+        2.0
       ],
       "": [
-        3.381,
-        2.131
+        3.4,
+        2.4
       ],
       "hi": [
-        4.368,
-        3.118
+        4.194,
+        3.1
       ]
     },
-    "rail": 3.131,
+    "rail": 3.025,
     "helm": "whipstaff",
     "mast_at": [
       -0.3,
       0.0,
       0.3
     ],
-    "oar": 2.2,
+    "oar": 2.013,
     "sail": {
-      "square": 19.173,
-      "lateen": 22.659,
-      "crab_claw": 24.402,
-      "junk": 20.916,
-      "wing": 15.687
+      "square": 33.649,
+      "lateen": 39.767,
+      "crab_claw": 42.826,
+      "junk": 36.708,
+      "wing": 27.531
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 3.5156,
+    "float_out": 3.5238,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "baghlah": {
-    "beam": 2.4375,
-    "depth": 0.9375,
-    "mast": 3.0,
+    "beam": 2.444,
+    "depth": 1.4531,
+    "draft": 0.8906,
+    "wash": 0.0,
+    "deck": "full",
+    "sheds": false,
+    "decks": 2,
+    "wall": 6.0,
+    "mast": 4.65,
     "masts": {
-      "square": 4.277,
-      "lateen": 3.049,
-      "crab_claw": 3.96,
-      "junk": 4.548,
-      "wing": 5.764
+      "square": 6.222,
+      "lateen": 4.36,
+      "crab_claw": 5.634,
+      "junk": 6.556,
+      "wing": 8.319
     },
     "scale": 4,
     "mast_count": 2,
     "seats": {
       "lo": [
-        1.993,
-        0.743
+        2.45,
+        1.2
       ],
       "": [
-        2.35,
-        1.1
+        2.9,
+        1.65
       ],
       "hi": [
-        2.976,
-        1.726
+        3.688,
+        2.438
       ]
     },
-    "rail": 2.1,
+    "rail": 2.65,
     "helm": "tiller",
     "mast_at": [
       -0.12,
       0.3
     ],
-    "oar": 2.138,
+    "oar": 1.927,
     "sail": {
-      "square": 13.005,
-      "lateen": 15.895,
-      "crab_claw": 17.34,
-      "junk": 14.45,
-      "wing": 10.838
+      "square": 27.522,
+      "lateen": 32.526,
+      "crab_claw": 35.028,
+      "junk": 30.024,
+      "wing": 22.518
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 3.0469,
+    "float_out": 3.055,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "fuchuan": {
-    "beam": 2.6719,
-    "depth": 1.0,
-    "mast": 3.2,
+    "beam": 2.677,
+    "depth": 1.5938,
+    "draft": 0.9844,
+    "wash": 0.0,
+    "deck": "full",
+    "sheds": false,
+    "decks": 2,
+    "wall": 3.5,
+    "mast": 5.1,
     "masts": {
-      "square": 2.599,
-      "lateen": 1.822,
-      "crab_claw": 2.355,
-      "junk": 2.742,
-      "wing": 3.484
+      "square": 3.857,
+      "lateen": 2.703,
+      "crab_claw": 3.495,
+      "junk": 4.064,
+      "wing": 5.176
     },
     "scale": 4,
     "mast_count": 3,
     "seats": {
       "lo": [
-        2.248,
-        0.798
+        2.8,
+        1.35
       ],
       "": [
-        2.619,
-        1.169
+        3.287,
+        1.837
       ],
       "hi": [
-        3.268,
-        1.818
+        4.141,
+        2.691
       ]
     },
-    "rail": 2.169,
+    "rail": 2.837,
     "helm": "tiller",
     "mast_at": [
       -0.32,
       0.0,
       0.3
     ],
-    "oar": 2.1,
+    "oar": 2.0,
     "sail": {
-      "square": 14.915,
-      "lateen": 17.626,
-      "crab_claw": 18.982,
-      "junk": 16.271,
-      "wing": 12.203
+      "square": 32.808,
+      "lateen": 38.773,
+      "crab_claw": 41.756,
+      "junk": 35.791,
+      "wing": 26.843
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 3.3398,
+    "float_out": 3.3462,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "shuinsen": {
-    "beam": 2.4688,
-    "depth": 0.8438,
-    "mast": 2.7,
+    "beam": 2.4753,
+    "depth": 1.5,
+    "draft": 0.9219,
+    "wash": 0.0,
+    "deck": "full",
+    "sheds": false,
+    "decks": 2,
+    "wall": 6.0,
+    "mast": 4.8,
     "masts": {
-      "square": 2.537,
-      "lateen": 1.682,
-      "crab_claw": 2.186,
-      "junk": 2.508,
-      "wing": 3.191
+      "square": 3.744,
+      "lateen": 2.44,
+      "crab_claw": 3.157,
+      "junk": 3.67,
+      "wing": 4.678
     },
     "scale": 4,
     "mast_count": 3,
     "seats": {
       "lo": [
-        1.828,
-        0.578
+        2.5,
+        1.25
       ],
       "": [
-        2.144,
-        0.894
+        2.962,
+        1.712
       ],
       "hi": [
-        2.697,
-        1.447
+        3.772,
+        2.522
       ]
     },
-    "rail": 1.894,
+    "rail": 2.712,
     "helm": "tiller",
     "mast_at": [
       -0.3,
       0.0,
       0.3
     ],
-    "oar": 2.019,
+    "oar": 1.846,
     "sail": {
-      "square": 13.005,
-      "lateen": 15.895,
-      "crab_claw": 17.34,
-      "junk": 14.45,
-      "wing": 10.838
+      "square": 28.351,
+      "lateen": 33.505,
+      "crab_claw": 36.083,
+      "junk": 30.928,
+      "wing": 23.196
     },
     "twin_gap": 0.0,
     "pod_half": 0,
-    "float_out": 3.0859,
+    "float_out": 3.0941,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "drua": {
-    "beam": 1.0469,
-    "depth": 0.4375,
-    "mast": 1.4,
+    "beam": 1.0483,
+    "depth": 0.6406,
+    "draft": 0.3906,
+    "wash": 0.0,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.5,
+    "mast": 2.05,
     "masts": {
-      "square": 4.984,
-      "lateen": 3.554,
-      "crab_claw": 4.622,
-      "junk": 5.307,
-      "wing": 6.718
+      "square": 4.988,
+      "lateen": 3.555,
+      "crab_claw": 4.624,
+      "junk": 5.304,
+      "wing": 6.74
     },
     "scale": 4,
     "mast_count": 1,
     "seats": {
       "lo": [
-        0.35,
+        0.45,
         0.35
       ],
       "": [
-        0.388,
-        0.35
+        0.65,
+        0.4
       ],
       "hi": [
-        0.676,
-        0.426
+        1.0,
+        0.75
       ]
     },
-    "rail": 1.138,
+    "rail": 1.4,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 0.9,
+    "oar": 0.83,
     "sail": {
       "square": 13.005,
       "lateen": 15.895,
@@ -1264,38 +1352,36 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "league_monoreme": {
-    "beam": 1.25,
-    "depth": 0.6875,
-    "mast": 2.2,
+    "beam": 1.2795,
+    "depth": 0.8125,
+    "draft": 0.5,
+    "wash": 0.1875,
+    "deck": "open",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 2.6,
     "masts": {
-      "square": 3.048,
+      "square": 3.046,
       "lateen": 2.171,
-      "crab_claw": 2.829,
-      "junk": 3.238,
+      "crab_claw": 2.827,
+      "junk": 3.24,
       "wing": 4.136
     },
     "scale": 1,
     "mast_count": 1,
     "seats": {
-      "lo": [
-        0.35,
-        0.35
-      ],
       "": [
         0.35,
         0.35
-      ],
-      "hi": [
-        0.617,
-        0.367
       ]
     },
-    "rail": 1.094,
+    "rail": 0.9,
     "helm": "oar",
     "mast_at": [
       0.0
     ],
-    "oar": 1.15,
+    "oar": 1.006,
     "sail": {
       "square": 4.851,
       "lateen": 5.929,
@@ -1310,63 +1396,39 @@ export const PROPORTIONS = {
     "typical_len": 7.0
   },
   "league_bireme": {
-    "beam": 1.1875,
-    "depth": 0.3438,
-    "mast": 1.1,
+    "beam": 1.2023,
+    "depth": 0.7812,
+    "draft": 0.4688,
+    "wash": 0.2188,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.0,
+    "mast": 2.5,
     "masts": {
-      "square": 3.697,
-      "lateen": 2.638,
-      "crab_claw": 3.428,
-      "junk": 3.932,
-      "wing": 4.996
+      "square": 3.699,
+      "lateen": 2.636,
+      "crab_claw": 3.431,
+      "junk": 3.934,
+      "wing": 5.011
     },
     "scale": 2,
     "mast_count": 1,
     "seats": {
-      "": [
-        0.35,
+      "lo": [
+        0.5,
         0.35
+      ],
+      "": [
+        0.712,
+        0.462
+      ],
+      "hi": [
+        1.084,
+        0.834
       ]
     },
-    "rail": 0.794,
-    "helm": "oar",
-    "mast_at": [
-      0.0
-    ],
-    "oar": 1.222,
-    "sail": {
-      "square": 7.153,
-      "lateen": 8.742,
-      "crab_claw": 9.537,
-      "junk": 7.948,
-      "wing": 5.961
-    },
-    "twin_gap": 0.0,
-    "pod_half": 0,
-    "float_out": 2.38,
-    "float_len": 5.525,
-    "typical_len": 8.5
-  },
-  "league_trireme": {
-    "beam": 1.0625,
-    "depth": 0.3125,
-    "mast": 1.0,
-    "masts": {
-      "square": 3.697,
-      "lateen": 2.634,
-      "crab_claw": 3.427,
-      "junk": 3.936,
-      "wing": 4.989
-    },
-    "scale": 4,
-    "mast_count": 1,
-    "seats": {
-      "": [
-        0.35,
-        0.35
-      ]
-    },
-    "rail": 0.863,
+    "rail": 1.462,
     "helm": "oar",
     "mast_at": [
       0.0
@@ -1385,33 +1447,99 @@ export const PROPORTIONS = {
     "float_len": 5.525,
     "typical_len": 8.5
   },
-  "theran_flagship": {
-    "beam": 0.8594,
-    "depth": 0.3125,
-    "mast": 1.0,
+  "league_trireme": {
+    "beam": 1.0639,
+    "depth": 0.6562,
+    "draft": 0.4062,
+    "wash": 0.0156,
+    "deck": "full",
+    "sheds": false,
+    "decks": 0,
+    "wall": 2.5,
+    "mast": 2.1,
     "masts": {
-      "square": 2.115,
-      "lateen": 1.507,
-      "crab_claw": 1.963,
+      "square": 3.699,
+      "lateen": 2.636,
+      "crab_claw": 3.431,
+      "junk": 3.934,
+      "wing": 5.011
+    },
+    "scale": 4,
+    "mast_count": 1,
+    "seats": {
+      "lo": [
+        0.5,
+        0.4
+      ],
+      "": [
+        0.712,
+        0.462
+      ],
+      "hi": [
+        1.084,
+        0.834
+      ]
+    },
+    "rail": 1.462,
+    "helm": "oar",
+    "mast_at": [
+      0.0
+    ],
+    "oar": 1.078,
+    "sail": {
+      "square": 7.153,
+      "lateen": 8.742,
+      "crab_claw": 9.537,
+      "junk": 7.948,
+      "wing": 5.961
+    },
+    "twin_gap": 0.0,
+    "pod_half": 0,
+    "float_out": 2.38,
+    "float_len": 5.525,
+    "typical_len": 8.5
+  },
+  "theran_flagship": {
+    "beam": 0.8645,
+    "depth": 0.6875,
+    "draft": 0.4219,
+    "wash": 0.0,
+    "deck": "half",
+    "sheds": false,
+    "decks": 0,
+    "wall": 3.5,
+    "mast": 2.2,
+    "masts": {
+      "square": 2.116,
+      "lateen": 1.508,
+      "crab_claw": 1.966,
       "junk": 2.25,
-      "wing": 2.866
+      "wing": 2.888
     },
     "scale": 4,
     "mast_count": 3,
     "seats": {
-      "": [
-        0.35,
+      "lo": [
+        0.5,
         0.35
+      ],
+      "": [
+        0.712,
+        0.462
+      ],
+      "hi": [
+        1.084,
+        0.834
       ]
     },
-    "rail": 0.863,
+    "rail": 1.462,
     "helm": "oar",
     "mast_at": [
       -0.26,
       0.0,
       0.26
     ],
-    "oar": 0.731,
+    "oar": 0.619,
     "sail": {
       "square": 13.005,
       "lateen": 15.895,

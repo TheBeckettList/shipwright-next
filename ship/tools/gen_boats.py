@@ -10,13 +10,15 @@ last visible mid-section and shifts the whole hull so the helm (z 8) sits over t
 import json
 import math
 import re
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 RP = ROOT / "RP"
 NS = "shipwright"
 SEG, END, SLICES, MAX_MIDS, MAX_OARS = 16, 24, 6, 7, 4
-HULL_LIFT, HELM_Z, FURNACE_Z = 5, 8, 0
+HULL_LIFT, HELM_Z, FURNACE_Z = 5, 8, 0      # HULL_LIFT: the building model's keel over the yard floor (world px)
+DECK_STATIONS = 7      # given: the deck property holds 4 bits a station and Bedrock's int stops at 2^31: seven stations
 # Small values share a property (Bedrock allows 32 per entity). Mirrors BP/scripts/props.js:
 # name -> (packed property, place value, range, offset).
 PACKED = {
@@ -120,6 +122,7 @@ def multihull(b):
     """Where a multihull's float or second hull sits, from the main hull's length L and beam B (model px).
     Float: about 0.65 L long and 0.35 B thick, out at the larger of 1.25 B and 0.28 L, on booms 0.4 L apart.
     Twin hulls: about 0.3 L apart, centre to centre, the craft centred between them."""
+    use(b)
     L = typical_length(b)
     B = 2 * (b["F"] + outer_of(b["section"], b.get("scale", 1)))
     return dict(float_out=max(1.25 * B, 0.28 * L), float_r=0.175 * B, float_len=0.65 * L, boom=0.2 * L,
@@ -136,7 +139,21 @@ THICK = {1: 1.0, 2: 1.25, 4: 1.5}       # world px thickness of an oar, rod or p
 
 
 def y_scale(hs):
-    return 1 + (hs - 1) * 0.4
+    """The model's height scale: its breadth scale (D-004). The squash this once was (1 + 0.4 (s - 1)) drew the big
+    hulls at a quarter to four fifths of their depth; the seat and eye it patched are the decks' work now."""
+    return hs
+
+
+def max_mids(b):
+    """Mid sections a hull can show: 7, and 8 at scale 2 so the ship class reaches its plans' 22 blocks (chief.md
+    section 2: MAX_MIDS = ceil(L_max / s) - 3)."""
+    return 8 if b.get("scale", 1) == 2 else MAX_MIDS
+
+
+def root_lift(b):
+    """Where the launched hull's keel sits, world px over the entity's origin: the law's draught under the water
+    (WATERLINE over the origin, handling.js), so she floats as deep as she is built."""
+    return round(16 * WATERLINE - b["wl"] * b.get("scale", 1), 3)
 
 
 # The helm. On a hull deep enough that a seated helmsman would see only planking, the helm stands
@@ -151,8 +168,17 @@ DEPTH_BANDS = {"lo": 0.8, "": 1.0, "hi": 1.35}   # seat sets for a shallow, typi
 
 
 def rail_y(b, depth=1.0):
-    """The rail's height above the entity's origin, in blocks."""
-    return HULL_LIFT / 16 + b["side"] * y_scale(b.get("scale", 1)) * depth / 16
+    """The rail's height above the entity's origin, in blocks, launched: the hull's depth property scales her about
+    the waterline (the hull bones' pivot), so draught and freeboard grow together."""
+    return WATERLINE + (b["side"] + b["wash"] - b["wl"]) * y_scale(b.get("scale", 1)) * depth / 16
+
+
+def deck_y(b):
+    """The walked surface, model px over the keel's foot: the weather deck where she is decked, else the sole."""
+    dk = b["_deck"]
+    if dk["kind"] != "open":
+        return dk["top"]
+    return b["wl"] + 1 / b.get("scale", 1)
 
 
 def seat_bands(b):
@@ -166,8 +192,10 @@ def seat_heights(b, depth=1.0):
     enough to see over the rail, the helm on its raised station."""
     r = rail_y(b, depth)
     raise_ = HELM.get(b.get("_pid"), ("", 0))[1]
+    # a decked hull's crew sit on her walked deck (grid.js topDeckUp: whole blocks over the water)
+    walk = WATERLINE + b["_deck"]["up"] * depth if b["_deck"]["kind"] in ("full", "biti") else 0
     # the helm's eye clears the rail by 0.35 (on its raised station where it has one)
-    return round(max(SEAT_BASE, r - (EYE - 0.35)) + raise_, 3), round(max(SEAT_BASE, r - 1.0), 3)
+    return round(max(SEAT_BASE, r - (EYE - 0.35), walk) + raise_, 3), round(max(SEAT_BASE, r - 1.0, walk), 3)
 
 
 def true_size(b):
@@ -202,7 +230,7 @@ def true_size(b):
 def derived(b):
     """Every derived dimension of a boat's parts, from its two inputs and the proportions above."""
     F, side = b["F"], b["side"]
-    mast = MAST_H * b.get("side0", side)
+    mast = MAST_H * side
     oar = b["oar"] * F
     d = dict(
         mast=mast,
@@ -247,11 +275,28 @@ CON = {
 }
 SCALE = 1          # the model scale of the boat being built (2 for medium ships)
 SIMPLE = False     # building the launched (simplified) model
+WALL = None        # the wall law's thickness for the boat being built (world px); None: today's CON (the old beams)
+PHI = (1 + 5 ** 0.5) / 2                                   # given: the golden ratio
+FIB = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233]     # given: core/golden.js's rungs
 
 
 def th(st, key):
-    """A construction thickness in this model's pixels."""
-    return CON[st].get(key, 0) / SCALE
+    """A construction thickness in this model's pixels. The wall law (D-004, chief.md section 3): the launched shell
+    carries the whole wall w (planking, frames and ceiling), w = max(CON, 16 L / K) world px; the building model's
+    planks are w / phi^2 with frames w / phi inside them; keel and gunwale phi w, deck w / phi; any edge against the
+    sky at least 2 px (given: the vanilla boat's 2 px sides). A carved log keeps its wall (its rim is the wall)."""
+    c = CON[st]
+    if WALL is None:
+        return c.get(key, 0) / SCALE
+    w = WALL
+    v = {"shell": w if SIMPLE or not c["frames"] else max(c["shell"], w / PHI ** 2),
+         "frame": max(1, w / PHI) if c["frames"] else 0,
+         "gunwale": w if st == "round" else max(2, PHI * w),
+         "keel": max(2, PHI * w) if c["keel"] else 0,
+         "chine": max(c.get("chine", 0), w / PHI ** 2) if "chine" in c else 0,
+         "deck": max(2, w / PHI),
+         "wash": max(2, w / PHI ** 2)}[key]
+    return v / SCALE
 
 
 def panels(st, hw):
@@ -277,16 +322,20 @@ def panels(st, hw):
     raise ValueError(st)
 
 
-def outer_of(st, scale=1):
-    """How far a section's planking reaches outside its half-width, in model pixels at a scale."""
-    global SCALE
-    saved, SCALE = SCALE, scale
+def outer_of(st, scale=1, legacy=False):
+    """How far a section's planking reaches outside its half-width, in model pixels at a scale: the launched wall's,
+    so the building model's thinner planks lie on the same outer face. legacy: as v0.9.14 measured it (CON, the
+    building model's laps), which set every beam the models are drawn to."""
+    global SCALE, SIMPLE, WALL
+    saved, SCALE, simple, SIMPLE, wall = SCALE, scale, SIMPLE, not legacy, WALL
+    if legacy:
+        WALL = None
     sh, gun = th(st, "shell"), th(st, "gunwale")
     ps = panels(st, 0)
     r = max(max(p[2] for p in ps) + sh, ps[-1][2] + gun)
     if st == "flat":
         r = max(r, sh + th(st, "chine"))
-    SCALE = saved
+    SCALE, SIMPLE, WALL = saved, simple, wall
     return r
 
 
@@ -297,13 +346,13 @@ def outer_of(st, scale=1):
 # each slab fitted to the four corners, so the hull runs smooth from the middle to the stem.
 ROUND = {"clinker": 2.3, "carvel": 2.5, "bark": 2.1, "skin": 2.2, "v": 1.55, "chine": 1.7, "round": 2.0, "flat": 4.5}
 STRAKES, STRAKES_LAUNCHED = 6, 4          # strakes a side: the building model, and the lighter launched one
-END_SLICES, END_SLICES_LAUNCHED = 12, 6
+END_SLICES, END_SLICES_LAUNCHED = 12, {1: 4, 2: 5, 4: 6}   # launched: the near model's end slices by class (chief.md section 6)
 
 
 def profile(b, hw, fy, sy):
     """Points from the keel (x 0) up to the sheer, on this tradition's curve, out to the planking's outer face."""
     n, X = ROUND[b["section"]], hw + outer_of(b["section"], SCALE)
-    N = STRAKES_LAUNCHED if SIMPLE else STRAKES
+    N = (STRAKES_LAUNCHED - (1 if b.get("twin") else 0)) if SIMPLE else STRAKES   # a twin draws two hulls: each a strake lighter
     pts = []
     for k in range(N + 1):
         th_ = (k / N) * math.pi / 2
@@ -430,20 +479,59 @@ def shell(b, a, c, za, zc, t=None, cockpit=False):
                 lw = 0.35 * math.dist(A[k], A[k + 1])
                 f = lambda P, Q: tuple(P[i] + (Q[i] - P[i]) * lw / max(0.01, math.dist(P, Q)) for i in range(3))
                 out += slab(p1, f(p1, p0), q1, f(q1, q0), t, (sx * 9999, A[k + 1][1], mid))   # proud of the shell
-        if not SIMPLE:                    # the gunwale along the sheer, on top of the topmost strake
-            pa, pc = A[-1], C[-1]
-            out += slab((sx * (pa[0] - gun), pa[1], za), (sx * pa[0], pa[1], za), (sx * (pc[0] - gun), pc[1], zc), (sx * pc[0], pc[1], zc),
-                        gun, (0, -9999, (za + zc) / 2))
-    # the floor (sole) a quarter of the way up the bilge, across between the strakes (the middle only, launched)
-    if (not b.get("deck") or cockpit) and (not SIMPLE or a == c):
-        fa, fc = a[1] + 0.22 * (a[2] - a[1]), c[1] + 0.22 * (c[2] - c[1])
+        pa, pc = A[-1], C[-1]
+        wash = 0 if b.get("deck") else b.get("wash", 0)
+        if wash > 0:                      # the washstrake: a strake over the sheer where the freeboard falls short of the reach's need
+            out += slab((sx * pa[0], pa[1], za), (sx * pa[0], pa[1] + wash, za), (sx * pc[0], pc[1], zc), (sx * pc[0], pc[1] + wash, zc),
+                        gun if SIMPLE else th(st, "wash"), (0, (pa[1] + pc[1]) / 2 + wash / 2, (za + zc) / 2))
+            if SIMPLE:                    # launched, one slab: the washstrake as thick as the gunwale that caps it
+                continue
+        # the gunwale capping the sheer (or the washstrake), on both models: the edge the eye sees against the sky
+        out += slab((sx * (pa[0] - gun), pa[1] + wash, za), (sx * pa[0], pa[1] + wash, za), (sx * (pc[0] - gun), pc[1] + wash, zc), (sx * pc[0], pc[1] + wash, zc),
+                    gun, (0, -9999, (za + zc) / 2))
+    # the floor (sole) across between the strakes, its underside on the water (D-004: under the waterline the game draws
+    # the sea inside a hull, so whatever is walked lies on or over it); a hull with no waterline (a float) a quarter of
+    # the way up its bilge. A decked hull's deck is her floor.
+    if (not b.get("deck") or cockpit) and b.get("_deck", {}).get("kind", "open") == "open":
+        fa = fc = b["wl"] + 1 / SCALE if "wl" in b else None       # its top a world pixel over the water: no flicker, feet barely in it
+        if fa is None:
+            fa, fc = a[1] + 0.22 * (a[2] - a[1]), c[1] + 0.22 * (c[2] - c[1])
         wa = next((x for x, y in A if y >= fa), A[-1][0]) - 0.13
         wc = next((x for x, y in C if y >= fc), C[-1][0]) - 0.13
-        if min(wa, wc) > 0.6:
+        if min(wa, wc) > 0.6 and max(fa, fc) < min(a[2], c[2]):
             out += slab((-wa, fa, za), (wa, fa, za), (-wc, fc, zc), (wc, fc, zc), sh, (0, -9999, (za + zc) / 2))
     if b.get("deck") and not cockpit:
         out += slab((-A[-1][0], A[-1][1], za), (A[-1][0], A[-1][1], za), (-C[-1][0], C[-1][1], zc), (C[-1][0], C[-1][1], zc),
                     sh, (0, -9999, (za + zc) / 2))
+    return out
+
+
+def inner_half(pts, y, t):
+    """The shell's inner half-width at height y, from a section's profile (its outer face), or None outside it."""
+    for (x0, y0), (x1, y1) in zip(pts, pts[1:]):
+        if y0 <= y <= y1:
+            return x0 + (x1 - x0) * (y - y0) / max(1e-6, y1 - y0) - t
+    return None
+
+
+def deck_slabs(b, a, c, za, zc, ends=False):
+    """The decks across a span between sections a and c (each (hw, fy, sy)): the weather deck (and, amidships, the
+    decks below it, every DECK_HEIGHT), each a slab w / phi thick lying on the shell's inner face, wherever the hull
+    is wide and deep enough to hold it (D-004: decks from depth; chief.md section 3)."""
+    dk = b.get("_deck")
+    if not dk or dk["kind"] == "open":
+        return []
+    sh, t = th(b["section"], "shell"), dk["t"]
+    A, C = profile(b, *a), profile(b, *c)
+    tops = [dk["top"]] + ([] if ends or dk["kind"] != "full" else dk["lower"])
+    out = []
+    for top in tops:
+        if top > min(a[2], c[2]):                       # above the sheer here: the deck stops short of this end
+            continue
+        wa, wc = inner_half(A, top - t, sh), inner_half(C, top - t, sh)
+        if wa is None or wc is None or min(wa, wc) < 1:
+            continue
+        out += slab((-wa, top, za), (wa, top, za), (-wc, top, zc), (wc, top, zc), t, (0, -9999, (za + zc) / 2))
     return out
 
 
@@ -469,7 +557,7 @@ def frames(b, hw, fy, sy, zc):
 
 
 # How far each section's planking reaches outside its half-width (its outermost strake or gunwale).
-OUTER = {st: outer_of(st) for st in CON}        # at model scale 1
+OUTER = {st: outer_of(st, legacy=True) for st in CON}        # at model scale 1
 
 
 # Medium hulls, drawn at twice the size. Each half-beam is derived from the tradition's typical
@@ -483,7 +571,7 @@ TYPICAL_BLOCKS = {1: 7, MEDIUM_SCALE: MEDIUM_TYPICAL_LENGTH, LARGE_SCALE: LARGE_
 def medium(section, lb, depth, scale=MEDIUM_SCALE, **kw):
     beam_blocks = TYPICAL_BLOCKS[scale] / lb
     snap = lambda v: round(v * 2) / 2              # on the half-pixel grid, so planks keep their true thickness
-    F = snap(beam_blocks / 2 / scale * 16 - outer_of(section, scale))
+    F = snap(beam_blocks / 2 / scale * 16 - outer_of(section, scale, legacy=True))
     return dict(section=section, F=F, side=snap(depth * F), scale=scale, **kw)
 
 
@@ -567,15 +655,75 @@ BOATS.update({
 })
 
 
-# Freeboard trim, from sailing them: small boats sat too low to the water (a wave over the rail at
-# the first heel), the great ships too tall to see past or step down from. Sides are snapped to
-# the half pixel so planks keep their thickness.
-SIDE_TRIM = {1: 1.15, 4: 0.85}
-for _b in BOATS.values():
-    _k = SIDE_TRIM.get(_b.get("scale", 1))
-    if _k:
-        _b["side0"] = _b["side"]                     # the hull's working depth (draft, mast): unchanged
-        _b["side"] = round(_b["side"] * _k * 2) / 2
+# ---------------------------------------------------------------- the laws (D-004; chief.md sections 2 and 3)
+# Every hull is drawn to the world's own measure (world/boatsizes.js sizeOf(...).exact, one source of truth, read
+# through node so there is no Python copy of the core): depth by form, the law's draught under the water, the
+# freeboard against its reach's design wave (a washstrake makes up any shortfall), walls that grow with length, and
+# decks from depth. The model's beam stays as drawn (Theran and twin beams are step 3's work).
+WATERLINE = 0.4        # given: the water's surface over a floating boat's origin (handling.js, grid.js WATERLINE)
+DECK_HEIGHT = 2        # given: a 1.8-block player walks a 2-block tween (grid.js DECK_HEIGHT)
+BULWARK = 1            # vision: a waist-high bulwark, a block, from the weather deck to the rail
+LAW_NAME = {"theran_skiff": "skiff", "theran_ship": "Theran ship", "theran_flagship": "flagship"}
+law_name = lambda pid: LAW_NAME.get(pid, pid.replace("league_", "").replace("_", " "))
+
+
+def _law():
+    js = ("import('./BP/world/boatsizes.js').then((m) => { const o = {}; for (const F of Object.values(m.FLEETS)) for (const t of F) "
+          "o[t.name] = { ...m.sizeOf(t).exact, cls: t.cls, reach: t.reach }; console.log(JSON.stringify(o)); });")
+    return json.loads(subprocess.run(["node", "-e", js], cwd=ROOT, check=True, capture_output=True, text=True).stdout)
+
+
+LAW = _law()
+# K, the wall law's length over thickness, by how the hull is built (on Fibonacci rungs by construction): frame-first
+# carvel 89, bulkheaded or flat 144, shell-first light (clinker, sewn, mortise-and-tenon, bark, skin) 233; a carved
+# log keeps its own wall (None).
+K_SECTION = {"clinker": FIB[12], "carvel": FIB[10], "flat": FIB[11], "v": FIB[12], "bark": FIB[12], "skin": FIB[12], "chine": FIB[12], "round": None}
+K_BOAT = {"cog": FIB[10],                                  # given: frame-first, the Bremen cog (chief.md section 3)
+          "dhow": FIB[12], "sewn_boat": FIB[12],           # given: sewn, shell-first (atlantic_indian.md)
+          "fuchuan": FIB[11],                              # given: bulkheaded, the Quanzhou ship
+          "shuinsen": FIB[10],                             # given: keeled, framed carvel (eastasian_pacific.md)
+          "league_monoreme": FIB[12], "league_bireme": FIB[12], "league_trireme": FIB[12],   # given: mortise-and-tenon shells (Olympias)
+          "theran_skiff": FIB[11], "theran_ship": FIB[11], "theran_flagship": FIB[11]}       # vision: the Therans' moulded hulls, as bulkheaded
+# Decks by class (chief.md section 3): n = floor((D - 1) / 2) decks (a bulwark and a 2-block tween each); full (n >= 1),
+# half (the ends) on undecked ships, open on small boats. Culture readings: the junk's full deck (eastasian_pacific.md),
+# the trireme's katastroma (league.md), the Norse deck boards on the biti at the waterline (northern.md, Gokstad).
+DECK_OVERRIDE = {"junk": "full", "league_trireme": "full", "skeid": "biti", "longship": "biti"}
+snap_w = lambda v: round(v * 2) / 2                       # derived: the half world pixel, finish()'s grid
+
+
+def _apply_laws():
+    global SCALE, WALL
+    for pid, b in BOATS.items():
+        lw = LAW[law_name(pid)]
+        s, st = b.get("scale", 1), b["section"]
+        snap = lambda v: round(v * 2 * s) / (2 * s)       # model px on the half world pixel
+        beam_out = b["F"] + outer_of(st, s, legacy=True)  # the half-beam outside the planking, as drawn at v0.9.14
+        K = K_BOAT.get(pid, K_SECTION[st])
+        SCALE, WALL = s, snap_w(max(CON[st]["shell"], 16 * lw["L"] / K if K else 0))
+        b["_law"], b["_wall"] = lw, WALL
+        b["F"] = snap(beam_out - outer_of(st, s))         # the same beam outside a thicker wall
+        b["fy"] = snap(th(st, "keel")) if (CON[st]["keel"] and b.get("keel", True)) else 0   # the keel, moulded as sided
+        b["side"] = snap(16 * lw["depth"] / s)            # keel's foot to the sheer: the law's depth
+        b["wl"] = snap(16 * lw["draft"] / s)              # the waterline over the keel's foot: the law's draught
+        b["wash"] = snap(16 * lw["wash"] / s)             # a washstrake over the sheer, where the freeboard falls short
+        n = max(0, math.floor((lw["depth"] - BULWARK) / DECK_HEIGHT))
+        kind = DECK_OVERRIDE.get(pid) or ("full" if n >= 1 else "open" if lw["cls"] == "small" else "half")
+        up = 0 if (kind == "biti" or n == 0) else max(0, math.floor(lw["freeboard"] + lw["wash"] - BULWARK + 0.5))   # derived: whole blocks, where feet stand (grid.js topDeckUp)
+        t = th(st, "deck")
+        on = lambda y: y + (1 / s if abs(y - b["wl"]) < 1e-6 else 0)   # a deck at the waterline stands a world pixel over it: the sea is drawn under it, never through it
+        top = on(b["wl"] + snap(16 * up / s))
+        b["_deck"] = dict(kind=kind, n=n, up=up, top=top, t=t,
+                          lower=[on(b["wl"] + snap(16 * (up - DECK_HEIGHT * k) / s)) for k in range(1, n) if b["wl"] + 16 * (up - DECK_HEIGHT * k) / s > b["fy"] + 16 / s])
+    SCALE, WALL = 1, None
+
+
+_apply_laws()
+
+
+def use(b):
+    """Builds at this boat's scale and wall."""
+    global SCALE, WALL
+    SCALE, WALL = b.get("scale", 1), b["_wall"]
 
 
 def details(b, hw, fy, sy, z0, L, mid=False):
@@ -616,10 +764,10 @@ def end_shape(b, end, t):
         hw = F * (1 - 0.5 * t ** 1.5)
     elif taper == "piercer":                      # a wave-piercer: a knife-fine entry, the deck falling toward the stem
         hw = max(0.6, F * (1 - t ** 1.05))
-        return hw, 1 + end["floor"] * side * t, side - end.get("drop", 0.3) * side * t ** 1.4
+        return hw, b["fy"] + end["floor"] * side * t, side - end.get("drop", 0.3) * side * t ** 1.4
     else:
         hw = F * (1 - 0.15 * t ** 2)
-    return hw, 1 + end["floor"] * side * t ** 2, side + end["rise"] * side * t ** 3
+    return hw, b["fy"] + end["floor"] * side * t ** 2, side + end["rise"] * side * t ** 3
 
 
 def at(tip, sign, dz, sz):
@@ -700,21 +848,21 @@ def stem(b, end, sign, tip, hw, fy, sy):
 
 def end_section(b, sign, base):
     end = b["bow"] if sign < 0 else b["stern"]
-    slices = END_SLICES_LAUNCHED if SIMPLE else END_SLICES
+    slices = END_SLICES_LAUNCHED[b.get("scale", 1)] - (1 if b.get("twin") else 0) if SIMPLE else END_SLICES   # a twin's two hulls: a slice lighter each
     seg = END / slices
     st = b["section"]
-    kw = max(1.0, CON[st]["keel"]) / SCALE
+    kw, FY = th(st, "keel"), b["fy"]
     keel, frame, plank = [], [], []
-    shape = lambda t: (b["F"], 1, b["side"]) if t <= 0 else end_shape(b, end, t)
+    shape = lambda t: (b["F"], FY, b["side"]) if t <= 0 else end_shape(b, end, t)
     for j in range(slices):
         a, c = shape(j / slices), shape((j + 1) / slices)
         za, zc = base + sign * seg * j, base + sign * seg * (j + 1)
         z0 = min(za, zc)
         hw, fy, sy = shape((j + 0.5) / slices)
-        if b.get("keel", True) and not SIMPLE:
-            keel.append(cube([-kw / 2, fy - 1, z0], [kw, 1 + th(st, "shell"), seg]))
+        if FY > 0:                       # the keel, standing proud under the bottom (both models: D-004)
+            keel.append(cube([-kw / 2, fy - FY, z0], [kw, FY + th(st, "shell"), seg]))
         cockpit = b.get("deck") and sign > 0 and z0 < 14
-        plank += shell(b, a, c, za, zc, cockpit=cockpit)
+        plank += shell(b, a, c, za, zc, cockpit=cockpit) + deck_slabs(b, a, c, za, zc, ends=True)
         if not SIMPLE:
             plank += details(b, hw, fy, sy, z0, seg)
             if j in (slices // 4, slices // 2 + 1):
@@ -842,7 +990,7 @@ def rig_kit(b, g):
     hs = b.get("scale", 1)
     ys = y_scale(hs)
     zx, yy = (lambda v: v * 16 / hs), (lambda v: v * 16 / ys)
-    base = b["side"]
+    base = b["side"] + b["wash"]                     # the rail: every sail sets clear of it
     spar_t = max(0.6, zx(0.07))
     bones = []
 
@@ -931,11 +1079,13 @@ def rig_kit(b, g):
     bones.append({"name": "rig_wing", "parent": "root", "pivot": [0, base, 0], "cubes": wing, "_area": A,
                   "_mast_top": wtop + 0.8, "_mast_t": zx(MAST_OF["wing"][1] * a), "_tt": (1.2, wy + 0.6 * yy(wh), -0.2 * zx(c0))})
 
-    # The mast: stepped through the deck, as tall as the tallest rig's own mast and as thick as the stoutest
-    # (each type's mast is trimmed to its own height and thickness by mast_factors and mast_thickness).
+    # The mast: stepped on the keel (the floor's top), through every deck, as tall as the tallest rig's own mast and
+    # as thick as the stoutest (each type's mast is trimmed to its own height and thickness by mast_factors and
+    # mast_thickness, about its step). A twin's masts stand on the platform between her hulls, as before.
     H = max(x["_mast_top"] for x in bones) - base
     mt = max(x["_mast_t"] for x in bones)
-    bones.insert(0, {"name": "mast", "parent": "root", "pivot": [0, base, 0], "cubes": [cube([-mt / 2, base - 2, -mt / 2], [mt, H + 2, mt])]})
+    foot = mast_foot(b)
+    bones.insert(0, {"name": "mast", "parent": "root", "pivot": [0, foot, 0], "cubes": [cube([-mt / 2, foot, -mt / 2], [mt, H + base - foot, mt])]})
     for x in list(bones[1:]):
         px_, py_, pz_ = x["_tt"]
         bones += telltale_bones(x["name"], [(px_, py_, pz_), (-px_ if x["name"] != "rig_crab" else 2 * CRAB_X - px_, py_, pz_)])
@@ -946,12 +1096,20 @@ def rig_kit(b, g):
     return bones
 
 
+def mast_foot(b):
+    """Where a mast is stepped (model px): on the keel, the floor's top; on the platform where twin hulls carry it."""
+    if b.get("twin"):
+        return b["side"] - 2
+    return b["fy"] + th(b["section"], "shell")
+
+
 def parts(b):
     """The culture-made parts kit, every size derived from this hull's proportions."""
+    use(b)
     F, side = b["F"], b["side"]
     d = derived(b)
     H = d["mast"]
-    base = 2
+    base = deck_y(b)                               # what stands aboard stands on the walked deck
     kf = kit_factor(b)
     bones = []
     for k, r in enumerate(m[1] for m in mast_plan(b)):
@@ -1035,12 +1193,14 @@ def parts(b):
         cube([px - 0.5, top + 0.3 * side - pl, HELM_Z - 4.5], [1, pl, 1])]})
     # Outrigger: a float out to port on two lashed booms, placed by the hull's length and beam (multihull()).
     fx, r, al, boom = d["ama_out"], d["ama_r"], d["ama_len"], d["boom"]
+    fl = b["wl"] - r                                 # the float rides half under, its middle at the waterline
+    post = max(0.5, side - 2 - 2 * r - fl)
     bones.append({"name": "ama", "parent": "root", "pivot": [0, 0, 0], "cubes": [
-        cube([fx - r, 1, -al / 2], [2 * r, 2 * r, al]),
-        cube([fx - 0.75 * r, 1.25 * r, -al / 2 - 0.1 * al], [1.5 * r, 1.5 * r, 0.1 * al]),
-        cube([fx - 0.75 * r, 1.25 * r, al / 2], [1.5 * r, 1.5 * r, 0.1 * al]),
+        cube([fx - r, fl, -al / 2], [2 * r, 2 * r, al]),
+        cube([fx - 0.75 * r, fl + 0.25 * r, -al / 2 - 0.1 * al], [1.5 * r, 1.5 * r, 0.1 * al]),
+        cube([fx - 0.75 * r, fl + 0.25 * r, al / 2], [1.5 * r, 1.5 * r, 0.1 * al]),
         cube([F, side - 1, -boom - 1], [fx - F, 1.5, 2]), cube([F, side - 1, boom - 1], [fx - F, 1.5, 2]),
-        cube([fx - 0.5, 2 * r + 1, -boom - 1], [1, side - 2 * r - 2, 1.5]), cube([fx - 0.5, 2 * r + 1, boom - 1], [1, side - 2 * r - 2, 1.5]),
+        cube([fx - 0.5, fl + 2 * r, -boom - 1], [1, post, 1.5]), cube([fx - 0.5, fl + 2 * r, boom - 1], [1, post, 1.5]),
         cube([F + 1, side - 1.6, -boom - 1.5], [1, 2.6, 3]), cube([F + 1, side - 1.6, boom - 1.5], [1, 2.6, 3])]})
     # Foils (the Theran skiff): a strut under the middle carrying a T-wing, and a T-rudder aft: at speed she lifts
     # onto them and flies.
@@ -1076,19 +1236,22 @@ def parts(b):
         n = 16
         shape = lambda t: (max(0.3, ar * (1 - abs(2 * t - 1) ** (1.6 if t < 0.5 else 2.6))), 1 + 0.25 * ah * abs(2 * t - 1) ** 3,
                            ah * (1 - 0.18 * max(0, 1 - 2 * t) ** 1.4))
+        fl = b["wl"] - 0.55 * ah                   # the floats ride with their waterline at the main hull's
         for sx in (-1, 1):
             x0 = sx * out_
             for k in range(n):
                 za, zc = -al / 2 + k * al / n, -al / 2 + (k + 1) * al / n
                 for c in shell(fb, shape(k / n), shape((k + 1) / n), za, zc):
                     c["origin"][0] += x0
+                    c["origin"][1] += fl
                     if "pivot" in c:
                         c["pivot"][0] += x0
+                        c["pivot"][1] += fl
                     amas.append(c)
             # The aka: one strut a side, swept forward from the main hull's side to the float like a fighter's wing,
             # white and planked like the hulls, deep at its root and fining to its tip, faired down into the float.
             xi, xo = sx * (F - 0.5), x0 - sx * 0.2 * ar
-            amas += swept_tube((xi, side + 0.8, 0.14 * L), (xo, side + 0.8, -0.1 * L), 0.07 * L, 0.2 * side, arch=0.9, drop=side + 0.8 - ah)
+            amas += swept_tube((xi, side + 0.8, 0.14 * L), (xo, side + 0.8, -0.1 * L), 0.07 * L, 0.2 * side, arch=0.9, drop=side + 0.8 - ah - fl)
             # The trampoline: an hourglass, broad along each hull and pinched between them, the aka sweeping across it.
             rope, cords = hourglass_net(sx * (F + 0.6), x0 - sx * 0.75 * ar, -0.3 * L, 0.28 * L, -0.24 * L, 0.18 * L, side - 0.2, 0.09 * L)
             akas += rope
@@ -1105,10 +1268,10 @@ def parts(b):
     cw, ch, cd = 0.9 * F, 0.45 * side, 0.5 * F
     cz = HELM_Z - 17
     chest_uv = {f: {"uv": [0, 0], "uv_size": [16, 16]} for f in ("north", "south", "east", "west", "up", "down")}
-    bones.append({"name": "sea_chest", "parent": "root", "pivot": [0, 2, cz], "cubes": [
-        {"origin": [-cw / 2, 2, cz - cd / 2], "size": [cw, ch, cd], "uv": chest_uv},
-        {"origin": [-cw / 2 - 0.25, 2 + ch, cz - cd / 2 - 0.25], "size": [cw + 0.5, 0.18 * side, cd + 0.5], "uv": chest_uv},
-        {"origin": [-0.6, 2 + ch - 1.2, cz - cd / 2 - 0.5], "size": [1.2, 1.8, 0.5], "uv": chest_uv}]})
+    bones.append({"name": "sea_chest", "parent": "root", "pivot": [0, base, cz], "cubes": [
+        {"origin": [-cw / 2, base, cz - cd / 2], "size": [cw, ch, cd], "uv": chest_uv},
+        {"origin": [-cw / 2 - 0.25, base + ch, cz - cd / 2 - 0.25], "size": [cw + 0.5, 0.18 * side, cd + 0.5], "uv": chest_uv},
+        {"origin": [-0.6, base + ch - 1.2, cz - cd / 2 - 0.5], "size": [1.2, 1.8, 0.5], "uv": chest_uv}]})
     # Sternpost rudder: a blade hung on the sternpost, with a tiller reaching in over the stern.
     bones.append({"name": "rudder_post", "parent": "root", "pivot": [0, 0.5 * side, END], "cubes": [
         cube([-0.75, 0.5, END], [1.5, 0.95 * side, 0.4 * side]),
@@ -1121,7 +1284,7 @@ def parts(b):
     kind, raise_ = HELM.get(b.get("_pid"), ("", 0))
     if raise_ > 0:
         ys = y_scale(b.get("scale", 1))
-        top = round((seat_heights(b)[0] * 16 - HULL_LIFT) / ys - 1, 2)
+        top = round((seat_heights(b)[0] * 16 - root_lift(b)) / ys - 1, 2)
         w = round(0.8 * F, 2)
         z0, z1 = HELM_Z - 7, END - 3
         bones.append({"name": "helm_deck", "parent": "stern", "pivot": [0, top, HELM_Z], "cubes": [
@@ -1149,10 +1312,10 @@ def parts(b):
             return [cube([cx - l2 + 1, cy, cz - w2], [L - 2, 0.6, W]),
                     cube([cx - l2 + 1, cy, cz - w2], [L - 2, H, 0.5]), cube([cx - l2 + 1, cy, cz + w2 - 0.5], [L - 2, H, 0.5]),
                     cube([cx - l2, cy + 0.3, cz - w2 / 2], [1, H - 0.3, w2]), cube([cx + l2 - 1, cy + 0.3, cz - w2 / 2], [1, H - 0.3, w2])]
-        chock_y = side - 2
+        chock_y = base + 1                      # on chocks on the weather deck
         bones.append({"name": "deck_boat", "parent": "root", "pivot": [0, chock_y, 0], "cubes": small_hull(0, chock_y, 0) + [
             cube([-W / 2 - 0.5, chock_y - 1, -L / 4], [W + 1, 1, 0.6]), cube([-W / 2 - 0.5, chock_y - 1, L / 4], [W + 1, 1, 0.6])]})
-        hang_y = side - 5
+        hang_y = side + b["wash"] - 5
         bones.append({"name": "deck_sboat", "parent": "stern", "pivot": [0, hang_y, END + 2 + W / 2], "cubes": small_hull(0, hang_y, END + 2 + W / 2, False) + [
             cube([-L / 2 + 1, hang_y + H, END + 2 + W / 2 - 0.25], [0.5, side + 4 - hang_y - H, 0.5]),
             cube([L / 2 - 1.5, hang_y + H, END + 2 + W / 2 - 0.25], [0.5, side + 4 - hang_y - H, 0.5]),
@@ -1171,7 +1334,7 @@ def parts(b):
             cube([cx - 0.25 + 0.5 * sx, base + fs / 2 - 0.5, FURNACE_Z - 0.5], [0.5, fs / 2, 1])]})
     for sname, sx in (("l", 1), ("r", -1)):
         hx = ((F + 0.5) - inb) * sx                    # the oar handles' inboard ends
-        y = side - 1.5
+        y = side - 1.75                                # at the handles, a quarter pixel off the gunwale's underside (no flicker)
         x0 = d["crank_root_x"] * sx
         bones.append({"name": f"linkx_{sname}", "parent": "root", "pivot": [x0, y, FURNACE_Z], "cubes": [
             cube([min(x0, hx), y - 0.5, FURNACE_Z - 0.5], [abs(hx - x0) + 0.5, 1, 1])]})
@@ -1303,21 +1466,22 @@ def hull_bones(b, simple):
     SIMPLE = simple
     F, side = b["F"], b["side"]
     st = b["section"]
-    kw = max(1.0, CON[st]["keel"]) / SCALE
+    kw, FY, wl = th(st, "keel"), b["fy"], b["wl"]
     bones = [{"name": "yaw", "pivot": [0, 0, 0]}, {"name": "root", "parent": "yaw", "pivot": [0, 0, 0]}]
     zones = {"bow": [], "mid": [], "stern": []}
-    for i in range(MAX_MIDS):
+    for i in range(max_mids(b)):
         z0 = -(i + 1) * SEG
         name = f"mid_{i}"
-        pivot = [0, 0, z0 + SEG / 2]
+        pivot = [0, wl, z0 + SEG / 2]          # the depth property scales her about the waterline: draught and freeboard together
         bones.append({"name": name, "parent": "root", "pivot": pivot})
-        keel = [cube([-kw / 2, 0, z0], [kw, 1 + th(st, "shell"), SEG])] if b.get("keel", True) and not simple else []
+        keel = [cube([-kw / 2, 0, z0], [kw, FY + th(st, "shell"), SEG])] if FY > 0 else []
         frame = []
         if not simple:
             spots = [z0 + SEG / 4, z0 + 3 * SEG / 4] if CON[st].get("half") else [z0 + SEG / 2]
             for zc in spots:
-                frame += frames(b, F, 1, side, zc)
-        plank = section(b, F, 1, side, z0, SEG) + ([] if simple else details(b, F, 1, side, z0, SEG, mid=True))
+                frame += frames(b, F, FY, side, zc)
+        plank = section(b, F, FY, side, z0, SEG) + deck_slabs(b, (F, FY, side), (F, FY, side), z0, z0 + SEG) \
+            + ([] if simple else details(b, F, FY, side, z0, SEG, mid=True))
         bones += layer_bones(name, pivot, keel, frame, plank)
         zones["mid"] += [name, f"{name}_keel", f"{name}_frame", f"{name}_plank"]
         if not simple:
@@ -1326,12 +1490,12 @@ def hull_bones(b, simple):
                 cube([-0.45 * F, -HULL_LIFT, z0 + SEG / 2 - 2], [0.9 * F, HULL_LIFT, 4]),
                 cube([-0.45 * F, -1, z0 + SEG / 2 - 2], [1, 2.5, 4]), cube([0.45 * F - 1, -1, z0 + SEG / 2 - 2], [1, 2.5, 4])]})
             zones["mid"].append(f"{name}_cradle")
-    bow_base = -MAX_MIDS * SEG
-    bones.append({"name": "bow", "parent": "root", "pivot": [0, 0, bow_base]})
-    bones.append({"name": "stern", "parent": "root", "pivot": [0, 0, 0]})
+    bow_base = -max_mids(b) * SEG
+    bones.append({"name": "bow", "parent": "root", "pivot": [0, wl, bow_base]})
+    bones.append({"name": "stern", "parent": "root", "pivot": [0, wl, 0]})
     for zone, sign, base in (("bow", -1, bow_base), ("stern", 1, 0)):
         keel, frame, plank = end_section(b, sign, base)
-        bones += layer_bones(zone, [0, 0, base], keel, frame, plank)
+        bones += layer_bones(zone, [0, wl, base], keel, frame, plank)
         zones[zone] += [zone, f"{zone}_keel", f"{zone}_frame", f"{zone}_plank"]
     if b.get("twin"):
         # Two hulls, centre to centre 0.3 of the length apart, with the craft centred between them, and a
@@ -1378,8 +1542,8 @@ def ram_cubes(pid, b):
     end = b["bow"]
     hw, fy, sy = end_shape(b, end, 1.0)
     reach = stem_curve(end["stem"], s, hw, fy, sy)[0][0]       # how far the stem's foot stands out from the hull's tip
-    z0 = -MAX_MIDS * SEG - END - reach + 0.6                    # the ram's root, into the stem's foot
-    y0 = fy + 0.18 * s                                          # at the waterline
+    z0 = -max_mids(b) * SEG - END - reach + 0.6                 # the ram's root, into the stem's foot
+    y0 = max(fy + 0.18 * s, b["wl"])                            # at the waterline (the law's draught over the keel)
     full = {f: {"uv": [0, 0], "uv_size": [16, 16]} for f in ALL_FACES}
     box = lambda o, sz: {"origin": [round(v, 3) for v in o], "size": [round(v, 3) for v in sz], "uv": full}
     style, out = ram_style(pid), []
@@ -1431,21 +1595,44 @@ def ram_cubes(pid, b):
     return out
 
 
+# Hull modules sit on the hull itself (its sheer, its sides, its floor); the rest stand on the walked deck.
+HULL_MODULES = ("deck_rail_", "deck_stitch_", "deck_lash_", "deck_full_", "deck_bulkhead_")
+
+
+def deck_modules(pid, b, name, i, z0):
+    """Deck modules at a station, in the tradition's look: drawn as on an open boat (over a floor at y 2, under a rail
+    at its side), then carried up onto this hull's walked deck, the rail being the bulwark over it."""
+    F, rail, wy = b["F"], b["side"] + b["wash"], deck_y(b)
+    lift = wy - 2
+    # sized by the bulwark over the deck, as they were by an open hull's side, but never smaller than for a
+    # three-quarter-block bulwark (vision: a barrel or a bench stays a size a person uses on the law's low small boats)
+    on_deck = deck_bones(pid, b, name, i, z0, F, max(rail - lift, 12 / b.get("scale", 1)))
+    on_hull = {x["name"]: x for x in deck_bones(pid, b, name, i, z0, F, rail)}
+    out = []
+    for x in on_deck:
+        if x["name"].startswith(HULL_MODULES):
+            out.append(on_hull[x["name"]])
+            continue
+        moved = lambda c: dict(c, origin=[c["origin"][0], round(c["origin"][1] + lift, 3), c["origin"][2]],
+                               **({"pivot": [c["pivot"][0], round(c["pivot"][1] + lift, 3), c["pivot"][2]]} if "pivot" in c else {}))
+        out.append(dict(x, pivot=[x["pivot"][0], round(x["pivot"][1] + lift, 3), x["pivot"][2]], cubes=[moved(c) for c in x["cubes"]]))
+    return out
+
+
 def geometry(pid, b):
-    global SCALE
-    SCALE = b.get("scale", 1)
+    use(b)
     F, side = b["F"], b["side"]
     o = outer_of(b["section"], SCALE)
     bones, zones = hull_bones(b, False)
-    for i in range(MAX_MIDS):
+    for i in range(max_mids(b)):
         z0 = -(i + 1) * SEG
         name, zc = f"mid_{i}", z0 + SEG / 2
         # Deck modules at this station, each in its tradition's look.
-        bones += deck_bones(pid, b, name, i, z0, F, side)
+        bones += deck_modules(pid, b, name, i, z0)
         # Bone runners under the keel (ice runners).
         bones.append({"name": f"runner_{i}", "parent": name, "pivot": [0, 0, zc], "cubes": [
             cube([-0.55 * F, -1.5, z0], [1, 1.5, SEG]), cube([0.55 * F - 1, -1.5, z0], [1, 1.5, SEG])]})
-    bones.append({"name": "ram", "parent": "bow", "pivot": [0, 1, -MAX_MIDS * SEG - END], "cubes": ram_cubes(pid, b)})
+    bones.append({"name": "ram", "parent": "bow", "pivot": [0, b["wl"], -max_mids(b) * SEG - END], "cubes": ram_cubes(pid, b)})
     bones += parts(b)
     launched, _ = hull_bones(b, True)
     geos = []
@@ -1569,6 +1756,7 @@ geometry_id = lambda pid, group: f"geometry.{NS}.{pid}" if group == "hull" else 
 
 # ---------------------------------------------------------------- animation (one per boat)
 def animation(pid, b):
+    use(b)
     mids, rs = P("mids"), P("rig_scale")
     hs = str(b.get("scale", 1))          # each boat is drawn at its own constant scale
     beam, depth = P("beam"), P("depth")
@@ -1592,10 +1780,11 @@ def animation(pid, b):
         "yaw": {"rotation": [0, f"{P('yaw')} - q.body_y_rotation + ({P('orient')} >= 2 ? 180 : 0)", 0]},
         "root": {"rotation": [0, 0, "v.heel"],
                  # The helm (one model block in from the stern tip) sits over the entity's origin: the
-                 # game turns a ridden boat about its origin, so the helmsman's seat never swings.
-                 "position": [0, HULL_LIFT, f"-8 * {hs}"],
-                 "scale": [hs, f"1 + ({hs} - 1) * 0.4", hs]},
-        "bow": {"position": [0, 0, f"({MAX_MIDS} - {mids}) * {SEG}"], "scale": [beam, depth, 1]},
+                 # game turns a ridden boat about its origin, so the helmsman's seat never swings. Launched,
+                 # her keel sits the law's draught under the water; in the yard, on her cradle.
+                 "position": [0, f"{P('stage')} >= 5 ? {root_lift(b)} : {HULL_LIFT}", f"-8 * {hs}"],
+                 "scale": [hs, hs, hs]},
+        "bow": {"position": [0, 0, f"({max_mids(b)} - {mids}) * {SEG}"], "scale": [beam, depth, 1]},
         "stern": {"scale": [beam, depth, 1]},
         # The rig grows with the hull, from the foot of the mast (y 2).
         "mast": {"position": [0, 0, f"-{mids} * 8{off(0)}"], "scale": [f"math.sqrt({rs}) * {tf}", f"{rs} * {mf}", f"math.sqrt({rs}) * {tf}"]},
@@ -1626,7 +1815,7 @@ def animation(pid, b):
             f"math.sin(q.life_time * 900 + {45 if s == 'a' else 0}) * (4 + 20 * math.abs(v.tt))", 0]}
            for r in ("rig_square", "rig_lateen", "rig_crab", "rig_junk", "rig_wing") for s in ("a", "b")},
         "pennant": {
-            "position": [0, f"{P('sail')} ? ({rs} * {mf} - 1) * {round(piv['pennant'][1] - foot, 3)} : {round(2 + 0.72 * d['mast'] - piv['pennant'][1], 3)}", f"{P('sail')} ? -{mids} * 8{off(0)} : 20"],
+            "position": [0, f"{P('sail')} ? ({rs} * {mf} - 1) * {round(piv['pennant'][1] - foot, 3)} : {round(piv['staff'][1] + 0.72 * d['mast'] - piv['pennant'][1], 3)}", f"{P('sail')} ? -{mids} * 8{off(0)} : 20"],
             "rotation": [f"(1 - math.min({P('wind_str')}, 1)) * 70",
                          f"{P('wind_rel')} + math.sin(q.life_time * (300 + 500 * {P('wind_str')})) * (2 + 6 * math.min({P('wind_str')}, 1))", 0]},
         "rudder": {"rotation": [0, f"-1 * {P('rudder')}", 0]},
@@ -1672,7 +1861,7 @@ def animation(pid, b):
         if name.startswith("link"):
             continue
         bones.setdefault(name, {})["scale"] = sc
-    for i in range(MAX_MIDS):
+    for i in range(max_mids(b)):
         cond = f"{mids} > {i}"
         bones[f"mid_{i}"] = {"scale": [f"{cond} ? {beam} : 0", f"{cond} ? {depth} : 0", f"{cond} ? 1 : 0"]}
     # Split into groups that only run when relevant (the rig with a sail, oars when rowing with oars...).
@@ -1750,9 +1939,11 @@ def controllers(pid, zones):
         [{n: f"{stage} >= 5 && {mod_on(key)}"} for n in names]
     rc[f"controller.render.{NS}.{pid}.ram"] = {
         "geometry": "Geometry.outfit", "materials": [{"*": "Material.default"}], "textures": ["Texture.copper"],
-        "part_visibility": (mods_vis([], "ram") + [{"ram": f"{stage} >= 5"}]) if pid.startswith("theran") else mods_vis(["ram"], "ram")}
+        # D-005: a ram only where it was used: the League's and the Therans' ships carry theirs; any other shows one
+        # only when the ram fitting is fitted
+        "part_visibility": (mods_vis([], "ram") + [{"ram": f"{stage} >= 5"}]) if pid.startswith(("theran", "league")) else mods_vis(["ram"], "ram")}
     mids_vis = [{"*": False}, {"yaw": True}, {"root": True}] + [{z: True} for z in zones["mid"] if z.count("_") == 1]
-    deck_vis = lambda part, key: mids_vis + [{f"deck_{part}_{i}": f"{stage} >= 5 && {deck_at(i, key)}"} for i in range(MAX_MIDS)]
+    deck_vis = lambda part, key: mids_vis + [{f"deck_{part}_{i}": f"{stage} >= 5 && {deck_at(i, key)}"} for i in range(max_mids(b))]
     rc[f"controller.render.{NS}.{pid}.deck_hold"] = {
         "geometry": "Geometry.deck_hold", "materials": [{"*": "Material.default"}], "textures": ["Texture.barrel"],
         "part_visibility": deck_vis("hold", "hold")}
@@ -1762,21 +1953,21 @@ def controllers(pid, zones):
         # Every wooden module skin, in the hull's own midships wood: deck modules at their stations,
         # hull and rail modules on every visible section.
         "part_visibility": deck_vis("bench", "benches")
-        + [{f"deck_{part}_{i}": f"{stage} >= 5 && {deck_at(i, key)}"} for i in range(MAX_MIDS)
+        + [{f"deck_{part}_{i}": f"{stage} >= 5 && {deck_at(i, key)}"} for i in range(max_mids(b))
            for part, key in (("bunk", "bunk"), ("castle", "castle"), ("house", "deckhouse"), ("lookout", "lookout"))]
-        + [{f"deck_{part}_{i}": f"{stage} >= 5 && {mod_on(key)}"} for i in range(MAX_MIDS)
+        + [{f"deck_{part}_{i}": f"{stage} >= 5 && {mod_on(key)}"} for i in range(max_mids(b))
            for part, key in (("full", "full_deck"), ("bulkhead", "bulkheads"), ("rail", "shield_rail"), ("stitch", "sewn_hull"), ("lash", "light_hull"))]
         + [{"deck_crossbow": f"{stage} >= 5 && {mod_on('crossbow')}"}]
         + ([{"deck_boat": f"{stage} >= 5 && {mod_on('boat_deck')}"}, {"deck_sboat": f"{stage} >= 5 && {mod_on('boat_stern')}"}] if b.get("scale", 1) >= 4 else [])}
     rc[f"controller.render.{NS}.{pid}.deck_canopy"] = {
         "geometry": "Geometry.deck_cloth", "materials": [{"*": "Material.default"}], "textures": ["Texture.canopy"],
         "part_visibility": mids_vis
-        + [{f"deck_canopy_{i}": f"{stage} >= 5 && {deck_at(i, 'canopy')} && {P('moored')}"} for i in range(MAX_MIDS)]
-        + [{f"deck_furled_{i}": f"{stage} >= 5 && {deck_at(i, 'canopy')} && !{P('moored')}"} for i in range(MAX_MIDS)]}
+        + [{f"deck_canopy_{i}": f"{stage} >= 5 && {deck_at(i, 'canopy')} && {P('moored')}"} for i in range(max_mids(b))]
+        + [{f"deck_furled_{i}": f"{stage} >= 5 && {deck_at(i, 'canopy')} && !{P('moored')}"} for i in range(max_mids(b))]}
     rc[f"controller.render.{NS}.{pid}.deck_nav"] = {
         "geometry": "Geometry.deck_copper", "materials": [{"*": "Material.default"}], "textures": ["Texture.copper"],
         "part_visibility": deck_vis("nav", "navigation")
-        + [{f"deck_{part}_{i}": f"{stage} >= 5 && {deck_at(i, key)}"} for i in range(MAX_MIDS) for part, key in (("cannon", "cannon"), ("bell", "diving_bell"))]}
+        + [{f"deck_{part}_{i}": f"{stage} >= 5 && {deck_at(i, key)}"} for i in range(max_mids(b)) for part, key in (("cannon", "cannon"), ("bell", "diving_bell"))]}
     rc[f"controller.render.{NS}.{pid}.chest"] = {
         "geometry": "Geometry.chest", "materials": [{"*": "Material.default"}], "textures": ["Texture.sea_chest"],
         "part_visibility": [{"*": False}, {"yaw": True}, {"root": True}, {"sea_chest": f"{stage} >= 5"}]}
@@ -1865,7 +2056,7 @@ def telltale_bones(rig_name, points):
 def mast_factors(b):
     """For each rig, the mast height that reaches just above its sail's top, as a share of its own mast."""
     bones = {x["name"]: x for x in parts(b)}
-    foot, H = bones["mast"]["pivot"][1], bones["mast"]["cubes"][0]["size"][1] - 2   # 2 px of it below the deck
+    foot, H = bones["mast"]["pivot"][1], bones["mast"]["cubes"][0]["size"][1]   # the whole mast, from its step on the keel
     out = {}
     for style, name in RIG_BONES.items():
         out[style] = round((bones[name]["_mast_top"] - foot) / H, 3)
@@ -1879,21 +2070,29 @@ def mast_thickness(b):
     return {style: round(bones[name]["_mast_t"] / t, 3) for style, name in RIG_BONES.items()}
 
 
-def mast_height(b):
-    """The main mast's height at rig scale 1 (model px)."""
-    return next(x for x in parts(b) if x["name"] == "mast")["cubes"][0]["size"][1] - 2
+def mast_heights(b):
+    """Each rig's mast over the rail at rig scale 1 (model px): what heels her (handling.js rigFor)."""
+    bones = {x["name"]: x for x in parts(b)}
+    return {style: bones[name]["_mast_top"] - (b["side"] + b["wash"]) for style, name in RIG_BONES.items()}
 
 
 def proportions():
     """What the scripts need to know about each hull, derived from the same inputs as the models."""
     out = {}
     for pid, b in BOATS.items():
+        use(b)
         d = derived(b)
         out[pid] = {
             "beam": round(2 * (b["F"] + outer_of(b["section"], b.get("scale", 1))) / 16, 4),   # blocks, outside the planking
-            "depth": round(b.get("side0", b["side"]) / 16, 4),             # blocks (working depth: draft)
+            "depth": round(b["side"] / 16, 4),                             # blocks at model scale 1: keel's foot to the sheer (the law's depth)
+            "draft": round(b["wl"] / 16, 4),                               # blocks at model scale 1: the law's draught
+            "wash": round(b["wash"] / 16, 4),                              # blocks at model scale 1: the washstrake over the sheer
+            "deck": b["_deck"]["kind"],                                    # open, half, full, or biti (the Norse deck at the waterline)
+            "sheds": bool(b.get("deck")),                                  # decked over to the sheer (the kayak): the sea runs off her, no freeboard asked
+            "decks": b["_deck"]["n"],                                      # the law's decks: floor((D - 1) / 2)
+            "wall": b["_wall"],                                            # world px: the wall law's w(L)
             "mast": round(d["mast"] / 16, 3),
-            "masts": {k: round(v * mast_height(b) / 16 * y_scale(b.get("scale", 1)) / b.get("scale", 1), 3) for k, v in mast_factors(b).items()},
+            "masts": {k: round(v / 16 * y_scale(b.get("scale", 1)) / b.get("scale", 1), 3) for k, v in mast_heights(b).items()},
             "scale": b.get("scale", 1),
             "mast_count": len(mast_plan(b)),
             "seats": seat_bands(b),

@@ -13,28 +13,36 @@ export const GRID = {
   large: { end: 3, gap: 1, mast: 1, slots: 4, fullDeck: 5 },
 };
 
-// Decks. A deep hull carries more than one: you walk the top deck, at the rail; the decks below
-// are black boxes (not drawn, not walked) that stow modules made to go below: the hold, bunks and
-// guns (fired through ports). A full deck adds a deck to any hull deep enough to stand under it.
+// Decks (D-004, from the law's depth: chief.md section 3). A hull D deep carries floor((D - 1) / 2) decks over
+// her hold (a block of bulwark, a 2-block tween for a 1.8-block player); you walk the top one, the weather deck,
+// a bulwark under the rail; the hold and any deck under the weather deck are black boxes (not walked) that stow
+// modules made to go below: the hold, bunks and guns (fired through ports). A full deck adds a deck to any hull a
+// tween deep. The model (tools/gen_boats.py) draws the same decks.
 export const BELOW = new Set(["hold", "bunk", "cannon"]);
-const DECK_HEIGHT = 1.5;                 // blocks between decks
-/** The rail's height above the boat's origin for this build, in blocks, as the model draws it. */
+export const WATERLINE = 0.4;            // given: the water's surface over a floating boat's origin (the game floats her so)
+export const DECK_HEIGHT = 2;            // given: a 1.8-block player walks a 2-block tween
+const BULWARK = 1;                       // vision: a waist-high bulwark, a block, from the weather deck to the rail
+/** The rail's height above the boat's origin for this build, in blocks, as the model draws it: the depth property
+ * scales the hull about her waterline (draught and freeboard together). */
 export const hullDepth = (rec, plan) => {
   const r = PROPORTIONS[plan.id]?.rail ?? 1;
-  return 5 / 16 + (r - 5 / 16) * (rec.dims?.depth ?? 1);
+  return WATERLINE + (r - WATERLINE) * (rec.dims?.depth ?? 1);
 };
-/** How many decks this hull has: 1, or more where the rail stands too high to see over from the hold. */
+/** The hull's depth, keel's foot to the sheer, in blocks, for this build. */
+export const keelDepth = (rec, plan) => (PROPORTIONS[plan.id]?.depth ?? 0.5) * (plan.modelScale ?? 1) * (rec.dims?.depth ?? 1);
+/** How many decks this hull has, counting her hold: 1 (an open hull), or one more for each of the law's decks. */
 export function decksFor(rec, plan, modules = rec.modules ?? []) {
-  const R = hullDepth(rec, plan);
+  const D = keelDepth(rec, plan);
   if (sizeClass(rec.dims.length) === "small") return 1;
-  let n = R >= 1.9 ? 1 + Math.floor((R - 0.4) / DECK_HEIGHT) : 1;
-  if (modules.includes("full_deck") && R >= 1.3 && n < 2) n += 1;
+  let n = 1 + Math.max(0, Math.floor((D - BULWARK) / DECK_HEIGHT));
+  if (modules.includes("full_deck") && D >= DECK_HEIGHT && n < 2) n += 1;
   return Math.max(1, Math.min(3, n));
 }
-/** Where the top deck is walked: blocks above the water block the hull floats in (0 = at the waterline, inside the hull). */
+/** Where the top deck is walked: whole blocks above the water block the hull floats in (0 = at the waterline, inside
+ * the hull): the weather deck, a bulwark under the rail. */
 export function topDeckUp(rec, plan, modules = rec.modules ?? []) {
   if (decksFor(rec, plan, modules) < 2) return 0;
-  return Math.max(2, Math.round(hullDepth(rec, plan) - 0.8));   // feet just under the rail, clear of the boat's own box
+  return Math.max(0, Math.round(hullDepth(rec, plan) - WATERLINE - BULWARK));
 }
 /** Slots on the decks below (black boxes): a class's worth per lower deck. */
 export function lowerSlotsFor(rec, plan, modules = rec.modules ?? []) {

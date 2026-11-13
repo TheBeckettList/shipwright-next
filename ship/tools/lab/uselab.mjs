@@ -70,9 +70,9 @@ function seatsOf(pid, rec) {
   return g?.["minecraft:rideable"]?.seats?.map((s) => s.position) ?? [];
 }
 
-const railAt = (pid, depth) => {
+const railAt = (pid, depth) => {   // as grid.js hullDepth: the depth property scales her about her waterline (D-004)
   const r = PROPORTIONS[pid]?.rail ?? 1;
-  return 5 / 16 + (r - 5 / 16) * depth;
+  return WATERLINE + (r - WATERLINE) * depth;
 };
 
 export function seatsLens({ e, rec, plan, h }, depth) {
@@ -102,7 +102,8 @@ export function heelLens({ rec, h }, depth) {
   const a = (Math.min(worst, limit) * Math.PI) / 180;
   const W = h.overallHalfWidth ?? h.beam / 2;
   const lee = rail * Math.cos(a) - W * Math.sin(a);        // the lee rail's height above the origin
-  const issues = lee < WATERLINE + 0.1 ? [`lee rail under water at ${(a * 180 / Math.PI).toFixed(1)}° (rail ${lee.toFixed(2)} vs water ${WATERLINE})`] : [];
+  // a hull decked to her sheer (the kayak) sheds the sea: her deck edge may dip (D-004: decked kayaks are exempt from freeboard)
+  const issues = lee < WATERLINE + 0.1 && !PROPORTIONS[rec.plan]?.sheds ? [`lee rail under water at ${(a * 180 / Math.PI).toFixed(1)}° (rail ${lee.toFixed(2)} vs water ${WATERLINE})`] : [];
   return { heel: +(a * 180 / Math.PI).toFixed(1), lee: +lee.toFixed(2), issues };
 }
 
@@ -218,6 +219,7 @@ export function brushLens(pid) {
 }
 
 export function useBoat(pid, depth = 1.0) {
+  depth = Math.min(depth, PLANS[pid].depthScale[1]);   // no deeper than her plan lets her be built (plans.js: GM, D-004)
   const b = launch(pid, depth);
   return { pid, seats: seatsLens(b, depth), heel: heelLens(b, depth), deck: deckLens(b, depth), sail: sailLens(b), coast: coastLens(launch(pid, depth)),
     brush: depth === 1.0 ? brushLens(pid) : { issues: [] } };

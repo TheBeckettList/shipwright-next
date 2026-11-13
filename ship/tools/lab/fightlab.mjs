@@ -170,7 +170,9 @@ export function gunsLens(pid) {
     let shots = 0, hits = 0, zones = new Set();
     while (target.isValid && shots < 60) {
       shots++;
-      const look = 0.02 + 0.01 * (shots % 3);
+      // the gunner lays the gun on her: lifted a touch for a tall hull, down to level and under for a low one (D-004
+      // drew the small boats to their law depth: a faering's rail is now 0.6 over the water, under a carrack's ports)
+      const look = [0.02, 0.03, 0.04, 0, -0.06, -0.12][shots % 6];
       const { ev } = broadside(shooter, 1, look);
       if (ev?.hit === target.id) { hits++; zones.add(ev.zone); }
     }
@@ -466,15 +468,20 @@ export function modulesLens() {
   const LOOKS = new Set(["canopy"]);            // shade and shelter: the look is the point
   const byKey = {};
   for (const [k, m] of Object.entries(MODULES)) {
-    const pid = Object.keys(PLANS).find((p) => p !== "testship" && m.sizes.some((sz) => sz === sizeClass(PLANS[p].lengthRange[1])) && !PLANS[p][k] && !PLANS[p].twin);   // a learned tradition's module fits any hull
-    if (!pid) { issues.push(`${k}: no boat can take it`); continue; }
-    const plan = PLANS[pid];
-    const L = plan.lengthRange[1];
-    const a = newRecord(plan, "lab", L), b = newRecord(plan, "lab", L);
-    if (plan.rigFamily) for (const r of [a, b]) r.sections.rig = { ...(r.sections.rig ?? {}), sail: true, style: plan.rigStyle };
-    b.modules = [k];
-    const ha = computeHandling(a), hb = computeHandling(b);
-    const changed = Object.keys(hb).filter((f) => typeof hb[f] !== "object" && hb[f] !== ha[f]);
+    // the boats that can take it (a learned tradition's module fits any hull); judged on the first it changes, since
+    // some ask a hull deep enough (D-004: a full deck needs a tween's depth under it, which no longship has)
+    const fits = Object.keys(PLANS).filter((p) => p !== "testship" && m.sizes.some((sz) => sz === sizeClass(PLANS[p].lengthRange[1])) && !PLANS[p][k] && !PLANS[p].twin);
+    if (!fits.length) { issues.push(`${k}: no boat can take it`); continue; }
+    const tryOn = (pid) => {
+      const plan = PLANS[pid];
+      const L = plan.lengthRange[1];
+      const a = newRecord(plan, "lab", L), b = newRecord(plan, "lab", L);
+      if (plan.rigFamily) for (const r of [a, b]) r.sections.rig = { ...(r.sections.rig ?? {}), sail: true, style: plan.rigStyle };
+      b.modules = [k];
+      const ha = computeHandling(a), hb = computeHandling(b);
+      return { pid, changed: Object.keys(hb).filter((f) => typeof hb[f] !== "object" && hb[f] !== ha[f]) };
+    };
+    const { pid, changed } = fits.map(tryOn).find((t) => t.changed.length) ?? tryOn(fits[0]);
     byKey[k] = { pid, changed: changed.slice(0, 5) };
     if (!changed.length && !LOOKS.has(k) && !["ram", "crossbow", "cannon", "castle", "shield_rail", "diving_bell", "hold", "bunk", "bulkheads", "deckhouse"].includes(k))
       issues.push(`${k} on a ${pid}: changes nothing in her handling and has no other effect`);

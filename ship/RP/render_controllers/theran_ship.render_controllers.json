@@ -207,6 +207,21 @@
         },
         {
           "mid_6_cradle": "q.property('shipwright:stage') >= 1 && q.property('shipwright:stage') < 5"
+        },
+        {
+          "mid_7": true
+        },
+        {
+          "mid_7_keel": "q.property('shipwright:stage') >= 1"
+        },
+        {
+          "mid_7_frame": "q.property('shipwright:stage') >= 2"
+        },
+        {
+          "mid_7_plank": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "mid_7_cradle": "q.property('shipwright:stage') >= 1 && q.property('shipwright:stage') < 5"
         }
       ]
     },
@@ -568,6 +583,9 @@
           "mid_6": true
         },
         {
+          "mid_7": true
+        },
+        {
           "bow": true
         },
         {
@@ -617,6 +635,9 @@
           "mid_6": true
         },
         {
+          "mid_7": true
+        },
+        {
           "deck_hold_0": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 1), 16) == 1"
         },
         {
@@ -636,6 +657,9 @@
         },
         {
           "deck_hold_6": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 16777216), 16) == 1"
+        },
+        {
+          "deck_hold_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 1"
         }
       ]
     },
@@ -699,6 +723,9 @@
           "mid_6": true
         },
         {
+          "mid_7": true
+        },
+        {
           "deck_bench_0": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 1), 16) == 2"
         },
         {
@@ -718,6 +745,9 @@
         },
         {
           "deck_bench_6": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 16777216), 16) == 2"
+        },
+        {
+          "deck_bench_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 2"
         },
         {
           "deck_bunk_0": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 1), 16) == 5"
@@ -802,6 +832,18 @@
         },
         {
           "deck_lookout_6": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 16777216), 16) == 8"
+        },
+        {
+          "deck_bunk_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 5"
+        },
+        {
+          "deck_castle_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 6"
+        },
+        {
+          "deck_house_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 7"
+        },
+        {
+          "deck_lookout_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 8"
         },
         {
           "deck_full_0": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 32), 2) == 1"
@@ -909,6 +951,21 @@
           "deck_lash_6": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 256), 2) == 1"
         },
         {
+          "deck_full_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 32), 2) == 1"
+        },
+        {
+          "deck_bulkhead_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 128), 2) == 1"
+        },
+        {
+          "deck_rail_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 1), 2) == 1"
+        },
+        {
+          "deck_stitch_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 64), 2) == 1"
+        },
+        {
+          "deck_lash_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 256), 2) == 1"
+        },
+        {
           "deck_crossbow": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 16), 2) == 1"
         }
       ]
@@ -955,6 +1012,9 @@
           "mid_6": true
         },
         {
+          "mid_7": true
+        },
+        {
           "deck_canopy_0": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 1), 16) == 3 && (math.mod(math.floor(q.property('shipwright:flags') / 16), 2))"
         },
         {
@@ -976,6 +1036,9 @@
           "deck_canopy_6": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 16777216), 16) == 3 && (math.mod(math.floor(q.property('shipwright:flags') / 16), 2))"
         },
         {
+          "deck_canopy_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 3 && (math.mod(math.floor(q.property('shipwright:flags') / 16), 2))"
+        },
+        {
           "deck_furled_0": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 1), 16) == 3 && !(math.mod(math.floor(q.property('shipwright:flags') / 16), 2))"
         },
         {
@@ -995,6 +1058,9 @@
         },
         {
           "deck_furled_6": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 16777216), 16) == 3 && !(math.mod(math.floor(q.property('shipwright:flags') / 16), 2))"
+        },
+        {
+          "deck_furled_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 3 && !(math.mod(math.floor(q.property('shipwright:flags') / 16), 2))"
         }
       ]
     },
@@ -1040,6 +1106,9 @@
           "mid_6": true
         },
         {
+          "mid_7": true
+        },
+        {
           "deck_nav_0": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 1), 16) == 4"
         },
         {
@@ -1059,6 +1128,9 @@
         },
         {
           "deck_nav_6": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 16777216), 16) == 4"
+        },
+        {
+          "deck_nav_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 4"
         },
         {
           "deck_cannon_0": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 1), 16) == 9"
@@ -1101,6 +1173,12 @@
         },
         {
           "deck_bell_6": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 16777216), 16) == 10"
+        },
+        {
+          "deck_cannon_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 9"
+        },
+        {
+          "deck_bell_7": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:deck') / 268435456), 16) == 10"
         }
       ]
     },

@@ -140,6 +140,12 @@ def exclusive(a, b):
     # cloth's box meets a paddle or pole in the file is not where they meet in the game (S002)
     if (a in PROPULSION and b.startswith("rig_")) or (b in PROPULSION and a.startswith("rig_")):
         return True
+    # the furnace and its cranks are brought to a block's true size at run time (gen_boats true_size), scaled about
+    # their own pivot, so where their authored box meets a rig or a paddle in the file is not where they meet in game
+    scaled = lambda n: n == "furnace" or n.startswith("crank_")
+    moved = lambda n: n.startswith(("rig_", "oar_")) or n in PROPULSION
+    if (scaled(a) and moved(b)) or (scaled(b) and moved(a)):
+        return True
     alt = ("rig_", "sail_", "furl", "deck_", "tt_", "oar_", "power_", "canopy", "ama", "float", "shield", "pennant", "flag")
     if a.split("_")[0] == b.split("_")[0] and any(a.startswith(p) for p in alt):
         return True
@@ -147,13 +153,14 @@ def exclusive(a, b):
 
 
 def stand(pid, b):
-    """Feet of a player on the laid deck vs the hull's floor and rail, in pixels above the model root."""
-    # The deck is barriers in the water block the hull floats in; the boat floats with its origin
-    # FLOAT_Y above that block's bottom, so feet are (1 - FLOAT_Y) blocks above the origin.
-    float_y = 0.6
-    feet = (1 - float_y) * 16
-    floor = G.HULL_LIFT + b.get("floor_px", 1)
-    rail = G.HULL_LIFT + b["side"]
+    """Feet of a player on the laid deck vs the hull's walked floor and rail, in world pixels above the entity's origin
+    (the launched model: her keel the law's draught under the water, D-004)."""
+    # The deck is barriers in the water block the hull floats in (or whole blocks over it on a decked ship: grid.js
+    # topDeckUp); the boat floats with its origin WATERLINE under the water's top, so feet stand there.
+    s = b.get("scale", 1)
+    feet = (G.WATERLINE + b["_deck"]["up"]) * 16
+    floor = G.root_lift(b) + G.deck_y(b) * s
+    rail = G.root_lift(b) + (b["side"] + b["wash"]) * s
     return {"feet": round(feet, 1), "floor": round(floor, 1), "rail": round(rail, 1), "rail_above_feet": round(rail - feet, 1)}
 
 

@@ -27,7 +27,7 @@ export const PACKED = {
 export const PACKED_DEFAULTS = { woods: 1 + 12 + 144, flags: 2, kinds: 4 };
 // Ranges of the plain number properties, matching the entity definitions (checked by a test).
 export const RANGES = {
-  stage: [0, 5], mids: [1, 7], beam: [0.75, 1.5], depth: [0.75, 1.5], sail_color: [0, 15],
+  stage: [0, 5], mids: [1, 8], beam: [0.75, 1.5], depth: [0.75, 1.5], sail_color: [0, 15],
   yaw: [-180, 180], wind_rel: [-180, 180], wind_str: [0, 1.5], rudder: [-30, 30], sail_fill: [0, 1],
   heel: [-30, 30], rowing: [0, 1], oar_pairs: [0, 4], rig_scale: [0.5, 3], stroke_l: [-1, 1], stroke_r: [-1, 1],
   turn: [-1, 1], telltale: [-1, 1], mods: [0, 4095], deck: [0, 16 ** 7 - 1],
