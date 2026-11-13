@@ -1841,7 +1841,7 @@ def glider_parts(b):
     yw, zw, hsw = ymid, -half + 2 * half * TMAX, g["wspan"] / 2
     s1, s2 = hsw / PHI, hsw / PHI ** 2
     a1, a2 = math.atan(1 / PHI), math.atan(1 / PHI ** 2)
-    sweep = 1 / PHI
+    sweep = 1 / PHI ** 2                                  # swept tan 1/phi^2 (about 21 degrees; Richard: "little less swept")
     cr = Lt / PHI ** 2.5
     co, ct = cr / PHI, cr / PHI ** 3
     def panel(x0, y0, x1, y1, c0, c1, l0, l1):
