@@ -1261,13 +1261,13 @@ def parts(b):
         cube([F, side - 1, -boom - 1], [fx - F, 1.5, 2]), cube([F, side - 1, boom - 1], [fx - F, 1.5, 2]),
         cube([fx - 0.5, fl + 2 * r, -boom - 1], [1, post, 1.5]), cube([fx - 0.5, fl + 2 * r, boom - 1], [1, post, 1.5]),
         cube([F + 1, side - 1.6, -boom - 1.5], [1, 2.6, 3]), cube([F + 1, side - 1.6, boom - 1.5], [1, 2.6, 3])]})
-    # Foils (the Theran skiff): a strut under the middle carrying a T-wing, and a T-rudder aft: at speed she lifts
-    # onto them and flies.
+    # Foils (the Theran skiff): one foiling keel, a strut under the middle carrying the main T-wing, and the lift aft
+    # comes from the rudder (below), itself a T-foil: at speed she lifts onto the two and flies, as a modern foiling
+    # monohull does with one centre foil and a T-rudder.
     if b.get("foils"):
         span, depth_ = 2.6 * F, 1.2 * side
         bones.append({"name": "foils", "parent": "root", "pivot": [0, 0, 0], "cubes": [
-            cube([-0.6, 1 - depth_, -4], [1.2, depth_, 5]), cube([-span / 2, 1 - depth_ - 0.8, -6], [span, 0.8, 8]),
-            cube([-0.4, 1 - 0.8 * depth_, 14], [0.8, 0.8 * depth_, 3]), cube([-0.45 * span, 1 - 0.8 * depth_ - 0.6, 12.5], [0.9 * span, 0.6, 5])]})
+            cube([-0.6, 1 - depth_, -4], [1.2, depth_, 5]), cube([-span / 2, 1 - depth_ - 0.8, -6], [span, 0.8, 8])]})
     # The Theran trimaran: two slim wave-piercing floats (true hulls, rounded and decked), each carried on a single
     # forward-swept gold aka, and an hourglass trampoline of diamond mesh between each float and the main hull.
     if b.get("twin") and b.get("bow") is PIERCE:
@@ -1320,9 +1320,19 @@ def parts(b):
         bones.append({"name": "nets", "parent": "root", "pivot": [0, 0, 0], "cubes": nets})
     # Steering oar on the starboard quarter, reaching below the bottom.
     rx, rl, rb, tl = -(F + 2), d["rudder"], d["rudder_blade"], d["tiller"]
-    bones.append({"name": "rudder", "parent": "root", "pivot": [rx, 0.45 * side, 14], "cubes": [
-        cube([rx - 0.5, side + 1 - rl, 13.5], [1, rl, 1]), cube([rx - 0.25, side + 1 - rl, 13.5], [0.5, rb, 0.4 * rb]),
-        cube([rx + 0.5, side + 1, 14 - tl * 0.6], [tl, 1, 1]), cube([rx + 0.5, side + 1, 14 - tl * 0.6], [1, 1, 0.55 * tl])]})
+    if b.get("foils"):
+        # A foiler steers with a T-rudder hung on the centre of her transom: the blade reaches as deep as the main
+        # foil (depth 0.8 of the strut's, so it flies a little higher, trimming her bow up), a small T-wing at its
+        # foot (a third of the main span) lifts the stern, and a tiller reaches in over the transom. It turns as one.
+        span, depth_ = 2.6 * F, 1.2 * side
+        rz, dr = END - 1, 0.8 * depth_
+        bones.append({"name": "rudder", "parent": "root", "pivot": [0, 0.45 * side, rz], "cubes": [
+            cube([-0.4, 1 - dr, rz - 1.5], [0.8, side + dr, 3]), cube([-span / 6, 1 - dr - 0.6, rz - 2], [span / 3, 0.6, 4]),
+            cube([-0.5, side + 1, rz - tl], [1, 1, tl])]})
+    else:
+        bones.append({"name": "rudder", "parent": "root", "pivot": [rx, 0.45 * side, 14], "cubes": [
+            cube([rx - 0.5, side + 1 - rl, 13.5], [1, rl, 1]), cube([rx - 0.25, side + 1 - rl, 13.5], [0.5, rb, 0.4 * rb]),
+            cube([rx + 0.5, side + 1, 14 - tl * 0.6], [tl, 1, 1]), cube([rx + 0.5, side + 1, 14 - tl * 0.6], [1, 1, 0.55 * tl])]})
     # The sea chest, part of the boat: a dark, ender-style chest on deck just ahead of the helm.
     cw, ch, cd = 0.9 * F, 0.45 * side, 0.5 * F
     cz = HELM_Z - 17
@@ -1683,6 +1693,9 @@ def ram_cubes(pid, b):
             out.append(box([-w / 2, y0 + dy - h / 2, z0 - (k + 1) * L / n], [w, h, L / n + 0.15]))
     else:                                                                                              # theran
         L = 0.7 * s
+        # the socket: a gold boss the spike and chevrons spring from, run back into the knife-thin piercing stem so
+        # the ram is cast onto the ship and never floats ahead of her (the lens's connect check)
+        out.append(box([-0.16 * F, y0 - 0.12 * s, z0 - 0.4], [0.32 * F, 0.24 * s, 0.4 + 0.3 * s]))
         for k in range(6):                       # the spike: a diamond in section (a square turned on its corner), tapering
             t = k / 6
             d = 0.3 * s * (1 - 0.85 * t)

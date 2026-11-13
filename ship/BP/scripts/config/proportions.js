@@ -1500,15 +1500,15 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "theran_flagship": {
-    "beam": 1.1457,
-    "depth": 0.7031,
-    "draft": 0.4375,
+    "beam": 1.1145,
+    "depth": 0.6875,
+    "draft": 0.4219,
     "wash": 0.0938,
     "deck": "half",
     "sheds": false,
     "decks": 0,
     "wall": 3.5,
-    "mast": 2.25,
+    "mast": 2.2,
     "masts": {
       "square": 2.116,
       "lateen": 1.508,
@@ -1539,7 +1539,7 @@ export const PROPORTIONS = {
       0.0,
       0.26
     ],
-    "oar": 0.872,
+    "oar": 0.844,
     "sail": {
       "square": 13.005,
       "lateen": 15.895,
