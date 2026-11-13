@@ -26,7 +26,7 @@
 import { FIB, PHI } from "../core/golden.js";
 import { VISION } from "../core/given.js";
 import { seaState } from "../core/sea.js";
-import { TRIAL } from "../core/boat.js";
+import { TRIAL, hullOf, pullSpeed } from "../core/boat.js";
 
 export const CLASSES = {
   small: { nominal: FIB[5], range: [4, 10], reach: "inshore", use: "fishing, ferrying, the canals and creeks" },   // given: Shipwright's small plans (4 to 10 blocks)
@@ -58,7 +58,18 @@ export const FLEETS = {
   dugout: [T("dugout", "small", [4, 9], 6, 0.45, "paddles", "inshore", { form: "open" }), T("war canoe", "ship", [12, 20], 8, 0.4, "paddles", "coastal", { form: "open" })],   // given: the Northwest Coast canoes (no great ship: they cross in others'); open keel-less hulls, beam/depth 2.4-2.9 (inland.md)
   birchbark: [T("bark canoe", "small", [4, 8], 5.75, 0.4, "paddles", "inshore", { form: "open" }), T("freight canoe", "ship", [12, 18], 6, 0.4, "paddles", "coastal", { form: "open" })],   // given: the bark canoe, the canot du maître (open, keel-less)
   shallow: [T("punt", "small", [4, 8], 4.5, 0.7, "poles", "inshore", { flat: true }), T("flatboat", "ship", [12, 20], 3.5, 0.75, "poles", "inshore", { flat: true })],   // given: the punt, the flatboat (river and lagoon only)
-  league: [T("monoreme", "small", [6, 10], 6, 0.42, "oars+sail", "coastal"), T("bireme", "ship", [14, 22], 7, 0.42, "oars+sail", "sea"), T("trireme", "great", [30, 38], 8, 0.4, "oars+sail", "sea")],   // given: the oared galleys (the penteconter, the Phoenician bireme, the Olympias trireme: 37 m by 5.5, three banks)
+  // The League (league.md): its -remes all great, each sized by its route (freeboard over the route's working sea,
+  // stores for its longest open leg: routeLength); its ship class and small craft by the need they meet. role is the
+  // job (world/league.js ROLES), banks the files of oars a side (a hemiolia's half file forward)
+  league: [
+    T("keles", "small", [8, 10], 6, 0.42, "oars+sail", "coastal", { galley: true, banks: 1, role: "dispatch" }),   // given: the single-banked "racehorse" (Thucydides 4.120: Brasidas crosses in a keles); vision: the presidency's courier
+    T("skaphe", "small", [5, 8], 3.25, 0.55, "oars", "inshore", { role: "tender" }),   // given: the ship's boat and harbour lighter (Casson, SSAW; Latin scapha); vision: lighterage at the shallow seats, the diving bell's boat
+    T("hemiolia", "ship", [16, 21], 7, 0.42, "oars+sail", "coastal", { galley: true, banks: 1.5, role: "guard" }),   // given: the "one-and-a-half", the pirate craft and the craft built to catch pirates (Casson, SSAW); vision: harbour guard, pirate chaser
+    T("kerkouros", "ship", [18, 22], 5, 0.5, "oars+sail", "coastal", { galley: true, banks: 1, role: "coaster" }),   // given: the oared Levantine/Cypriot heavy transport, later in Ptolemaic service (Casson, SSAW); vision: the coaster between the deep seats
+    T("monoreme", "great", [28, 30], 6, 0.42, "oars+sail", "sea", { galley: true, banks: 1, role: "victualler" }),   // given: the penteconter, the Phocaeans' long-haul ship (Herodotus 1.163); derived: the sea and payload laws (league.md section 2)
+    T("bireme", "great", [30, 34], 7, 0.42, "oars+sail", "sea", { galley: true, banks: 2, role: "carrier" }),   // given: the Phoenician merchant-warship (Sennacherib's reliefs, Nineveh); derived: each takes its route's sea, routeLength
+    T("trireme", "great", [36, 38], 8, 0.4, "oars+sail", "sea", { galley: true, banks: 3, role: "month-ship", masts: 2 }),   // given: the Olympias (36.9 m by 5.45), the Zea shipsheds (about 37 m; Blackman & Rankov 2013), the akateion forward (the naval inventories); derived: Thera's sea
+  ],
   arctic: [T("kayak", "small", [4, 6], 6.5, 0.4, "paddles", "coastal", { form: "flat" }), T("umiak", "ship", [12, 16], 4, 0.45, "paddles+sail", "coastal", { form: "flat" })],   // given: the kayak, the umiak (hard-chine skin boats: flat in form, northern.md)
 };
 
@@ -68,12 +79,39 @@ export function sizeOf(type, seed = null) {
   const L = seed == null ? Math.round(mean) : Math.round(lo + (((seed * PHI) % 1) * (hi - lo)));   // derived: the seed's golden step through the range
   const B = Math.max(1, Math.round(L / type.lb)), depth = Math.max(1, Math.round(B / (type.flat ? PHI * PHI : PHI))), draft = Math.max(1, Math.round(depth / PHI));
   const main = type.masts ? Math.round(L / PHI) : 0, masts = Array.from({ length: type.masts }, (_, k) => Math.round(main / PHI ** (k === 0 ? 0 : Math.min(k, 2) / 2)));   // derived: the main a length over phi; the fore and mizzen a half-step down, the rest a step
-  const end = L / PHI ** 3, rooms = Math.max(1, Math.floor(L - 2 * end));   // derived: the ends a length over phi cubed; a room a metre
-  const rowers = type.drive.includes("oars") ? 2 * rooms : 0, paddlers = /paddles|poles/.test(type.drive) ? rooms * (B > 2 ? 2 : 1) : 0;
-  const sailors = type.drive.includes("sail") ? Math.max(2, Math.round((L * B) / FIB[6])) : 0;   // derived: a hand to each 13 blocks of deck
-  const crew = Math.max(1, rowers + paddlers + (rowers || paddlers ? Math.ceil(sailors / PHI ** 2) : sailors));   // derived: a pulled boat's sail is worked by its own rowers, with a few hands more
+  const galley = !!type.galley, banks = type.banks ?? 1;
+  const end = L / PHI ** (galley ? 4 : 3), rooms = Math.max(1, Math.floor(L - 2 * end));   // derived: the ends a length over phi cubed; a room a metre. vision (league.md section 2): a galley's rowers fill her, her ends a step shorter (L/phi^4)
+  const rowers = type.drive.includes("oars") ? Math.round(2 * rooms * banks) : 0, paddlers = /paddles|poles/.test(type.drive) ? rooms * (B > 2 ? 2 : 1) : 0;   // derived: a pair to each room for each bank
+  const marines = galley ? Math.round(rowers / PHI ** 4) : 0;   // vision: a galley's deck crew, marines and archers, rowers/phi^4 (given check: the Olympias, 170 rowers and 30 more)
+  const sailors = type.drive.includes("sail") ? Math.max(2, Math.round((L * (galley ? L / type.lb : B)) / FIB[6])) : 0;   // derived: a hand to each 13 blocks of deck (a galley's deck to the pixel: league.md's crews)
+  const crew = Math.max(1, rowers + paddlers + marines + (rowers || paddlers ? Math.ceil(sailors / PHI ** 2) : sailors));   // derived: a pulled boat's sail is worked by its own rowers, with a few hands more
   const cargo = Math.max(1, Math.round((L * B * depth * type.full) / FIB[6]));   // derived: chests of 13 blocks of hold
-  return { name: type.name, cls: type.cls, L, B, depth, draft, masts, crew, cargo, drive: type.drive, reach: type.reach, form: type.form, exact: exactOf(type, L), ...berthOf({ L, B, draft }) };
+  return { name: type.name, cls: type.cls, L, B, depth, draft, masts, crew, cargo, drive: type.drive, reach: type.reach, form: type.form, exact: exactOf(type, L), ...(galley ? { oars: { rooms, banks, rowers, marines }, role: type.role } : {}), ...berthOf({ L, B, draft }) };
+}
+
+// ---- a galley sized by her route (league.md section 2)
+export const GALLEY = Object.freeze({
+  RATION: 0.015,   // given: m^3 a crew-day: about 8 L of water (a litre an hour at the oar; Morrison, Coates & Rankov, The Athenian Trireme, 2000) and a choinix of grain (Herodotus 7.187), the amphorae filling 1/phi of the space (vision)
+  HALVES: 2 ** (-1 / 3),   // given: galleys cross open water rowing by halves (Thucydides 3.49): half the power at P ~ v^3 is 2^(-1/3) of the speed
+  DAY_S: 1200,   // given: a Minecraft day, seconds (the world's EAT clock)
+});
+const CARRIES = new Set(["carrier", "victualler", "coaster"]);   // vision: the hulls that carry payload keep 1/phi^2 of their free hold for stores, the rest for cargo
+/** The length a galley takes for her route: the least in her range whose freeboard clears the route's working sea
+ * (Hs/2, the crest) and whose free hold carries her crew's stores for its longest open leg (blocks), with phi in hand
+ * for contrary weather. Hs: the route's design sea (blocks; core/sea.js seaState of its windier end's wind). */
+export function routeLength(type, { Hs = 0, leg = 0 } = {}) {
+  const [lo, hi] = type.range, banks = type.banks ?? 1;
+  const sea = (Hs / 2) * type.lb * (FORM_DEPTH[type.form] ?? PHI) * PHI * PHI;   // derived: freeboard B/(form phi^2) = L/(lb form phi^2) over the crest
+  const k = CARRIES.has(type.role) ? PHI ** -2 : 1 / PHI;   // vision: the share of free hold stores may take
+  const stores = (L) => {
+    if (!leg) return true;
+    const s = sizeOf({ ...type, range: [L, L] }), x = exactOf(type, L);
+    const pull = pullSpeed(hullOf({ L, lb: type.lb, full: type.full, pull: "oars", pullers: s.oars?.rowers ?? s.crew, depth: x.depth }));
+    const days = leg / (pull * GALLEY.HALVES * GALLEY.DAY_S);   // derived: rowing by halves across the leg
+    return s.crew * days * PHI * GALLEY.RATION <= (k * L * x.B * x.depth * type.full) / PHI ** banks;   // vision: each bank of rowers takes a golden step of the hull
+  };
+  for (let L = Math.max(lo, Math.ceil(sea)); L <= hi; L++) if (stores(L)) return L;
+  return hi;
 }
 
 // D-004: the hull to the pixel, by its form
