@@ -2725,88 +2725,98 @@ def glider_parts(b):
             mini += slab(T(F_), T(Ff_), T(Rt_), T(Rf_), 0.5, (0, T((0, ymid, 0))[1] - 99, T(F_)[2]))
         mini += slab(T(FRr[0]), T(FRl[0]), T(FRr[1]), T(FRl[1]), 0.5, (0, T((0, ymid, 0))[1] + 99, T(FRl[0])[2]))
     if b.get("sail") == "clam" and b.get("_plates") and b.get("_rud_FR"):
-        # simpler (Richard: "make it look way simpler geometry, and mirror the craft's wings and stab setup, just small;
-        # it needs an h stab for lift on the tail anyway"; "make the fuselage a simplified one, like a normal drop keel
-        # shape; then on the rear, have the emitter for the power source"): a teardrop bulb, her plates' wing on it at
-        # 1/phi^3, and at its tail a level stab with two fins on its tips, her rudders mirrored (up, canted out)
+        # the foil as a real casting, then into the game (Richard: "still way too boxy; like, make this in real life out
+        # of gold in a sim, then translate that in"; "a proper sand or lost-wax pour of gold"): first a smooth solid,
+        # drawn as a real foil is (a body of revolution; wings, stab, fins and blade lofted from a symmetric NACA
+        # section 12% thick, with rounded leading edges, a smooth anhedral into the tips, rounded corners where the stab
+        # turns into its fins, and a flared root where the blade meets the drop); then each face of it becomes one
+        # thin gold plate, so the game shows the casting's own facets
         pl, km_ = b["_plates"], km
-        Lb = km_ * LB                                                       # derived: the bulb, her length at 1/phi^3
-        rb = Lb / (2 * PHI ** 5)                                            # vision: a slim drop, its girth 1/phi^5 of its length (Richard:
-                                                                            # "way slimmer; not weight, just hydro")
-        z0b = zc - Lb / PHI ** 2                                            # its nose: its wing at the third of its length
+        Lb = km_ * LB                                                       # derived: the drop, her length at 1/phi^3
+        rb = Lb / (2 * PHI ** 5)                                            # vision: a slim drop (hydro, not weight)
+        z0b = zc - Lb / PHI ** 2                                            # its nose: the wing at the third of its length
         ybk = yb                                                            # its axis, the wing's plane
-        prof = [(0.0, 0.25), (0.1, 0.8), (1 / PHI ** 2, 1.0), (1 / PHI, 0.72), (1.0, 0.18)]   # vision: a drop, full at 0.38
-        # (Richard: "a proper sand or lost-wax pour of gold"; "too many angles; make all the surfaces join"): the drop is
-        # a few square sections along one axis, all square to it, so it shows no facet angles, only its taper
-        mini = []
+        TK = 0.12                                                           # given: a NACA 0012's thickness
+        SKIN = 0.3                                                          # vision: each plate's thickness, px
+        def naca(x):                                                        # its half thickness at x of the chord
+            return 5 * TK * (0.2969 * math.sqrt(max(x, 0)) - 0.126 * x - 0.3516 * x ** 2 + 0.2843 * x ** 3 - 0.1036 * x ** 4)
+        XS = [0.0, 0.08, 0.3, 0.65, 1.0]                                    # vision: the section's stations, LE to TE
+        cast_q = []                                                         # the casting's faces: (four points, a point inside)
+        def loft(stations):
+            """stations: (origin of the leading edge (x, y, z), chord, chord direction, normal): quads round each span."""
+            ring = []
+            for (O, c_, dvec, nvec) in stations:
+                up = [tuple(O[k] + dvec[k] * c_ * x + nvec[k] * c_ * naca(x) for k in range(3)) for x in XS]
+                lo = [tuple(O[k] + dvec[k] * c_ * x - nvec[k] * c_ * naca(x) for k in range(3)) for x in XS]
+                ring.append((up, lo, tuple(O[k] + dvec[k] * c_ * 0.35 for k in range(3))))
+            for (ua, la, ca_), (ub, lb_, cb_) in zip(ring, ring[1:]):
+                mid = tuple((ca_[k] + cb_[k]) / 2 for k in range(3))
+                for j in range(len(XS) - 1):
+                    cast_q.append(((ua[j], ub[j], ua[j + 1], ub[j + 1]), mid))
+                    cast_q.append(((la[j], lb_[j], la[j + 1], lb_[j + 1]), mid))
+        # the drop: a body of revolution, eight round
+        prof = [(0.0, 0.0), (0.03, 0.42), (0.1, 0.72), (0.22, 0.93), (1 / PHI ** 2, 1.0), (0.55, 0.92), (0.75, 0.62), (0.92, 0.3), (1.0, 0.16)]
+        NR = 8
+        rng = lambda f, r: [(r * rb * math.cos(2 * math.pi * k / NR), ybk + r * rb * math.sin(2 * math.pi * k / NR), z0b + Lb * f) for k in range(NR)]
         for (f0, r0), (f1, r1) in zip(prof, prof[1:]):
-            mini += strut((0, ybk, z0b + Lb * f0), (0, ybk, z0b + Lb * f1), rb * (r0 + r1) / 2)
-        # one cast piece (Richard: "sweep the wings back a tad, and round the leading edge with the linear geometry";
-        # "then make the whole thing one cast piece"; "no gaps"): every surface is laid as spanwise pieces between
-        # stations, each piece reaching from the fuller of its two leading edges to the fuller of its two trailing edges
-        # and lapping its neighbours a little, so a curve is drawn in straight pieces with no gap anywhere, and each
-        # surface starts inside the body it grows from
-        LAP = 0.3                                                           # vision: how far each piece laps the next, px
-        def cast_surface(stations, t, inside):
-            # (Richard: "eliminate the X joints on the wings and tail"): a piece laps its neighbour only where the
-            # surface runs straight on; at a bend it stops at the shared station, so no two pieces cross
-            out_ = []
-            dirs = []
-            for (xa, ya, *_a), (xb_, yb2, *_b) in zip(stations, stations[1:]):
-                n_ = math.hypot(xb_ - xa, yb2 - ya) or 1
-                dirs.append(((xb_ - xa) / n_, (yb2 - ya) / n_))
-            straight = lambda i, j: 0 <= i < len(dirs) and 0 <= j < len(dirs) and dirs[i][0] * dirs[j][0] + dirs[i][1] * dirs[j][1] > math.cos(math.radians(3))
-            for i, ((xa, ya, la, ca), (xb_, yb2, lb, cb)) in enumerate(zip(stations, stations[1:])):
-                d0, d1 = (LAP if straight(i - 1, i) else 0), (LAP if straight(i, i + 1) else 0)
-                ex0, ey0, ex1, ey1 = dirs[i][0] * d0, dirs[i][1] * d0, dirs[i][0] * d1, dirs[i][1] * d1
-                # the piece follows its own leading and trailing edges (no steps), padded a little fore and aft so the
-                # box fitted to it still covers both ends
-                pad = abs((lb - la) - ((lb + cb) - (la + ca))) / 2 + 0.15
-                out_ += slab((xa - ex0, ya - ey0, la - pad), (xb_ + ex1, yb2 + ey1, lb - pad), (xa - ex0, ya - ey0, la + ca + pad), (xb_ + ex1, yb2 + ey1, lb + cb + pad), t, inside)
-            return out_
-        c0m, c1m, Lm = km_ * pl["c0"], km_ * pl["c1"], km_ * (pl["L"] + W)
-        swq = math.atan(1 / PHI ** 2)                                       # vision: swept back a tad more, atan 1/phi^2 (20.9 degrees)
-        tc = math.tan(math.atan(1 / PHI))                                   # its outer third canted down at atan 1/phi
+            A_, B_ = rng(f0, r0), rng(f1, r1)
+            for k in range(NR):
+                cast_q.append(((A_[k], A_[(k + 1) % NR], B_[k], B_[(k + 1) % NR]), (0, ybk, z0b + Lb * (f0 + f1) / 2)))
+        # the wing: her plates' planform at 1/phi^3, swept atan 1/phi^2, an elliptic run of chord to a rounded tip,
+        # its outer part curving down to atan 1/phi at the tip
+        c0m, Lm = km_ * pl["c0"], km_ * (pl["L"] + W)
+        swq = math.atan(1 / PHI ** 2)
+        tc = math.tan(math.atan(1 / PHI))
         zle = zc - c0m / 2
-        US = [0.0, 1 / PHI, 2 / 3, 1.0]                                    # vision: few pieces, so few angles: a pour, not a lattice
-        chord_ = lambda u, c0_: max(c0_ / PHI ** 4, c0_ * math.sqrt(max(0.0, 1 - u ** 2.2)))   # an elliptic run to a rounded tip
+        chord_ = lambda u, c0_: max(c0_ / PHI ** 4, c0_ * math.sqrt(max(0.0, 1 - u ** 2.2)))
+        u_b = 1 / PHI                                                       # where the curve down begins
+        ycurve = lambda u: -tc * Lm * max(0.0, u - u_b) ** 2 / (2 * (1 - u_b))
+        slope = lambda u: -tc * max(0.0, u - u_b) / (1 - u_b)
         for sx in (-1, 1):
             st_ = []
-            for u in US:
+            for u in (0.0, 0.18, 0.36, 0.52, 0.66, 0.78, 0.88, 0.95, 1.0):
                 c_ = chord_(u, c0m)
-                le_ = zle + Lm * u * math.tan(swq) + (c0m - c_) * 0.75   # the leading edge curving back into the tip
-                st_.append((sx * Lm * u, ybk - Lm * max(0.0, u - 2 / 3) * tc, le_, c_))
-            mini += cast_surface(st_, 0.6, (0, ybk - 99, zle))
-        # its tail, as her own stern is (Richard: "redo the tail to match the rear of the boat: flat h stab with drop v
-        # stabs"; "widen the h stab so it's a real foil"; "make the rudders again swept and not taper up, align with the
-        # hull line"): a flat stab, the wing's shape at 1/phi, and from each tip a fin dropping down, canted out and swept
-        # aft as her rudders are, an even chord, its root along the stab's line
-        # (Richard: "do the h and v stabs again: they're a box, not a capital pi"): the fins hang from the stab's very
-        # tips, flush, as her rudders hang from her stab's: the stab tapers straight to a tip whose chord is the fins'
+                n_ = (-sx * slope(u), 1.0, 0.0); nn = math.hypot(n_[0], n_[1]); n_ = (n_[0] / nn, n_[1] / nn, 0.0)
+                st_.append(((sx * Lm * u, ybk + ycurve(u), zle + Lm * u * math.tan(swq) + (c0m - c_) * 0.75), c_, (0, 0, 1), n_))
+            loft(st_)
+        # the tail, as her stern: a stab and two fins in one band, round-cornered, the fins canted out and raked aft
         zt_ = z0b + Lb * (1 - 1 / PHI ** 2)
-        hsm, csm = Lm / PHI ** 2, c0m / PHI                                 # vision: half span 1/phi^2 of the wing's, chord 1/phi
-        cft = csm / PHI                                                     # the tip's chord, and the fins'
-        # (Richard: "one piece, not three"): the stab and its fins are one band, bent round two rounded corners: from
-        # one fin's foot up to the stab's tip, across, and down the other fin, its chord running from the fins' at the
-        # feet and corners to the stab's at the middle, cast as one surface
-        hf = max(3.0, km_ * 22)                                             # vision: the fins' depth, her rudders' at 1/phi^3
+        hsm, csm = Lm / PHI ** 2, c0m / PHI
+        cft = csm / PHI
+        hf = max(3.0, km_ * 22)
         cant_, rake_ = math.atan(1 / PHI ** 3), math.atan(1 / PHI ** 2)
-        def fin_pt(sx, f):                                                  # f of the way down a fin from its corner
-            return (sx * (hsm + hf * f * math.tan(cant_)), ybk - hf * f, zt_ + hsm * math.tan(swq) + hf * f * math.tan(rake_), cft)
-        def stab_pt(sx, u):                                                 # u of the way out the stab
-            return (sx * hsm * u, ybk, zt_ + hsm * u * math.tan(swq), csm + (cft - csm) * u)
-        rr = min(hsm, hf) / PHI ** 3                                        # vision: the corners' radius
-        def corner(sx):                                                     # a quarter round from the stab into the fin
-            out_ = []
-            for k in range(1, 4):
-                th_ = math.pi / 2 * k / 4
-                x_ = sx * (hsm - rr + rr * math.sin(th_)); y_ = ybk - rr + rr * math.cos(th_)
-                out_.append((x_, y_, zt_ + abs(x_) * math.tan(swq), cft))
-            return out_
-        band = ([fin_pt(-1, f) for f in (1.0, 0.0)] + [stab_pt(1, 0.0)] + [fin_pt(1, f) for f in (0.0, 1.0)])                  # (the corners lapped, not fanned)
-        mini += cast_surface(band, 0.5, (0, ybk - hf / 2, zt_ + csm / 2))
-        # (no fillets: their two wedges crossed over the drop's back; the surfaces start inside the drop instead)
-        yr_, tail_y, tail_z = ybk, ybk, z0b + Lb                            # the mast meets its axis; the emitter at its tail
+        rr = min(hsm, hf) / PHI                                             # vision: generous corners, a casting's
+        path = []                                                           # (x, y) along the band, left foot to right foot
+        fdir = (math.sin(cant_), -math.cos(cant_))                          # down a right fin: out and down
+        def band_side(sx):
+            cx_, cy_ = sx * (hsm - rr), ybk - rr                            # the corner's centre
+            pts = []
+            for k in range(5):                                              # from the stab round into the fin
+                th_ = (math.pi / 2 - cant_) * k / 4
+                pts.append((cx_ + sx * rr * math.sin(th_), cy_ + rr * math.cos(th_)))
+            end = pts[-1]
+            L_f = hf - rr
+            pts += [(end[0] + sx * L_f * 0.5 * fdir[0], end[1] + L_f * 0.5 * fdir[1]), (end[0] + sx * L_f * fdir[0], end[1] + L_f * fdir[1])]
+            return pts
+        right = band_side(1); left = band_side(-1)
+        path = left[::-1] + [(0.0, ybk)] + right
+        st_ = []
+        for i_, (x_, y_) in enumerate(path):
+            a_ = path[max(0, i_ - 1)]; b2 = path[min(len(path) - 1, i_ + 1)]
+            tx, ty = b2[0] - a_[0], b2[1] - a_[1]; tn = math.hypot(tx, ty) or 1
+            n_ = (-ty / tn, tx / tn, 0.0)                                   # in-plane normal to the band
+            out_ = min(1.0, abs(x_) / hsm)
+            c_ = csm + (cft - csm) * out_
+            z_ = zt_ + abs(min(abs(x_), hsm)) * math.tan(swq) + max(0.0, ybk - y_) * math.tan(rake_)
+            st_.append(((x_, y_, z_), c_, (0, 0, 1), n_))
+        loft(st_)
+        # every face of the casting, one thin gold plate
+        mini = []
+        for (P0, P1, Q0, Q1), ins in cast_q:
+            mini += slab(P0, P1, Q0, Q1, SKIN, ins)
+        b["_cast_n"] = len(cast_q)
+        b["_cast_drop"] = (prof, rb, z0b, Lb)
+        yr_, tail_y, tail_z = ybk, ybk, z0b + Lb                            # the blade meets its axis; the emitter at its tail
         b["_bulb_rb"] = rb
     # dropped (Richard: "drop the keel and foil and resize in turn with the rudders as they are"): its midline down to
     # the rudders' feet, the mast running down with it
@@ -2815,6 +2825,7 @@ def glider_parts(b):
                                                                            # the bottom of the rudders": its spindle's line, its wings' plane)
         outlet = (0, tail_y, tail_z)                                       # (its power outlet, below, moves with it)
         dy = (1 - side - 16 / PHI ** 4) - low
+        b["_cast_dy"] = dy
         mini = [dict(c, origin=[c["origin"][0], round(c["origin"][1] + dy, 3), c["origin"][2]],
                      **({"pivot": [c["pivot"][0], round(c["pivot"][1] + dy, 3), c["pivot"][2]]} if "pivot" in c else {})) for c in mini]
         yr_ += dy
@@ -2840,15 +2851,19 @@ def glider_parts(b):
                 if f0 <= f <= f1:
                     return ybot + rb * (r0 + (r1 - r0) * (f - f0) / (f1 - f0)) * 0.95
             return ybot
-        # one true raked blade (no strips), its foot's leading corner on the drop's back; under its foot, which rises
-        # aft square to the rake, one level filler down to the drop, so blade and drop meet along a line, flush
-        zle_k = zc - ck / 2
-        foot = (0, drop_top(zle_k), zle_k)
-        tfoot = tuple(foot[i] + ck * ch[i] for i in range(3))
-        hk = (ytop + 1.5 - foot[1]) / math.cos(rk)
-        head = tuple(foot[i] - hk * dn[i] for i in range(3))
-        mini += slab(head, foot, tuple(head[i] + ck * ch[i] for i in range(3)), tfoot, 0.9, (99, 0, zc))
-        mini += slab((0, drop_top(zle_k) - 0.4, zle_k + 0.3), (0, tfoot[1] + 0.3, zle_k + 0.3), (0, drop_top(tfoot[2]) - 0.4, tfoot[2]), (0, tfoot[1] + 0.3, tfoot[2]), 0.9, (99, 0, zc))
+        # the blade, lofted as the rest: a NACA section of the rudders' chord, raked, flaring at its root into the
+        # drop as a casting's fillet does, its head inside her hull
+        bq = []
+        hk2 = (ytop + 1.5 - ybot) / math.cos(rk)
+        for s_ in (0.0, 0.08, 0.2, 0.5, 1.0):
+            flare = 1 + 0.6 * max(0.0, 1 - s_ / 0.2) ** 2                 # vision: the root's fillet
+            y_ = ybot + rb * 0.6 + s_ * hk2 * math.cos(rk)
+            z_ = zc - ck * flare / 2 - s_ * hk2 * math.sin(rk)
+            bq.append(((0.0, y_, z_), ck * flare, (0, math.sin(rk) * 0, 1), (1.0, 0.0, 0.0)))
+        n0 = len(cast_q)
+        loft(bq)
+        for (P0, P1, Q0, Q1), ins in cast_q[n0:]:
+            mini += slab(P0, P1, Q0, Q1, SKIN, ins)
     else:
         for (ya, ca, ta), (yb2, cb, tb) in (((ytop, cm * 1.3, 1.0), (ymid_m, cm, 0.8)), ((ymid_m, cm, 0.8), (ybot, cm * 0.85, 0.65))):
             mini += slab((0, ya, zc - ca / 2), (0, yb2, zc - cb / 2), (0, ya, zc + ca / 2), (0, yb2, zc + cb / 2), (ta + tb) / 2, (99, 0, zc))
@@ -2865,7 +2880,9 @@ def glider_parts(b):
         cb["cubes"] = cb["cubes"] + [{"origin": [-glow / 2, oy - glow / 2, oz + 1.0], "size": [glow, glow, 0.6], "uv": core_uv},
                                      {"origin": [-0.5, oy - 0.5, oz + 1.6], "size": [1.0, 1.0, 0.5], "pivot": [0, oy, oz + 1.85], "rotation": [0, 0, 45], "uv": core_uv}]
     if os.environ.get("KEEL_DUMP"):                                         # (the foil alone, for a look at it)
-        json.dump({"cubes": mini, "feet": 1 - side - 16 / PHI ** 4, "mid": yr_}, open(os.environ["KEEL_DUMP"], "w"))
+        _n, _d = b.get("_cast_n", 0), b.get("_cast_dy", 0)
+        _q = [[[P_[0], P_[1] + (_d if i_ < _n else 0), P_[2]] for P_ in q_] for i_, (q_, _ins) in enumerate(cast_q)] if b.get("sail") == "clam" else []
+        json.dump({"cubes": mini, "feet": 1 - side - 16 / PHI ** 4, "mid": yr_, "quads": _q}, open(os.environ["KEEL_DUMP"], "w"))
     bones[0]["cubes"] = bones[0]["cubes"] + gold(mini)
     return bones
 
