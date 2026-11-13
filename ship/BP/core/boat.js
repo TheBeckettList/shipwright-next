@@ -174,7 +174,7 @@ export const TRIAL = Object.freeze({
   PULL: { oars: 100, paddles: 70, poles: 50 },   // given: watts a hand keeps up for hours: a rower, a paddler, a poler (the sport physiologists' sustained figures)
   PULL_EFF: { oars: 0.6, paddles: 0.5, poles: 0.4 },   // given: the share the blade or pole turns into thrust (the propulsion studies')
   RIGS: { norse: "square", european: "square", therans: "square", japanese: "square", indian_ocean: "fore_and_aft", east_asian: "fore_and_aft", pacific: "fore_and_aft", arctic: "square" },   // given: the lateen, the lug and the crab claw point higher; the rest are square sails
-  TWIN: { outrigger: 0.5, "voyaging canoe": 1, drua: 1 },   // given: the Pacific's hulls stand on a second hull (the double canoe, the drua) or an outrigger's float (about half the lever)
+  TWIN: { outrigger: 0.5, "voyaging canoe": 1, drua: 1, "Theran ship": 1, flagship: 1 },   // given: the Pacific's hulls stand on a second hull (the double canoe, the drua) or an outrigger's float (about half the lever); the Therans' catamaran on her second hull, and their trimaran on floats each carrying her whole displacement (therans.md: trimaran practice, a float >= 100%)
   SPREAD: PHI * PHI,        // vision: a twin's hulls a beam times phi squared apart, centre to centre
   KG: 0.62,                 // vision: a laden hull's centre of gravity as a share of its depth (ballast and cargo low, crew and gear high)
   CE: 0.42,                 // vision: a sail's centre of effort as a share of the mainmast over the deck

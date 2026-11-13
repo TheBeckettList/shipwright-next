@@ -81,7 +81,7 @@
           "v.r = math.lerp(v.r ?? 0.0, q.property('shipwright:stroke_r'), 0.12);",
           "v.turn = math.lerp(v.turn ?? 0.0, q.property('shipwright:turn'), 0.12);",
           "v.a = math.max(math.abs(v.l), math.abs(v.r));",
-          "v.p_oar = math.mod((v.p_oar ?? 0) + q.delta_time * (335 + 240 * v.row), 360);",
+          "v.p_oar = math.mod((v.p_oar ?? 0) + q.delta_time * (350 + 240 * v.row), 360);",
           "v.p_pad = math.mod((v.p_pad ?? 0) + q.delta_time * (300 + 240 * v.row), 360);",
           "v.p_dp = math.mod((v.p_dp ?? 0) + q.delta_time * (260 + 240 * v.row), 360);",
           "v.p_scull = math.mod((v.p_scull ?? 0) + q.delta_time * (200 + 200 * v.row), 360);",

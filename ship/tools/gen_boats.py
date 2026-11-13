@@ -275,6 +275,7 @@ CON = {
 }
 SCALE = 1          # the model scale of the boat being built (2 for medium ships)
 SIMPLE = False     # building the launched (simplified) model
+IN_END = False     # building a bow or stern (the launched ends are planked a strake lighter)
 WALL = None        # the wall law's thickness for the boat being built (world px); None: today's CON (the old beams)
 PHI = (1 + 5 ** 0.5) / 2                                   # given: the golden ratio
 FIB = [1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233]     # given: core/golden.js's rungs
@@ -352,7 +353,9 @@ END_SLICES, END_SLICES_LAUNCHED = 12, {1: 4, 2: 5, 4: 6}   # launched: the near 
 def profile(b, hw, fy, sy):
     """Points from the keel (x 0) up to the sheer, on this tradition's curve, out to the planking's outer face."""
     n, X = ROUND[b["section"]], hw + outer_of(b["section"], SCALE)
-    N = (STRAKES_LAUNCHED - (1 if b.get("twin") else 0)) if SIMPLE else STRAKES   # a twin draws two hulls: each a strake lighter
+    # a twin draws two hulls: each a strake lighter; launched, the short curved ends a strake lighter again (the lens's
+    # near budget, chief.md section 6: there the curve, not the strake count, is what reads)
+    N = (STRAKES_LAUNCHED - (1 if b.get("twin") else 0) - (1 if IN_END else 0)) if SIMPLE else STRAKES
     pts = []
     for k in range(N + 1):
         th_ = (k / N) * math.pi / 2
@@ -529,7 +532,7 @@ def deck_slabs(b, a, c, za, zc, ends=False):
         if top > min(a[2], c[2]):                       # above the sheer here: the deck stops short of this end
             continue
         wa, wc = inner_half(A, top - t, sh), inner_half(C, top - t, sh)
-        if wa is None or wc is None or min(wa, wc) < 1:
+        if wa is None or wc is None or 2 * min(wa, wc) * SCALE < 16:   # vision: no deck where the hull is under a block across (nobody walks it; the stem's plates close it)
             continue
         out += slab((-wa, top, za), (wa, top, za), (-wc, top, zc), (wc, top, zc), t, (0, -9999, (za + zc) / 2))
     return out
@@ -697,7 +700,14 @@ def _apply_laws():
         lw = LAW[law_name(pid)]
         s, st = b.get("scale", 1), b["section"]
         snap = lambda v: round(v * 2 * s) / (2 * s)       # model px on the half world pixel
-        beam_out = b["F"] + outer_of(st, s, legacy=True)  # the half-beam outside the planking, as drawn at v0.9.14
+        # the half-beam outside the planking: the law's beam (sizeOf exact B = L / lb, one hull's on a twin). The hand-set
+        # beams v0.9.14 drew strayed up to a third from it (narrow sewn boat and trimaran, broad punt and dugout), and at
+        # true depth a beam that strays takes GM with it (the lens: the trimaran capsized, the sewn boat stood on 0.05)
+        # the Pacific twins keep v0.9.14's hulls (already within the lens's half-step of the law) until step 3 settles
+        # whether the fleet's beam is one hull's or both (eastasian_pacific.md); the Theran catamaran's hulls, drawn a
+        # third narrower, take the law's
+        legacy = b.get("twin") and not pid.startswith("theran_")
+        beam_out = b["F"] + outer_of(st, s, legacy=True) if legacy else 16 * lw["B"] / 2 / s
         K = K_BOAT.get(pid, K_SECTION[st])
         SCALE, WALL = s, snap_w(max(CON[st]["shell"], 16 * lw["L"] / K if K else 0))
         b["_law"], b["_wall"] = lw, WALL
@@ -830,6 +840,9 @@ def stem(b, end, sign, tip, hw, fy, sy):
     w = max(1.2, min(2 * hw + 0.8, 0.22 * F + 1))            # the timber: as broad as the closing hull, never a plank
     d = max(1.2, 0.11 * s)
     curve = stem_curve(kind, s, hw, fy, sy)
+    if SIMPLE:                                              # launched, every other station of the timber (every third on a long curled
+        k = 3 if len(curve) > 12 else 2                     # stem): the same line, a half or a third of the pieces
+        curve = curve[::k] + ([curve[-1]] if (len(curve) - 1) % k else [])
     Z = lambda dz: tip + sign * dz
     for (za, ya), (zb, yb) in zip(curve, curve[1:]):
         out += slab((-w / 2, ya, Z(za)), (w / 2, ya, Z(za)), (-w / 2, yb, Z(zb)), (w / 2, yb, Z(zb)), d,
@@ -847,6 +860,8 @@ def stem(b, end, sign, tip, hw, fy, sy):
 
 
 def end_section(b, sign, base):
+    global IN_END
+    IN_END = True
     end = b["bow"] if sign < 0 else b["stern"]
     slices = END_SLICES_LAUNCHED[b.get("scale", 1)] - (1 if b.get("twin") else 0) if SIMPLE else END_SLICES   # a twin's two hulls: a slice lighter each
     seg = END / slices
@@ -869,6 +884,7 @@ def end_section(b, sign, base):
                 frame += frames(b, hw, fy, sy, z0 + seg / 2)
     tip = base + sign * END
     plank += stem(b, end, sign, tip, *shape(1.0))
+    IN_END = False
     return keel, frame, plank
 
 
@@ -1098,9 +1114,9 @@ def rig_kit(b, g):
 
 def mast_foot(b):
     """Where a mast is stepped (model px): on the keel, the floor's top; on the platform where twin hulls carry it."""
-    if b.get("twin"):
+    if b.get("twin") and not any(len(m) > 2 and m[2] for m in mast_plan(b)):   # a twin's centreline masts: on her platform
         return b["side"] - 2
-    return b["fy"] + th(b["section"], "shell")
+    return b["fy"] + th(b["section"], "shell")          # on a keel (a twin's masts stood on her hulls: on that hull's)
 
 
 def parts(b):
@@ -1639,6 +1655,11 @@ def geometry(pid, b):
     for group in GROUPS:
         geos.append(geo_entry(geometry_id(pid, group), group_bones(bones, group)))
     geos.append(geo_entry(geometry_id(pid, "launched"), launched))
+    # the launched hull's culling box holds her whole height (D-004 sets her keel the draught under the water and her
+    # ends' sheer high over it): at least the 16 blocks every geometry has, about the same offset
+    ys = [(root_lift(b) + v * SCALE) / 16 for x in launched for c in x.get("cubes", []) for v in (c["origin"][1], c["origin"][1] + c["size"][1])]
+    d = geos[-1]["description"]
+    d["visible_bounds_height"] = max(d["visible_bounds_height"], 2 * math.ceil(max(abs(y - d["visible_bounds_offset"][1]) for y in ys)))
     for gdef in geos:
         finish(gdef["bones"])
         layer(gdef["bones"])
@@ -1909,7 +1930,7 @@ def controllers(pid, zones):
                [{n: rigged} for n in ["mast"] + [f"mast_{k}" for k in range(1, len(mast_plan(b)))]] + [
                 {"rudder": f"{stage} >= 4 && {prop} == 0 && {P('rudder_type')} == 0"},
                 {"rudder_post": f"{stage} >= 4 && {P('rudder_type')} == 1"},
-                *([] if b.get("twin") else [{"ama": f"{stage} >= 3 && {P('outrigger')}"}]), {"staff": f"{stage} >= 5 && !{P('sail')}"},
+                *([] if b.get("twin") or b.get("tri") else [{"ama": f"{stage} >= 3 && {P('outrigger')}"}]), {"staff": f"{stage} >= 5 && !{P('sail')}"},   # a trimaran's floats are her outrigger: no second one
                 *([{"foils": f"{stage} >= 4"}] if b.get("foils") else []), *([{"amas": f"{stage} >= 3"}] if b.get("tri") else []),
                 *([{"akas": f"{stage} >= 3"}, {"nets": f"{stage} >= 4"}] if b.get("tri") or (b.get("twin") and b.get("bow") is PIERCE) else []),
                 {"paddle": f"{stage} >= 5 && {prop} == 1"}, {"dpaddle": f"{stage} >= 5 && {prop} == 2"},

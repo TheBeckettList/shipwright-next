@@ -70,9 +70,13 @@ CHECKS = ["conn", "step", "thick", "depth", "lb", "draught", "freeboard", "deck"
 
 
 def waterline():
-    """The water's surface over a floating boat's origin, as the game holds it (handling.js), in blocks."""
-    m = re.search(r"const WATERLINE = ([\d.]+)", (SHIP / "BP/scripts/handling.js").read_text())
-    return float(m.group(1)) if m else None
+    """The water's surface over a floating boat's origin, as the game holds it (grid.js WATERLINE, which handling.js and
+    the model share since D-004), in blocks. The launched keel sits the law's draught under it."""
+    for f in ("BP/scripts/grid.js", "BP/scripts/handling.js"):
+        m = re.search(r"(?:export )?const WATERLINE = ([\d.]+)", (SHIP / f).read_text())
+        if m:
+            return float(m.group(1))
+    return None
 
 
 # ---------------------------------------------------------------- the law (lawdump.mjs, one node run)
@@ -302,12 +306,13 @@ def pieces(pid, mids, rig_scale=1.0):
     """Every piece of the launched hull, fittings, rig and outfit: its corner points (blocks), its edge axes, its
     kind, bone and geometry. A cloth quad is a flat piece (its normal stands for the third axis)."""
     ex = E.export(pid, mids=mids, names=True)
-    # boatexport lays every piece at (y + HULL_LIFT) * ys and z * hs; the game's root bone (gen_boats animation) moves
-    # by [0, HULL_LIFT, -8 hs] px and scales by [hs, ys, hs] about its pivot at the origin, and Bedrock does not scale
-    # a bone's own position by its own scale. So, in the entity's frame, every piece sits HULL_LIFT (ys - 1) px lower
-    # and 8 hs px further aft than the viewer's export draws it.
+    # boatexport lays every piece at y * ys + root_lift and z * hs: the game's root bone (gen_boats animation) moves by
+    # [0, root_lift, -8 hs] px (launched: the keel the law's draught under the water, D-004) and scales by [hs, ys, hs]
+    # about its pivot at the origin, and Bedrock does not scale a bone's own position by its own scale, so the export's
+    # heights are already the entity's frame. Only the root's -8 hs px along her is left: every piece sits that much
+    # further aft than the viewer's export draws it.
     hs = G.BOATS[pid].get("scale", 1)
-    shift = np.array([0.0, -G.HULL_LIFT * (G.y_scale(hs) - 1) * PX, -8 * hs * PX])   # given: the root's position channel
+    shift = np.array([0.0, 0.0, -8 * hs * PX])   # given: the root's position channel
     out = []
     for item, (bone, group) in zip(ex["boxes"], ex["bones"]):
         if item[0] == "cloth":
@@ -405,14 +410,22 @@ def measure(pid, law, mids, wl):
     mid = [p for p in hull if p["bone"].startswith("mid_")] or hull
     ys = np.concatenate([p["P"][:, 1] for p in mid])
     L = max(p["P"][:, 2].max() for p in hull) - min(p["P"][:, 2].min() for p in hull)
-    if law["twin"]:                                   # a twin's beam is one hull's: the pieces wholly to one side
-        side = [p for p in mid if p["P"][:, 0].min() > 0]
-        xs = np.concatenate([p["P"][:, 0] for p in side]) if side else np.array([0.0])
+    if law["twin"]:                                   # a twin's beam is one hull's: the pieces wholly to one side, run in from the
+        side = sorted((p for p in mid if p["P"][:, 0].min() > 0), key=lambda p: -p["P"][:, 0].max())   # outer face while
+        hull1, reach = [], None                       # they touch (a bridge-deck pod between the hulls is not her beam)
+        for p in side:
+            if reach is None or p["P"][:, 0].max() >= reach - EPS:
+                hull1.append(p)
+                reach = min(reach if reach is not None else math.inf, p["P"][:, 0].min())
+        xs = np.concatenate([p["P"][:, 0] for p in hull1]) if hull1 else np.array([0.0])
     else:
         xs = np.concatenate([p["P"][:, 0] for p in mid])
     B = float(xs.max() - xs.min())
     bottom, rail = float(ys.min()), float(ys.max())
-    m = dict(L=float(L), B=B, D=rail - bottom, bottom=bottom, rail=rail)
+    # the hull's depth runs to her sheer: a washstrake over it (where her freeboard falls short of her reach's need)
+    # counts for freeboard, not for depth, draught or GM (gen_boats draws it wash px over the sheer)
+    wash = G.BOATS[pid].get("wash", 0) * G.y_scale(G.BOATS[pid].get("scale", 1)) * PX
+    m = dict(L=float(L), B=B, D=rail - wash - bottom, bottom=bottom, rail=rail, wash=wash)
     m["T"] = wl - bottom if wl is not None else None
     m["fb"] = rail - wl if wl is not None else None
     # walls: each slab's least side by its tag (a bone named for its kind: shell, keel, wale, deck; untagged hull
