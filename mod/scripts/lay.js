@@ -44,6 +44,8 @@ export const MARKS = ["minecraft:bedrock", "minecraft:structure_void", "minecraf
 import { LEVEL } from "./rings.js";
 export { LEVEL };
 const C = 16;   // given: a chunk's side
+const PILE = 3;   // derived: a stilt house's piles every three blocks, FIB[3] (the stilt peoples' shallows are three deep)
+const LADDER_FACES = [[1, 0, 5], [-1, 0, 4], [0, 1, 3], [0, -1, 2]];   // given: out of the door each way, and the ladder's facing_direction that way (east 5, west 4, south 3, north 2)
 const perms = new Map();
 export function perm(id, states) {
   const key = states ? `${id}|${JSON.stringify(states)}` : id;
@@ -193,8 +195,8 @@ export function* lifeChunk(dim, cx, cz, { folk = true } = {}) {
     if (!pl.free) for (let x = bx0; x <= bx1; x++) for (let z = bz0; z <= bz1; z++) {
       covered.add((z - z0) * C + (x - x0));
       const top = cols[(z - z0) * C + (x - x0)].top;
-      const corner = (x === pl.b[0] || x === pl.b[2]) && (z === pl.b[1] || z === pl.b[3]);
-      if (!pl.s || corner) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp);
+      const pile = ((x - pl.b[0]) % PILE === 0 || x === pl.b[2]) && ((z - pl.b[1]) % PILE === 0 || z === pl.b[3]);   // a stilt house's piles: a grid every PILE, its edges always
+      if (!pl.s || pile) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp);
       if (pl.c) fill(dim, x, pl.y + 1, z, x, top, z, "minecraft:air");   // cut into the slope
     }
     yield;
@@ -205,6 +207,15 @@ export function* lifeChunk(dim, cx, cz, { folk = true } = {}) {
       if (x < x0 || x >= x0 + C || z < z0 || z >= z0 + C) continue;
       set(dim, x, y, z, palPerm(rot ? rot[f[i + 3]] : f[i + 3]));
       if (i % 256 === 0) yield;
+    }
+    if (pl.s) for (let i = 0; i < f.length; i += 4) {   // a stilt house on land: a ladder up a pile to each door
+      const e = PALETTE[rot ? rot[f[i + 3]] : f[i + 3]]; if (!/_door$/.test(e[0]) || e[1]?.upper_block_bit) continue;
+      let dx = f[i], dz = f[i + 2]; for (let t = 0; t < turn; t++) [dx, dz] = [-dz, dx];
+      const x = pl.x + dx, y = pl.y + f[i + 1], z = pl.z + dz;
+      for (const [ux, uz, face] of LADDER_FACES) { const nx = x + ux, nz = z + uz; if (nx >= pl.b[0] && nx <= pl.b[2] && nz >= pl.b[1] && nz <= pl.b[3]) continue;   // the outside of the door
+        if (nx < x0 || nx >= x0 + C || nz < z0 || nz >= z0 + C || x < x0 || x >= x0 + C || z < z0 || z >= z0 + C) break;   // both columns in this chunk
+        const g = cols[(nz - z0) * C + (nx - x0)].top, gp = cols[(z - z0) * C + (x - x0)].top; if (g < SEA || y - 1 - g < 2) break;   // on land, and high enough to need one
+        fill(dim, x, gp + 1, z, x, pl.y - 1, z, fp); fill(dim, nx, g + 1, nz, nx, y - 1, nz, perm("minecraft:ladder", { facing_direction: face })); break; }
     }
   }
   // a grown settlement's blocks (data/grown.js): each column's runs, a fill apiece

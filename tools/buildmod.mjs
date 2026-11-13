@@ -7,6 +7,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadMap } from "../world/load.js";
+import { PALETTE as PEOPLE_PAL } from "../world/palette.js";
 import { decode } from "./png.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -131,13 +132,16 @@ const toWorld = (bx, bz, sh) => [Math.round(SX + D0.x * K + bx + sh[0]), Math.ro
 
 const placements = [], taken = new Set(), why = {};
 const STILT_DEEP = FIB[3];   // derived: the grown towns' own bound (growth.js planeOf, district.js: the stilt peoples build over water three deep at most), so one people builds by one rule wherever it stands
+const LIFT = FIB[2];   // vision: on land the stilt peoples still raise the floor on posts, two blocks over the highest ground under it (terraform.md: a pad raised LIFT)
+const POST_MAX = FIB[4] + 1;   // derived: a post at most six (terraform.md: the pad law's five, and the floor's block)
 const no = (w) => { why[w] = (why[w] ?? 0) + 1; return false; };
 const colKey = (x, z) => `${x},${z}`;
 const BAD = new Set(["round harbour", "merchant harbour", "fairway", "ring canal", "wall canal", "canal"].map((k) => G.KIND[k]));
 /** Place a prototype with its footprint's middle at world (X, Z): its floor (y 0) on the highest ground under it.
- *  wet: a people that builds over the shallows (the stilt-house peoples): on stilts a block over the sea where its whole
- *  footprint is water no deeper than STILT_DEEP, refused over deeper water, and on the ground like any house where it
- *  stands on land (a floor at the sea's level on a hill was buried by the deep pass: design/s004-specs/terraform.md §1). */
+ *  wet: a people that builds over the shallows (its key; the stilt-house peoples): always on stilts of its frame wood, a block over the sea where
+ *  its footprint is water no deeper than STILT_DEEP and LIFT over the highest ground where it stands on land, refused
+ *  over deeper water or where a post would pass POST_MAX (a floor at the sea's level on a hill was buried by the deep
+ *  pass: design/s004-specs/terraform.md §1). */
 function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, water = false, stilts = false, wet = false, tag = "", pad = 0, kinds = null, slope = Infinity, anyWater = false, carve = false, trunk = false, over = false, foot = null, origin = false } = {}) {   // origin: the prototype's own 0,0 goes at X, Z (not its box's middle)   // foot: the columns it truly stands on (a round pad's), in place of its box   // over: stands on something already placed (a dockhouse on its pad)
   const [x0, x1, , , z0, z1] = trunk ? [0, 0, 0, 0, 0, 0] : P.b, ox = origin ? X : X - Math.round((x0 + x1) / 2), oz = origin ? Z : Z - Math.round((z0 + z1) / 2);   // trunk: the footprint is the trunk's column (a crown hangs free)
   if (!over) { if (foot) { for (const [x, z] of foot) if (taken.has(colKey(ox + x, oz + z))) return no("overlap"); } else for (let x = x0 - pad; x <= x1 + pad; x++) for (let z = z0 - pad; z <= z1 + pad; z++) if (taken.has(colKey(ox + x, oz + z))) return no("overlap"); }
@@ -150,7 +154,7 @@ function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, 
   }
   if (top - low > slope) return no("too steep");
   if (wet) { if (cols.some(([, , t]) => G.SEA - t > STILT_DEEP)) return no("water too deep for stilts");
-    const dry = cols.some(([, , t]) => t >= G.SEA); stilts = !dry; floorAt = dry ? null : G.SEA + 1; }   // the sea's own columns lie under it (lay.js: water over a top under SEA)
+    stilts = true; foundation = PEOPLE_PAL[wet]?.frame ?? foundation; floorAt = Math.max(G.SEA + 1, top + LIFT); if (floorAt - low > POST_MAX) return no("posts too tall"); }   // always on posts: a block over the shallows, LIFT over the land (the sea's own columns lie under it: lay.js lays water over a top under SEA)
   const y0 = trunk ? top + 1 : floorAt ?? (carve ? Math.max(low, G.SEA + 1) : Math.max(top, G.SEA + 1));   // a carved house sits at its downhill foot, cut into the slope
   for (const [wx, wz] of cols) taken.add(colKey(wx, wz));
   placements.push({ p: P.i, x: ox, y: y0, z: oz, f: pal(foundation), stilts, carve, tag, b: [ox + x0, oz + z0, ox + x1, oz + z1] });
@@ -457,7 +461,7 @@ const scan = (kinds, kind, cultureOf, slope, stride = 1, { max = Infinity, class
     const cls = clsAt(i, j), fp = footOf(b.vox), area = (fp[1] - fp[0] + 1 + 2 * pad) * (fp[3] - fp[2] + 1 + 2 * pad), keep = cls ? ((KEEP[cls] ?? 1) * (t === "therans" ? THINNER : 1) * (G.CELL * stride) ** 2) / area : 1;
     if (classed && golden(j * N + i) >= keep) continue;
     if (made >= max) return;
-    for (const r of [0, 1, 2, 3]) if (place(proto(key, b.vox, r), X, Z, { pad, kinds, slope, carve: kind === "caldera" || (kind === "outer" && !!CLIFF[t]), foundation: kind === "caldera" ? ST.plaster : "minecraft:calcite", wet: t === "shallow", water: t === "shallow", tag: `${kind}|${t}` })) {
+    for (const r of [0, 1, 2, 3]) if (place(proto(key, b.vox, r), X, Z, { pad, kinds, slope, carve: kind === "caldera" || (kind === "outer" && !!CLIFF[t]), foundation: kind === "caldera" ? ST.plaster : "minecraft:calcite", wet: t === "shallow" && t, water: t === "shallow", tag: `${kind}|${t}` })) {
       houses++; made++; beds += b.beds; const key = t === "therans" ? `therans (${kind})` : kind === "caldera" ? `${t} (cliff)` : t; perCulture[key] = (perCulture[key] ?? 0) + 1;
       placements[placements.length - 1].folk = { t, kind, beds: b.beds, door: b.door, storeys: b.storeys, r };
       settle(placements[placements.length - 1], b, t, kind, r);
@@ -645,7 +649,7 @@ Lw.forEach((p, i) => {
           const face = [Math.cos(part.face ?? 0), Math.sin(part.face ?? 0)], dc = [hb.door.x - (fx0 + fx1) / 2, hb.door.z - (fz0 + fz1) / 2];   // town boxes are in world axes (z south)
           const opts = [0, 1, 2, 3].map((r) => { let [dx, dz] = dc; for (let k = 0; k < r; k++) [dx, dz] = [-dz, dx]; const [w, l] = r % 2 ? [pl, pw] : [pw, pl]; return { r, over: Math.max(0, w - bw) + Math.max(0, l - bl), align: (dx * face[0] + dz * face[1]) / (Math.hypot(dx, dz) || 1) }; }).sort((a, c) => a.over - c.over || c.align - a.align);
           const water = !!LAYOUT_WATER[t];
-          for (const o of opts.slice(0, 2)) if (place(proto(`town ${t} ${b.storeys ?? 1}`, hb.vox, o.r), X, Z, { pad: 0, water, wet: water })) { townHouses++; townBeds += hb.beds; settle(placements[placements.length - 1], hb, t, "town", o.r, SHOWN_TOWN); break; }
+          for (const o of opts.slice(0, 2)) if (place(proto(`town ${t} ${b.storeys ?? 1}`, hb.vox, o.r), X, Z, { pad: 0, water, wet: water && t })) { townHouses++; townBeds += hb.beds; settle(placements[placements.length - 1], hb, t, "town", o.r, SHOWN_TOWN); break; }
         }
       }
     }

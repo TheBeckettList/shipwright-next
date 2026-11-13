@@ -45,6 +45,8 @@ import { pinnacle, floorsOf, PINNACLE, CLIFF } from "../world/pinnacle.js";
 import { skinOf, DRESS, CULTURES, RANKS, SKINS } from "../world/dress.js";
 import { NAMES } from "../world/names.js";
 import { LADDERS, CALIBRATION, HISTORY as CAL_HISTORY } from "../game/calibration.js";
+import * as TF from "../world/terraform.js";
+import { vnoise } from "../core/noise.js";
 import { TABLE as PTABLE, formulaOf, assemble, joinOf, fitStack, STOREYS } from "../world/periodic.js";
 import { theraPlan, useSectors } from "../world/theracity.js";
 import { roomVox, MATS } from "../world/roomvox.js";
@@ -679,6 +681,49 @@ export const LENSES = {
     const t = 4 * RUNGS.day + RUNGS.day / 2, T = L.townAt(town, { living: "farmers", tradition: "european" }, { action: "build", professions: {} }, t), shown = L.shownAt(T, t, { B: T.N }), people = R.costOf(R.peopleOps(shown));
     const lines = [`a village of ${pl.census.households} households: ${pl.placed.length} buildings, ${blocks.toLocaleString("en-US")} blocks one by one, ${b.calls} structure calls (${Math.round(blocks / b.calls)} blocks a call)`, `its ground: ${ground.length.toLocaleString("en-US")} columns in ${f.calls} fills; its ${sets.length} lamps, pots and barrels in ${li.calls} lists`, `its ${shown.length} people out of doors at midday: ${people.by.crowd ?? 0} crowd entities and ${people.by.walker ?? 0} walkers (${shown.length} bodies one by one); 21 entities as crowds show up to ${R.peopleFor(21)}`];
     return { ok: b.calls < pl.placed.length * 2 && people.calls <= shown.length, lines };
+  },
+  terraform() {
+    // the overlay law (world/terraform.js; design/s004-specs/terraform.md §5, checks 4-8) on a synthetic island: hills of
+    // two scales, pads tried on a grid the way place() tries sites, every compatible one set
+    const bad = [], lines = [], N = FIBS_[11], hOf = (x, z) => Math.round(FIB_[7] + FIB_[8] * vnoise(x / FIB_[8], z / FIB_[8], FIB_[4]) + FIB_[4] * vnoise(x / FIB_[4], z / FIB_[4], FIB_[5]));   // vision: 144 blocks a side; hills 34 high over 34 (a block a block at their steepest), bumps 5 over 5
+    const run = (terrace) => {
+      const pads = []; let refused = 0, why = {};
+      for (let z0 = 0; z0 + FIB_[6] < N; z0 += FIB_[7]) for (let x0 = 0; x0 + FIB_[6] < N; x0 += FIB_[7]) {   // vision: a box up to 13 every 21
+        const w = FIB_[4 + ((x0 + z0) % 3)], l = FIB_[4 + ((x0 * 3 + z0) % 3)], cols = [];   // vision: boxes of 5, 8 and 13
+        for (let x = x0; x < x0 + w; x++) for (let z = z0; z < z0 + l; z++) cols.push({ x, z, h: hOf(x, z) });
+        const p0 = TF.padOf(cols, { terrace }), bw = p0.why ? null : TF.bankFits(p0, hOf), p = bw ? { why: bw } : p0; if (p.why) { refused++; why[p.why.split(" ")[0]] = (why[p.why.split(" ")[0]] ?? 0) + 1; continue; }
+        if (!TF.compatible(p, pads)) { refused++; why.incompatible = (why.incompatible ?? 0) + 1; continue; } pads.push(p); }
+      const T = new Int32Array(N * N), H = new Int32Array(N * N);
+      for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) { H[z * N + x] = hOf(x, z); T[z * N + x] = TF.groundAt(x, z, hOf, pads).h; }
+      let onPad = 0, moved = 0, steeper = 0, pits = 0, meet = 0, risers = 0, treads = [], gentle = 0;
+      for (const p of pads) for (let x = p.x0; x <= p.x1; x++) for (let z = p.z0; z <= p.z1; z++) if (T[z * N + x] !== p.L) onPad++;
+      for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) { const k = z * N + x, nb = [k - 1, k + 1, k - N, k + N];
+        moved = Math.max(moved, Math.abs(T[k] - H[k]));
+        for (const q of [k + 1, k + N]) { const dT = Math.abs(T[k] - T[q]), dH = Math.abs(H[k] - H[q]); steeper = Math.max(steeper, dT - Math.max(dH, TF.BANK.GRADE)); if (terrace && dH <= 1) risers = Math.max(risers, dT); }
+        if (nb.every((q) => T[q] > T[k]) && !nb.every((q) => H[q] >= H[k])) pits++;   // a hollow nature lacks
+        let lo = -Infinity, hi = Infinity; for (const p of pads) { const d = TF.distTo(p, x, z); if (d > TF.BANK.REACH) continue; const s2 = TF.spreadOf(p, d); lo = Math.max(lo, p.L - s2); hi = Math.min(hi, p.L + s2); } if (lo > hi) meet++; }
+      return { pads, refused, why, onPad, moved, steeper, pits, meet, risers, T };
+    };
+    for (const terrace of [false, true]) {
+      const r = run(terrace), name = terrace ? "terraced" : "plain";
+      if (r.onPad) bad.push(`${name}: ${r.onPad} footprint columns off their pad's level`);
+      if (r.moved > Math.max(TF.BANK.CUT, TF.BANK.FILL)) bad.push(`${name}: the ground moved ${r.moved}`);
+      if (r.meet) bad.push(`${name}: ${r.meet} columns where compatible pads' cones did not meet`);
+      if (r.pits) bad.push(`${name}: ${r.pits} pits the natural ground lacks`);
+      if (!terrace && r.steeper > TF.BANK.RISER) bad.push(`plain: a bank ${r.steeper} steeper than nature or a block a block`);   // derived: the ease takes at most CUT / (REACH + 1) < 1 a block, and a block of rounding
+      if (terrace && r.risers > TF.BANK.STEP_MAX) bad.push(`terraced: a riser of ${r.risers} on ground of a block a block or gentler`);
+      lines.push(`${name}: ${r.pads.length} pads set, ${r.refused} refused (${Object.entries(r.why).map(([k, v]) => `${k} ${v}`).join(", ")}); every footprint at its level; the ground moved ${r.moved} at most; ${terrace ? `risers at most ${r.risers} where nature is a block a block or gentler; ` : `banks at most ${r.steeper} past nature's or a block's grade; `}no new pits; every meet held`);
+    }
+    // no pads: nature back, exactly; the same inputs, the same field
+    let back = 0; for (let i = 0; i < FIB_[10] * FIB_[10]; i++) { const x = i % FIB_[10], z = Math.floor(i / FIB_[10]), h = hOf(x, z); if (TF.terraAt(x, z, h, []).h !== h) back++; }   // derived: 89 x 89, over 10^4 columns (terraform.md check 8)
+    const a = run(false), b = run(false); let same = a.T.length === b.T.length; for (let i = 0; same && i < a.T.length; i++) same = a.T[i] === b.T[i];
+    if (back) bad.push(`${back} columns changed with no pads`); if (!same) bad.push("the same pads gave a different field");
+    // compatibility is exact: two pads side by side, levels one past what their cones allow, refused; at the bound, set
+    const P = (x0, L, flags = 0) => ({ x0, z0: 0, x1: x0 + FIB_[4] - 1, z1: FIB_[4] - 1, L, flags, cut: 0 });   // vision: five-block boxes
+    const gap = FIB_[4], A = P(0, 0), B = P(FIB_[4] - 1 + gap, gap), C = P(FIB_[4] - 1 + gap, gap + 1);   // vision: five blocks apart
+    if (!TF.compatible(B, [A]) || TF.compatible(C, [A])) bad.push("compatibility missed its bound");
+    lines.push(`no pads: ${FIB_[10] * FIB_[10]} columns all natural; the same pads give the same field; two pads ${gap} apart may differ by ${gap}, not ${gap + 1}`);
+    return { ok: !bad.length, lines: [...lines, ...bad.map((x) => `FAIL ${x}`)] };
   },
   inherency() {
     const FREE = new Set([0, 1, 2, 0.5, 90, 180, 360]);   // given: none, one, two, a half, and the degrees of a right angle, a half turn, a turn
