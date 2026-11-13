@@ -1409,8 +1409,7 @@ def parts(b):
         zf, ye, cr_ = END + g["Lb"], g["ye"], g["cf"] / PHI
         yfoil = 1 - side
         bones.append({"name": "rudder", "parent": "root", "pivot": [0, ye, zf], "cubes": theran_uv(
-            slab((0, yfoil, zf - cr_ / 2), (0, ye, zf - cr_ / 2), (0, yfoil, zf + cr_ / 2), (0, ye, zf + cr_ / 2), 0.7, (99, 0, zf))
-            + lambda_foil(0, yfoil, zf - cr_ * 0.8, cr_ * 1.6, PHI * g["F"], 0.5), "gold")})
+            slab((0, yfoil, zf - cr_ / 2), (0, ye, zf - cr_ / 2), (0, yfoil, zf + cr_ / 2), (0, ye, zf + cr_ / 2), 0.7, (99, 0, zf)), "gold")})   # just the rudder, her fin (Richard: "fuck the foil on the rudder")
     elif b.get("foils"):
         # A foiler steers with a T-rudder hung on the centre of her transom: the blade reaches as deep as the main
         # foil (depth 0.8 of the strut's, so it flies a little higher, trimming her bow up), a small T-wing at its
@@ -1852,14 +1851,32 @@ def glider_parts(b):
         w, lo, hi = max(0.15, wid(t)), bot(t), max(top(t), bot(t) + 0.3)
         return [(w * u, lo + (hi - lo) * (v + 1) / 2, zs[i]) for u, v in section(t)]
     R = [ring(i) for i in range(N + 1)]
-    frame, cloth = [], []
+    frame, cloth, gskin = [], [], []
+    # her bottom paint (Richard: "a gold 'bottom paint' kind of shield ... the same as the triangular bow gold shield"):
+    # the boot line runs level just over her waterline along her length and climbs at the bow to the shield's head,
+    # half her side above the water, so the bow shield and the bottom are one gold piece
+    T_SHIELD = 1 / PHI ** 3                                # vision: the shield sweeps back a quarter (0.24) of her length
+    boot = lambda t: wl + side * (0.05 + 0.45 * max(0.0, 1 - t / T_SHIELD))
+    def split(P, Q, yb):                                   # the fraction of P->Q, from its low end, under the line yb
+        y0, y1 = min(P[1], Q[1]), max(P[1], Q[1])
+        if y1 - y0 < 1e-6:
+            return 1.0 if y0 <= yb else 0.0
+        return max(0.0, min(1.0, (yb - y0) / (y1 - y0)))
+    at = lambda P, Q, u: tuple(P[j] + (Q[j] - P[j]) * u for j in range(3))
     for i in range(N):
         mid = (zs[i] + zs[i + 1]) / 2
         inside = (0, cy((i + 0.5) / N), mid)
         for k in range(K):
             a, c = R[i][k], R[i][(k + 1) % K]
             a2, c2 = R[i + 1][k], R[i + 1][(k + 1) % K]
-            cloth += slab(a, c, a2, c2, 0.2, inside)                                   # the skin
+            # the skin, gold below her boot line (her bottom paint), cloth above: each facet is cut where it crosses
+            sa, sb = split(a, c, boot(i / N)), split(a2, c2, boot((i + 1) / N))
+            lo = a[1] <= c[1]                                                          # which end of the facet is low
+            A, C, A2, C2 = (a, c, a2, c2) if lo else (c, a, c2, a2)
+            if sa > 0 or sb > 0:
+                gskin += slab(A, at(A, C, sa), A2, at(A2, C2, sb), 0.25, inside)
+            if sa < 1 or sb < 1:
+                cloth += slab(at(A, C, sa), C, at(A2, C2, sb), C2, 0.2, inside)
             if k % max(1, K // 4) == 0:                                                # stringers, gold
                 f = lambda P, Q: tuple(P[j] + (Q[j] - P[j]) * 0.18 for j in range(3))
                 frame += slab(a, f(a, c), a2, f(a2, c2), 0.5, inside)
@@ -1873,9 +1890,7 @@ def glider_parts(b):
     t1 = 0.25
     z1 = -half + 2 * half * t1
     if hull == "dart":
-        ys, yf = wl + 0.5 * side, bot(0)
-        for sx in (-1, 1):
-            frame += slab((0, ys, zs[0]), (0, yf, zs[0]), (sx * 0.55 * wid(t1), bot(t1) + 0.6 * (ys - bot(t1)), z1), (sx * 0.62 * wid(t1), bot(t1) + 0.15 * (ys - bot(t1)), z1), 0.6, (0, cy(t1), z1 + 4))
+        frame += slab((0, boot(0), zs[0] - 0.2), (0, bot(0), zs[0] - 0.2), (0, boot(0), zs[0] + 0.6), (0, bot(0), zs[0] + 0.6), 0.7, (99, 0, zs[0]))   # a gold stem bar
     else:
         tip = (0, cy(0), zs[0])
         foot = (0, cy(t1) - hd(t1), z1)
@@ -1888,9 +1903,24 @@ def glider_parts(b):
     tk = TMAX - 0.06
     zk, yk = -half + 2 * half * tk, cy(tk) - hd(tk)
     ck = Lt / PHI ** 5                                    # a fine chord, bow to stern (Richard: "less thick")
-    frame += slab((0, yk + 0.5, zk - ck / 2), (0, 1 - side, zk - ck / 2), (0, yk + 0.5, zk + ck / 2), (0, 1 - side, zk + ck / 2), 0.7, (99, 0, zk))
-    frame += lambda_foil(0, 1 - side, zk - ck, 2 * ck, PHI ** 2 * W, 0.6)
-    bones = [{"name": "rig_glide_body", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(frame)},
+    # her foil, a hydrofoil's (Richard: "copy the foiling keel ... keep the foiling keel's wing sizing and spacing,
+    # just make 'em cant a little"), its proportions the photograph's, read by golden ratios off the front wing's span
+    # (phi^2 of her breadth, the keel foil's, kept): the front wing's root chord span/phi^3; the rear stabiliser's span
+    # span/phi^2 and chord the front's/phi; the fuselage 0.7 of the span long (the photograph's), its nose just ahead
+    # of the front wing, the stabiliser at its tail well clear of the wing; the
+    # mast a straight blade down from her keel line, chord the front wing's/phi, standing over the front wing's rear
+    yb = 1 - side
+    span_f = PHI ** 2 * W
+    c0 = span_f / PHI ** 3
+    cm = c0 / PHI
+    zf0 = zk - c0 / PHI                                   # the fuselage's nose
+    zf1 = zf0 + 0.7 * span_f                              # its tail (vision: the photograph's)
+    zm = zf0 + 0.4 + c0 / 2                               # the mast's leading edge, over the front wing's rear half
+    frame += slab((0, yk + 0.5, zm), (0, yb, zm), (0, yk + 0.5, zm + cm), (0, yb, zm + cm), 0.5, (99, 0, zk))
+    frame += slab((-0.3, yb, zf0), (0.3, yb, zf0), (-0.3, yb, zf1), (0.3, yb, zf1), 0.6, (0, yb + 99, (zf0 + zf1) / 2))
+    frame += swept_wing(yb - 0.3, zf0 + 0.4, c0, span_f, "lambda", 0.45)
+    frame += swept_wing(yb - 0.3, zf1 - c0 / PHI * 1.4, c0 / PHI, span_f / PHI ** 2, "tips", 0.4)
+    bones = [{"name": "rig_glide_body", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(frame + gskin)},
              {"name": "rig_glide_body_skin", "parent": "rig_glide_body", "pivot": [0, 0, 0], "cubes": skin(cloth)}]
     # the core: an asterion crystal turned on its corners (three cubes, an icosahedron's look), at her heart
     zc, rc = -half + 2 * half * 0.42, 0.7 * W
@@ -2037,6 +2067,29 @@ def glider_parts(b):
 GLIDE_BONES = ("rig_glide_body", "rig_glide_body_skin", "rig_glide_core", "rig_glide_tail", "rig_glide_tail_skin", "rig_glide_sail", "rig_glide_sail_skin",
                "rig_glide_l", "rig_glide_l_skin", "rig_glide_l_out", "rig_glide_l_out_skin",
                "rig_glide_r", "rig_glide_r_skin", "rig_glide_r_out", "rig_glide_r_out_skin")
+
+
+def swept_wing(y, le, c0, span, mode, t, n=10):
+    """A Theran foil wing after a hydrofoil's front wing (Richard's photograph): slim, its chord c0 at the root running
+    out in an ellipse to a fine rounded tip (phi^-3 of the root's), its quarter-chord line swept gently back (1/phi of
+    the root chord over the half span), so the leading edge curves back and the trailing edge forward into the tip.
+    mode "lambda": each arm droops a little, at tan 1/phi^4 (her inverted V, shallow); "tips": level for 1/phi of the
+    half span, the tips then turned down at tan 1/phi^2. n narrow strips a side, so the outline curves instead of stepping."""
+    hs = span / 2
+    def at(u):                                            # u of the half span: (x, drop, leading edge z, chord)
+        c = max(c0 / PHI ** 3, c0 * math.sqrt(max(0.0, 1 - u * u)))
+        q = le + c0 / 4 + u * c0 / PHI                    # the quarter-chord line, swept
+        drop = u * hs / PHI ** 4 if mode == "lambda" else max(0.0, u - 1 / PHI) * hs / PHI ** 2   # a little cant (Richard: "cant a lil")
+        return u * hs, drop, q - c / 4, c
+    us = [1 - (1 - k / n) ** 1.5 for k in range(n + 1)]   # strips finer toward the tip, where the outline turns
+    out = []
+    for sx in (-1, 1):
+        for u0, u1 in zip(us, us[1:]):
+            x0, d0, l0, c_0 = at(u0)
+            x1, d1, l1, c_1 = at(u1)
+            out += slab((sx * x0, y - d0, l0), (sx * x1, y - d1, l1), (sx * x0, y - d0, l0 + c_0),
+                        (sx * x1, y - d1, l1 + c_1), t, (0, y + 99, le))
+    return out
 
 
 def lambda_foil(x0, apex_y, z0, chord, span, t):
