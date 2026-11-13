@@ -172,7 +172,7 @@ def export(pid, with_uv=False, mids=None, names=False):
                 dy = (mf[rig] - 1) * (bone["pivot"][1] - foot)
                 bone = dict(bone, pivot=[bone["pivot"][0], bone["pivot"][1] + dy, bone["pivot"][2]],
                             cubes=[dict(c, origin=[c["origin"][0], c["origin"][1] + dy, c["origin"][2]]) for c in bone["cubes"]])
-            if n.startswith(("foils", "amas", "akas", "nets")) or n in ("rig_glide_l", "rig_glide_r"):   # amidships, with her foils
+            if n.startswith(("foils", "amas", "akas", "nets")) or n in ("rig_glide_l", "rig_glide_r", "rig_glide_body", "rig_glide_tail"):   # amidships, with her foils
                 dz = -mids * 8
             elif n.startswith("bow") or n == "ram":
                 dz = (G.max_mids(b) - mids) * G.SEG   # the bow slides aft to close up on the last mid section

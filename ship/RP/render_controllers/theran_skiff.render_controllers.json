@@ -404,6 +404,12 @@
       "materials": [
         {
           "*": "Material.default"
+        },
+        {
+          "*_skin": "Material.skin"
+        },
+        {
+          "rig_glide_core": "Material.glow"
         }
       ],
       "textures": [
@@ -438,16 +444,43 @@
           "rig_wing": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5"
         },
         {
-          "rig_glide_l": "q.property('shipwright:stage') >= 4"
+          "rig_glide_body": "q.property('shipwright:stage') >= 3"
         },
         {
-          "rig_glide_l_out": "q.property('shipwright:stage') >= 4"
+          "rig_glide_body_skin": "q.property('shipwright:stage') >= 3"
         },
         {
-          "rig_glide_r": "q.property('shipwright:stage') >= 4"
+          "rig_glide_core": "q.property('shipwright:stage') >= 3"
         },
         {
-          "rig_glide_r_out": "q.property('shipwright:stage') >= 4"
+          "rig_glide_tail": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_tail_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_l": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_l_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_l_out": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_l_out_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_r": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_r_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_r_out": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_r_out_skin": "q.property('shipwright:stage') >= 3"
         },
         {
           "tt_rig_square_a": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 1 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"

@@ -577,6 +577,17 @@ def sail_texture(hex_color, seed, trim=None, spar=(124, 92, 56)):
     # Telltale yarn lives in this corner: red, or white on sails that are already reddish.
     reddish = base[0] > base[1] + 50 and base[0] > base[2] + 30
     yarn = (240, 240, 235) if reddish else (200, 40, 40)
+    # The Exokoitos's skin: the cloth itself, translucent (alpha 0.4: drawn with entity_alphablend), its weave faintly
+    # gridded; and asterion's glow for her core, a pale star-blue with a bright heart (drawn with entity_emissive_alpha)
+    x0, y0, w, h = SC.SKIN
+    for y in range(y0, y0 + h):
+        for x in range(x0, x0 + w):
+            px[x, y] = (236, 240, 244, 92 if (x + y) % 3 else 120)
+    x0, y0, w, h = SC.CORE
+    for y in range(y0, y0 + h):
+        for x in range(x0, x0 + w):
+            d = max(abs(x - x0 - 3.5), abs(y - y0 - 3.5))
+            px[x, y] = (150, 230, 255, 255) if d > 2 else (232, 250, 255, 255)
     tx, ty, tw, th = SC.TELLTALE
     for y in range(ty, ty + th):
         for x in range(tx, tx + tw):
