@@ -241,7 +241,27 @@ let TP = null, templeOk = false, HORAIA_AT = null; const POOLDRESS = [], POOLFIS
     done.push(`the pools dressed (${dressed} things on their floors), ${fish0} fish, ${beasts} beasts on their banks`); }
   site("great temple", mouth, 0);   // the Sea Rite Temple on the summit's middle
   site("navigation house", mouth + Math.PI, 89); site("library", mouth + (2 * Math.PI) / 3, 89); site("government seat", mouth - (2 * Math.PI) / 3, 89);   // vision: eighty-nine out from the summit's middle at least (clear of the great temple)
-  say(`the summit: ${done.join(", ")}`); }
+  say(`the summit: ${done.join(", ")}`);
+  // the museum of the lost keels (handover/design/lost-keels.md on sim/sea; agreed on Olympus, 0001689165-builder): a
+  // stoa on the library's south terrace, 55 by 8 (FIB[9] x FIB[5]), its back to the library, its colonnade to the
+  // sea; eleven plinths at five, the flagship's three wide at its head (east). Empty until a keel comes home.
+  { const lib = placements.find((q) => q.tag === "library"); if (!lib) say("the museum: no library to stand by");
+    else { const L = FIB[9], D = FIB[5], H = FIB[3] + 1, vox = new Map(), put = (x, y, z, id) => vox.set(`${x},${y},${z}`, { id, s: null });   // derived: 55 long, 8 deep, four high under the roof
+      for (let x = 0; x < L; x++) for (let z = 0; z < D; z++) { put(x, 0, z, "waterworld:theran_marble_tile"); put(x, H + 1, z, "waterworld:theran_marble_tile"); }   // the floor and the roof
+      for (let x = 0; x < L; x++) for (let y = 1; y <= H; y++) put(x, y, 0, "waterworld:theran_marble_ashlar");   // the back wall, toward the library
+      for (let x = 0; x < L; x += FIB[4]) for (let y = 1; y <= H; y++) put(x, y, D - 1, "minecraft:quartz_pillar");   // the colonnade, a column every five
+      for (let y = 1; y <= H; y++) put(L - 1, y, D - 1, "minecraft:quartz_pillar");
+      for (let k = 0; k < FIB[9] / FIB[4] - 1; k++) put(FIB[3] + FIB[4] * k, 1, FIB[3], "waterworld:theran_marble_polished");   // derived: ten plinths at five
+      for (let x = L - FIB[4]; x < L - FIB[4] + FIB[3]; x++) for (let z = FIB[2]; z < FIB[2] + FIB[3]; z++) put(x, 1, z, "waterworld:theran_marble_polished");   // the flagship's, three by three at the head
+      const P = proto("museum of the lost keels", vox, 0), cx = Math.round((lib.b[0] + lib.b[2]) / 2); let best = null;
+      for (let dz = FIB[2]; dz <= FIB[5]; dz++) for (let dx = -FIB[4]; dx <= FIB[4]; dx++) { const X = cx + dx, Z = lib.b[3] + dz + D / 2, w = place(P, X, Z, { foundation: "minecraft:calcite", dry: true }); if (w && (!best || w.score < best.w.score)) best = { X, Z, w }; }   // along the terrace, the least earthwork
+      say(best && place(P, best.X, best.Z, { foundation: "minecraft:calcite", tag: "museum" }) ? `the museum of the lost keels on the library's south terrace (cut ${best.w.cut}, fill ${best.w.fill})` : "the museum: NOT placed (the terrace is taken)"); } }
+  // Olympus (world/olympus.js): the world's highest summit, and the ring of nine on it
+  { const O = await import("../world/olympus.js"), M = await import("../world/map.js"), m = M.map(), V = (await import("../core/given.js")).VISION;
+    const top = O.summitOf({ w: m.w, h: m.h, chunkHeight: M.chunkHeight, topAt: G.topAt, px: V.MAP_PX });
+    const stones = new Map(); for (const [dx, y, dz, id] of O.ringOf()) { const k = `${dx},${dz}`; if (!stones.has(k)) stones.set(k, []); stones.get(k).push([y - 1, id]); }
+    let n = 0; for (const [k, col] of stones) { const [dx, dz] = k.split(",").map(Number); if (place(proto(`olympus stone ${k}`, new Map(col.map(([y, id]) => [`0,${y},0`, { id, s: null }])), 0), top.x + dx, top.z + dz, { trunk: true, tag: "olympus" })) n++; }
+    say(`Olympus: the summit at ${top.x}, ${top.y}, ${top.z} (${top.y - G.SEA} over the sea); ${n} of 9 stones in its ring`); } }
 // the skyways (world/theraplan.js, game/skyway.js): a tree from the cone's skirt to each Theran quarter, over the
 // lagoon at the great ships' clearance and up the wall to the rim; laid before the houses so they keep clear of it
 { const { skywayNetwork } = await import("../game/skyway.js"), ground = (X, Z) => { const t = G.SEA + Math.round(G.heightAt(X, Z).h); return { top: t, water: t <= G.SEA }; };
