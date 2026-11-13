@@ -2089,24 +2089,22 @@ def glider_parts(b):
     yb = 1 - side + 2                                     # the reflection's wing roots, near her old foil's depth
     zc = zk                                               # its wing roots under her mast
     T = lambda P: (km * P[0], yb - km * (P[1] - ymid), zc + km * (P[2] - zw))
+    # one shape, plainly (Richard: "way too detailed ... look like one shape"; "scrap the accurate fuselage"): a plain
+    # rod for a fuselage from her nose to her tailplane, each wing panel one gold plate, the tailplane one plate and
+    # its tips one each, all one thickness, meeting edge to edge
+    TH = 0.7
     mini = []
-    for i in range(0, N, 2):                               # its body: her rings, every other station, solid gold
-        Ra, Rb = R[i], R[min(N, i + 2)]
-        cin = T((0, cy((i + 1) / N), (zs[i] + zs[min(N, i + 2)]) / 2))
-        for k in range(K):
-            mini += slab(T(Ra[k]), T(Ra[(k + 1) % K]), T(Rb[k]), T(Rb[(k + 1) % K]), 0.35, cin)
+    yr_ = T((0, ymid, 0))[1]
+    mini += strut((0, yr_, T((0, 0, zs[0]))[2]), T((0, ye, ze + cs / 2)), 0.45)          # the fuselage, nose to tailplane
+    up_ = T((0, ymid - 99, zw))
     for sx, (rx_, yw_, kx_, ky_, tx_, ty_, lr_, lk_, lt_, cr_, co_, ct_) in wingpts.items():
-        for (x0, y0, l0, c0), (x1, y1, l1, c1) in (((rx_, yw_, lr_, cr_), (kx_, ky_, lk_, co_)), ((kx_, ky_, lk_, co_), (tx_, ty_, lt_, ct_))):
-            for ua, ub in ((0, 0.5), (0.5, 1)):            # two strips a panel, so the taper shows
-                P_ = lambda u, v: T((x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, l0 + (l1 - l0) * u + v * (c0 + (c1 - c0) * u)))
-                mini += slab(P_(ua, 0), P_(ub, 0), P_(ua, 1), P_(ub, 1), 0.5, T((0, ymid - 99, zw)))
-    for sgn in (-1, 1):                                    # its booms
-        mini += strut(T((sgn * xr, yr, zr)), T((sgn * xb, ye, ze)), 0.3)
-    mini += slab(T((-xb, ye, ze - cs / 2)), T((xb, ye, ze - cs / 2)), T((-xb, ye, ze + cs / 2)), T((xb, ye, ze + cs / 2)), 0.45, T((0, ye - 99, ze)))   # its tailplane
-    for sgn in (-1, 1):                                    # and its tips, canted up as her own cant down
-        mini += slab(T((sgn * xb, ye, ze - cs / 2)), T((sgn * hs, ytip, ze - 0.4 * cs)), T((sgn * xb, ye, ze + cs / 2)), T((sgn * hs, ytip, ze + 0.3 * cs)), 0.45, T((0, ye - 99, ze)))
+        for (x0, y0, l0, c0), (x1, y1, l1, c1) in (((0, yw_, lr_, cr_), (kx_, ky_, lk_, co_)), ((kx_, ky_, lk_, co_), (tx_, ty_, lt_, ct_))):
+            mini += slab(T((x0, y0, l0)), T((x1, y1, l1)), T((x0, y0, l0 + c0)), T((x1, y1, l1 + c1)), TH, up_)
+    mini += slab(T((-xb, ye, ze - cs / 2)), T((xb, ye, ze - cs / 2)), T((-xb, ye, ze + cs / 2)), T((xb, ye, ze + cs / 2)), TH, T((0, ye - 99, ze)))   # the tailplane
+    for sgn in (-1, 1):                                    # its tips, canted up as her own cant down
+        mini += slab(T((sgn * xb, ye, ze - cs / 2)), T((sgn * hs, ytip, ze - 0.4 * cs)), T((sgn * xb, ye, ze + cs / 2)), T((sgn * hs, ytip, ze + 0.3 * cs)), TH, T((0, ye - 99, ze)))
     # the mast: her keel line down to the reflection's back, at its wing root
-    ytop, ybot = cy(tk) - hd(tk) + 0.5, T((0, cy(TMAX) - hd(TMAX), zw))[1]
+    ytop, ybot = cy(tk) - hd(tk) + 0.5, yr_
     cm = km * cr / PHI
     mini += slab((0, ytop, zc - cm / 2), (0, ybot, zc - cm / 2), (0, ytop, zc + cm / 2), (0, ybot, zc + cm / 2), 0.9, (99, 0, zc))
     bones[0]["cubes"] = bones[0]["cubes"] + gold(mini)
