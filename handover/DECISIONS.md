@@ -39,3 +39,19 @@ bake step. Minecraft is one view of it, the server's live sim runs alongside, an
 Consequence: keep sim logic out of `mod/` and `ship/` game glue wherever it can live in `core/`/`world/`; keep the
 closed-form/stepped handover exact (the analogue lens); treat the world viewer as the start of the sim's own
 front end, not a debugging toy.
+
+## D-004 — Ships keep the world's length rungs; depth, decks and walls are drawn true  (accepted · Richard · 2026-11-12 · S003)
+Context: the big ships "look paper thin" and "flat". The culture engineers measured why: models drawn at 0.25–0.83 of
+the law's depth (`y_scale`, `SIDE_TRIM`), walls a constant ~1/8 block (`th()` divides by the model scale).
+Decision: lengths stay on `boatsizes.js`'s rungs (8 / 21 / 34; ship class to its plans' 22). Depth, draught and
+freeboard come from the law (beam/φ, /φ², freeboard against the reach's design wave), walls grow with length
+(w = 16·L/K, K on Fibonacci rungs by construction), decks from depth. The League's galleys are all great, sized by
+route (29–37). Design: `design/S003-ship-engineering.md`.
+Consequence: every hull is regenerated (0.10.0); the engineering lens (englab) judges the models against the law.
+
+## D-005 — A ram only where it was used, or bought  (accepted · Richard · 2026-11-12 · S003)
+Context: every culture's hull carried a ram; only the League and the Therans rammed. The League sells the ram as a
+fitting to any fleet (`world/league.js` PIECES).
+Decision: no ram drawn by default; the League's and Therans' ships carry theirs; any other ship shows one only when
+the ram fitting is fitted.
+Consequence: `RAM_OF` and the outfit render controller key on the fitting; a lens check: no unfitted rams.
