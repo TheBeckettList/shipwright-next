@@ -138,7 +138,7 @@ function hullOf(boat) {
 /**
  * Whether a world point is inside a ship's hull (pad: blocks of slack all round), and where:
  * { along } from her centre (+ forward), or null. Twin hulls are two hulls with water between;
- * an outrigger's float counts as hull.
+ * an outrigger's float counts as hull, and so does a twin's bridge-deck pod.
  */
 export function inHull(origin, F, h, p, pad = 0.25) {
   const loc = F.toLocal(p);
@@ -149,7 +149,8 @@ export function inHull(origin, F, h, p, pad = 0.25) {
   const half = (h.beamEach ?? h.beam ?? 1.5) / 2 + pad;
   const onHull = (h.hullLines ?? [0]).some((c) => Math.abs(loc.across - c) <= half);
   const onFloat = h.float && Math.abs(loc.across - h.float.across) <= 0.6 + pad && Math.abs(along) <= h.float.half + pad;
-  return onHull || onFloat ? { along, across: loc.across } : null;
+  const onPod = (h.podHalf ?? 0) > 0 && Math.abs(loc.across) <= h.podHalf + pad;   // a twin's bridge-deck pod
+  return onHull || onFloat || onPod ? { along, across: loc.across } : null;
 }
 
 /** The hull zone a point along her lies in: the fore third is the bow, the after third the stern. */

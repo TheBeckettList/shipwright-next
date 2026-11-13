@@ -105,7 +105,7 @@
         "pennant": {
           "position": [
             0,
-            "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? (q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.557 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.484 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.805 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.03 : 0.769)))) - 1) * 101.95 : -90.43",
+            "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? (q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.567 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.726 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.826 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.04 : 0.779)))) - 1) * 102.935 : -89.111",
             "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? -q.property('shipwright:mids') * 8 : 20"
           ],
           "rotation": [
@@ -204,7 +204,7 @@
           ],
           "scale": [
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.76 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.867 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.526 : 0.822))))",
-            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.557 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.484 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.805 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.03 : 0.769))))",
+            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.567 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.726 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.826 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.04 : 0.779))))",
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.76 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.867 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.526 : 0.822))))"
           ]
         },
@@ -371,7 +371,7 @@
           ],
           "scale": [
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.76 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.867 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.526 : 0.822))))",
-            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.557 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.484 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.805 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.03 : 0.769))))",
+            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.567 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.726 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.826 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.04 : 0.779))))",
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.76 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.867 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.526 : 0.822))))"
           ]
         },
@@ -468,7 +468,7 @@
           ],
           "scale": [
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.76 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.867 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.526 : 0.822))))",
-            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.557 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.484 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.805 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.03 : 0.769))))",
+            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.567 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.726 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.826 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.04 : 0.779))))",
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.76 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.867 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.526 : 0.822))))"
           ]
         },
@@ -565,7 +565,7 @@
           ],
           "scale": [
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.76 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.867 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.526 : 0.822))))",
-            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.557 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.484 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.805 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.03 : 0.769))))",
+            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.567 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.726 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.826 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.04 : 0.779))))",
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.76 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.867 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.526 : 0.822))))"
           ]
         },
@@ -767,9 +767,9 @@
             "(1 - v.a) * 70"
           ],
           "scale": [
-            1.0,
-            1.4286,
-            1.0
+            0.8805,
+            1.2579,
+            0.8805
           ]
         },
         "dpaddle": {
@@ -779,9 +779,9 @@
             "math.sin(v.p_dp) * (math.sin(v.p_dp) > 0 ? math.abs(v.l) : math.abs(v.r)) * 28"
           ],
           "scale": [
-            0.88,
-            1.2571,
-            0.88
+            0.8088,
+            1.1555,
+            0.8088
           ]
         },
         "scull": {

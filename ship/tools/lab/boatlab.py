@@ -136,6 +136,10 @@ def exclusive(a, b):
         return True
     if a.startswith("mast") or b.startswith("mast"):           # masts slide to their stations at run time
         return True
+    # a rig is lifted, slid and scaled to its hull at run time (gen_boats animation: lift, slide, rs), so where its cut
+    # cloth's box meets a paddle or pole in the file is not where they meet in the game (S002)
+    if (a in PROPULSION and b.startswith("rig_")) or (b in PROPULSION and a.startswith("rig_")):
+        return True
     alt = ("rig_", "sail_", "furl", "deck_", "tt_", "oar_", "power_", "canopy", "ama", "float", "shield", "pennant", "flag")
     if a.split("_")[0] == b.split("_")[0] and any(a.startswith(p) for p in alt):
         return True

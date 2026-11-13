@@ -166,6 +166,7 @@ export function computeHandling(rec, load = 0, crew = 0) {
     half,                                       // centre to bow tip, and to stern tip
     helmAt: -(half - ms),                       // the helm, aft of centre
     hullLines: plan.twin ? [-gap / 2, gap / 2] : [0],
+    podHalf: (pr.pod_half ?? 0) * ms,             // a twin's bridge-deck pod on the centre line (the Therans'): deck, not water
     decks: decksFor(rec, plan),
     deckUp: topDeckUp(rec, plan),               // the walked top deck, blocks above the water block
     // Each mast's place along the hull from the centre (+ forward), where the model steps it.

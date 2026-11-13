@@ -8,8 +8,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.11,
       "lateen": 3.071,
-      "crab_claw": 2.631,
-      "junk": 4.551,
+      "crab_claw": 3.97,
+      "junk": 4.615,
       "wing": 5.872
     },
     "scale": 1,
@@ -42,6 +42,7 @@ export const PROPORTIONS = {
       "wing": 8.208
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.1875,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -53,8 +54,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.681,
       "lateen": 3.558,
-      "crab_claw": 3.06,
-      "junk": 5.225,
+      "crab_claw": 4.62,
+      "junk": 5.306,
       "wing": 6.725
     },
     "scale": 2,
@@ -87,6 +88,7 @@ export const PROPORTIONS = {
       "wing": 10.837
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -98,8 +100,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.391,
       "lateen": 3.079,
-      "crab_claw": 2.637,
-      "junk": 4.562,
+      "crab_claw": 3.979,
+      "junk": 4.627,
       "wing": 5.886
     },
     "scale": 1,
@@ -132,6 +134,7 @@ export const PROPORTIONS = {
       "wing": 8.248
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 1.96,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -143,8 +146,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.108,
       "lateen": 2.93,
-      "crab_claw": 2.524,
-      "junk": 4.303,
+      "crab_claw": 3.808,
+      "junk": 4.37,
       "wing": 5.559
     },
     "scale": 1,
@@ -177,6 +180,7 @@ export const PROPORTIONS = {
       "wing": 7.35
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 1.96,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -188,8 +192,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.108,
       "lateen": 2.93,
-      "crab_claw": 2.524,
-      "junk": 4.303,
+      "crab_claw": 3.808,
+      "junk": 4.37,
       "wing": 5.559
     },
     "scale": 1,
@@ -222,6 +226,7 @@ export const PROPORTIONS = {
       "wing": 7.35
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 1.96,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -233,8 +238,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.198,
       "lateen": 2.943,
-      "crab_claw": 2.527,
-      "junk": 4.361,
+      "crab_claw": 3.81,
+      "junk": 4.423,
       "wing": 5.627
     },
     "scale": 1,
@@ -267,6 +272,7 @@ export const PROPORTIONS = {
       "wing": 7.533
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 1.96,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -278,8 +284,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.504,
       "lateen": 3.158,
-      "crab_claw": 2.705,
-      "junk": 4.679,
+      "crab_claw": 4.082,
+      "junk": 4.746,
       "wing": 6.038
     },
     "scale": 1,
@@ -312,6 +318,7 @@ export const PROPORTIONS = {
       "wing": 8.682
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.1094,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -323,8 +330,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.649,
       "lateen": 2.983,
-      "crab_claw": 2.555,
-      "junk": 4.421,
+      "crab_claw": 3.856,
+      "junk": 4.483,
       "wing": 5.704
     },
     "scale": 1,
@@ -357,6 +364,7 @@ export const PROPORTIONS = {
       "wing": 7.74
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 1.96,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -368,8 +376,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.108,
       "lateen": 2.93,
-      "crab_claw": 2.524,
-      "junk": 4.303,
+      "crab_claw": 3.808,
+      "junk": 4.37,
       "wing": 5.559
     },
     "scale": 1,
@@ -402,6 +410,7 @@ export const PROPORTIONS = {
       "wing": 7.35
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 1.96,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -413,8 +422,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.318,
       "lateen": 3.027,
-      "crab_claw": 2.593,
-      "junk": 4.486,
+      "crab_claw": 3.913,
+      "junk": 4.549,
       "wing": 5.788
     },
     "scale": 1,
@@ -439,6 +448,7 @@ export const PROPORTIONS = {
       "wing": 7.972
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.1875,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -450,8 +460,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.108,
       "lateen": 2.93,
-      "crab_claw": 2.524,
-      "junk": 4.303,
+      "crab_claw": 3.808,
+      "junk": 4.37,
       "wing": 5.559
     },
     "scale": 1,
@@ -476,6 +486,7 @@ export const PROPORTIONS = {
       "wing": 7.35
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 1.96,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -487,8 +498,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.108,
       "lateen": 2.93,
-      "crab_claw": 2.524,
-      "junk": 4.303,
+      "crab_claw": 3.808,
+      "junk": 4.37,
       "wing": 5.559
     },
     "scale": 1,
@@ -521,6 +532,7 @@ export const PROPORTIONS = {
       "wing": 7.35
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 1.96,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -532,8 +544,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 6.152,
       "lateen": 4.227,
-      "crab_claw": 3.615,
-      "junk": 6.264,
+      "crab_claw": 5.459,
+      "junk": 6.353,
       "wing": 8.052
     },
     "scale": 2,
@@ -566,6 +578,7 @@ export const PROPORTIONS = {
       "wing": 15.563
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 3.3594,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -577,8 +590,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.99,
       "lateen": 3.558,
-      "crab_claw": 3.06,
-      "junk": 5.225,
+      "crab_claw": 4.62,
+      "junk": 5.306,
       "wing": 6.725
     },
     "scale": 2,
@@ -611,6 +624,7 @@ export const PROPORTIONS = {
       "wing": 10.837
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -622,8 +636,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 3.527,
       "lateen": 2.511,
-      "crab_claw": 2.168,
-      "junk": 3.698,
+      "crab_claw": 3.269,
+      "junk": 3.75,
       "wing": 4.766
     },
     "scale": 2,
@@ -657,6 +671,7 @@ export const PROPORTIONS = {
       "wing": 10.837
     },
     "twin_gap": 2.55,
+    "pod_half": 0,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -668,8 +683,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.277,
       "lateen": 3.047,
-      "crab_claw": 2.626,
-      "junk": 4.485,
+      "crab_claw": 3.965,
+      "junk": 4.548,
       "wing": 5.772
     },
     "scale": 2,
@@ -703,6 +718,7 @@ export const PROPORTIONS = {
       "wing": 10.838
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.8125,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -714,8 +730,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.126,
       "lateen": 2.89,
-      "crab_claw": 2.477,
-      "junk": 4.286,
+      "crab_claw": 3.734,
+      "junk": 4.346,
       "wing": 5.516
     },
     "scale": 2,
@@ -749,6 +765,7 @@ export const PROPORTIONS = {
       "wing": 11.365
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 3.2812,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -760,8 +777,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 5.447,
       "lateen": 3.558,
-      "crab_claw": 3.06,
-      "junk": 5.225,
+      "crab_claw": 4.62,
+      "junk": 5.306,
       "wing": 6.725
     },
     "scale": 2,
@@ -794,6 +811,7 @@ export const PROPORTIONS = {
       "wing": 10.837
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.8125,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -805,8 +823,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 3.798,
       "lateen": 2.71,
-      "crab_claw": 2.335,
-      "junk": 3.983,
+      "crab_claw": 3.521,
+      "junk": 4.039,
       "wing": 5.132
     },
     "scale": 2,
@@ -832,6 +850,7 @@ export const PROPORTIONS = {
       "wing": 10.838
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -843,8 +862,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.99,
       "lateen": 3.558,
-      "crab_claw": 3.06,
-      "junk": 5.225,
+      "crab_claw": 4.62,
+      "junk": 5.306,
       "wing": 6.725
     },
     "scale": 2,
@@ -877,6 +896,7 @@ export const PROPORTIONS = {
       "wing": 10.837
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 3.0469,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -888,8 +908,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.99,
       "lateen": 3.558,
-      "crab_claw": 3.06,
-      "junk": 5.225,
+      "crab_claw": 4.62,
+      "junk": 5.306,
       "wing": 6.725
     },
     "scale": 2,
@@ -922,20 +942,21 @@ export const PROPORTIONS = {
       "wing": 10.837
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.6172,
     "float_len": 5.525,
     "typical_len": 8.5
   },
   "theran_ship": {
     "beam": 0.9688,
-    "depth": 0.3125,
-    "mast": 1.0,
+    "depth": 0.375,
+    "mast": 1.2,
     "masts": {
-      "square": 3.381,
-      "lateen": 2.449,
-      "crab_claw": 2.128,
-      "junk": 3.539,
-      "wing": 4.528
+      "square": 3.425,
+      "lateen": 2.493,
+      "crab_claw": 3.192,
+      "junk": 3.631,
+      "wing": 4.572
     },
     "scale": 2,
     "mast_count": 4,
@@ -945,7 +966,7 @@ export const PROPORTIONS = {
         0.35
       ]
     },
-    "rail": 0.75,
+    "rail": 0.837,
     "helm": "oar",
     "mast_at": [
       0.0,
@@ -959,9 +980,10 @@ export const PROPORTIONS = {
       "lateen": 15.895,
       "crab_claw": 17.34,
       "junk": 14.45,
-      "wing": 10.838
+      "wing": 10.837
     },
     "twin_gap": 2.55,
+    "pod_half": 0.1842,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -973,8 +995,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.682,
       "lateen": 3.554,
-      "crab_claw": 3.063,
-      "junk": 5.226,
+      "crab_claw": 4.622,
+      "junk": 5.307,
       "wing": 6.718
     },
     "scale": 4,
@@ -999,6 +1021,7 @@ export const PROPORTIONS = {
       "wing": 10.837
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -1010,8 +1033,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 3.228,
       "lateen": 2.22,
-      "crab_claw": 1.902,
-      "junk": 3.287,
+      "crab_claw": 2.868,
+      "junk": 3.338,
       "wing": 4.236
     },
     "scale": 4,
@@ -1046,6 +1069,7 @@ export const PROPORTIONS = {
       "wing": 15.687
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 3.5156,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -1057,8 +1081,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.277,
       "lateen": 3.049,
-      "crab_claw": 2.623,
-      "junk": 4.484,
+      "crab_claw": 3.96,
+      "junk": 4.548,
       "wing": 5.764
     },
     "scale": 4,
@@ -1092,6 +1116,7 @@ export const PROPORTIONS = {
       "wing": 10.838
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 3.0469,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -1103,8 +1128,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 2.599,
       "lateen": 1.822,
-      "crab_claw": 1.561,
-      "junk": 2.7,
+      "crab_claw": 2.355,
+      "junk": 2.742,
       "wing": 3.484
     },
     "scale": 4,
@@ -1139,6 +1164,7 @@ export const PROPORTIONS = {
       "wing": 12.203
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 3.3398,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -1150,8 +1176,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 2.537,
       "lateen": 1.682,
-      "crab_claw": 1.449,
-      "junk": 2.473,
+      "crab_claw": 2.186,
+      "junk": 2.508,
       "wing": 3.191
     },
     "scale": 4,
@@ -1183,9 +1209,10 @@ export const PROPORTIONS = {
       "lateen": 15.895,
       "crab_claw": 17.34,
       "junk": 14.45,
-      "wing": 10.837
+      "wing": 10.838
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 3.0859,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -1197,8 +1224,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 4.984,
       "lateen": 3.554,
-      "crab_claw": 3.063,
-      "junk": 5.226,
+      "crab_claw": 4.622,
+      "junk": 5.307,
       "wing": 6.718
     },
     "scale": 4,
@@ -1231,6 +1258,7 @@ export const PROPORTIONS = {
       "wing": 10.837
     },
     "twin_gap": 2.55,
+    "pod_half": 0,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -1242,8 +1270,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 3.048,
       "lateen": 2.171,
-      "crab_claw": 1.874,
-      "junk": 3.193,
+      "crab_claw": 2.829,
+      "junk": 3.238,
       "wing": 4.136
     },
     "scale": 1,
@@ -1276,6 +1304,7 @@ export const PROPORTIONS = {
       "wing": 4.043
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 1.96,
     "float_len": 4.55,
     "typical_len": 7.0
@@ -1287,8 +1316,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 3.697,
       "lateen": 2.638,
-      "crab_claw": 2.273,
-      "junk": 3.877,
+      "crab_claw": 3.428,
+      "junk": 3.932,
       "wing": 4.996
     },
     "scale": 2,
@@ -1313,6 +1342,7 @@ export const PROPORTIONS = {
       "wing": 5.961
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -1324,8 +1354,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 3.697,
       "lateen": 2.634,
-      "crab_claw": 2.27,
-      "junk": 3.876,
+      "crab_claw": 3.427,
+      "junk": 3.936,
       "wing": 4.989
     },
     "scale": 4,
@@ -1350,6 +1380,7 @@ export const PROPORTIONS = {
       "wing": 5.961
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5
@@ -1361,8 +1392,8 @@ export const PROPORTIONS = {
     "masts": {
       "square": 2.115,
       "lateen": 1.507,
-      "crab_claw": 1.301,
-      "junk": 2.218,
+      "crab_claw": 1.963,
+      "junk": 2.25,
       "wing": 2.866
     },
     "scale": 4,
@@ -1389,6 +1420,7 @@ export const PROPORTIONS = {
       "wing": 10.837
     },
     "twin_gap": 0.0,
+    "pod_half": 0,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5

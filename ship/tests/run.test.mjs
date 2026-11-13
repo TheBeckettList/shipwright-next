@@ -2722,14 +2722,14 @@ test("every piece sits on the half-pixel grid", async () => {
   }
 });
 
-test("launched, every boat is drawn within its part budget: 340 small, 420 medium", async () => {
+test("launched, every boat is drawn within its part budget: 340 small, 460 medium", async () => {
   for (const pid of ALL_BOATS()) {
     const p = PLANS[pid];
     const mids = Math.min(7, Math.max(1, Math.round(p.lengthRange[1] / p.modelScale - 3)));
     const launched = (await modelsOf(pid)).launched;
     const n = launched.filter((b) => !(b.name.startsWith("mid_") && Number(b.name.split("_")[1]) >= mids))
       .reduce((a, b) => a + (b.cubes?.length ?? 0), 0);
-    const budget = p.modelScale === 1 ? 340 : 420;   // the rounded shell is planked in strakes along its curve
+    const budget = p.modelScale === 1 ? 340 : 460;   // the rounded shell is planked in strakes along its curve; 460 for the Theran cat's pod and wave-piercing ends (S002)
     assert.ok(n + 40 <= budget, `${pid}: launched hull ${n} pieces, leaving under 40 for rig, propulsion and chest`);
     const building = (await modelsOf(pid))[pid].reduce((a, b) => a + (b.cubes?.length ?? 0), 0);
     assert.ok(n < building / 2, `${pid}: launched ${n} vs building ${building}`);
