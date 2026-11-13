@@ -172,6 +172,7 @@ function houseAt(p, { n = 4, job = null, k = 0, tradition = p.tradition, dense =
     door0 = { x: 1, y: 1, z: -1 - (t - 1), facing: "south" }; rooms = [{ name: "hall", x0: 0, z0: 0, x1: Li - 1, z1: Wi - 1 }];
     for (let k = 0; k < t - 1; k++) { v.del(1, 1, -1 - k); v.del(1, 2, -1 - k); }   // a thick wall opened through to the door
     windows(v, 0, 0, Li - 1, Wi - 1, 1, H, p, t, f); roof(v, -t, -t, Li - 1 + t, Wi - 1 + t, 1 + H, p.build.roof.pitch === "flat" ? "pitched" : p.build.roof.pitch, cover, "gable", f.wall);
+    yardFire(Math.floor(Li / 2), -t - FIB[4]);   // vision: where it's hot the fire pits move out to the yard, five blocks out (the hearths above are lit only where it's cold)
   } else if (form === "twocell" || form === "stilt") {
     const up = form === "twocell" && n > 2 && !dense ? false : false, need = 6 + n * 3 + kit().length * 2, [Wi, Li] = goldenRect(form === "twocell" && n > 2 ? need / 2 + 6 : need, 3);   // vision: the hall's own six cells; a bed and its reach three, a fixture and its reach two
     const two = form === "twocell" && n > 2; y0 = form === "stilt" ? FIB[3] : 0;   // derived: three blocks of piles over the water
@@ -431,7 +432,7 @@ function buildPlan(v, P, c) {
 }
 /** Light every floor cell to LIT: block light spreads through air, less one a block; lanterns hung at the darkest until none is dark. */
 function light(v, fx, door0, rooms) {
-  const cells = floorCells(v), lamps = [];
+  const cells = floorCells(v), lamps = [], full = new Set();
   if (!cells.length) return lamps;
   const sources = () => [...fx.filter((f) => f.what === "fire" && /campfire/.test(f.id)), ...lamps].map((s) => ({ x: s.x, y: s.y, z: s.z }));
   const level = () => {   // breadth-first through air from every source, 15 less the steps
@@ -440,9 +441,10 @@ function light(v, fx, door0, rooms) {
     return L;
   };
   for (let g = 0; g < 64; g++) {   // vision: lanterns at most
-    const L = level(), dark = cells.filter((c) => (L.get(K(c.x, c.y, c.z)) ?? 0) < DWELL.LIT + CALIBRATION.litMargin);   // the margin: what the server's probes found the game's light short of the lab's
+    const L = level(), dark = cells.filter((c) => !full.has(K(c.x, c.y, c.z)) && (L.get(K(c.x, c.y, c.z)) ?? 0) < DWELL.LIT + CALIBRATION.litMargin);   // the margin: what the server's probes found the game's light short of the lab's
     if (!dark.length) break;
     const c = dark.sort((a, b) => (L.get(K(a.x, a.y, a.z)) ?? 0) - (L.get(K(b.x, b.y, b.z)) ?? 0))[Math.floor(dark.length / 2)];
+    if (v.get(c.x, c.y + 1, c.z)) { full.add(K(c.x, c.y, c.z)); continue; }   // a doorway (the door's top half over it) has no room to hang a lantern: light it from the next darkest
     let y = c.y + 1; while (y < c.y + 6 && !v.get(c.x, y + 1, c.z)) y++;   // vision: hang it from the ceiling (or six up, if there's none)
     v.set(c.x, y, c.z, "lantern", { hanging: !!v.get(c.x, y + 1, c.z) }); lamps.push({ x: c.x, y, z: c.z });
   }
