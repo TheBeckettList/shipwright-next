@@ -2736,13 +2736,11 @@ def glider_parts(b):
         z0b = zc - Lb / PHI ** 2                                            # its nose: its wing at the third of its length
         ybk = yb                                                            # its axis, the wing's plane
         prof = [(0.0, 0.25), (0.1, 0.8), (1 / PHI ** 2, 1.0), (1 / PHI, 0.72), (1.0, 0.18)]   # vision: a drop, full at 0.38
-        nf = 6
-        ring_ = lambda f, r: [(r * rb * math.cos(2 * math.pi * (k + 0.5) / nf), ybk + r * rb * math.sin(2 * math.pi * (k + 0.5) / nf), z0b + Lb * f) for k in range(nf)]
+        # (Richard: "a proper sand or lost-wax pour of gold"; "too many angles; make all the surfaces join"): the drop is
+        # a few square sections along one axis, all square to it, so it shows no facet angles, only its taper
         mini = []
         for (f0, r0), (f1, r1) in zip(prof, prof[1:]):
-            A_, B_ = ring_(f0, r0), ring_(f1, r1)
-            for k in range(nf):
-                mini += slab(A_[k], A_[(k + 1) % nf], B_[k], B_[(k + 1) % nf], 0.5, (0, ybk, z0b + Lb * (f0 + f1) / 2))
+            mini += strut((0, ybk, z0b + Lb * f0), (0, ybk, z0b + Lb * f1), rb * (r0 + r1) / 2)
         # one cast piece (Richard: "sweep the wings back a tad, and round the leading edge with the linear geometry";
         # "then make the whole thing one cast piece"; "no gaps"): every surface is laid as spanwise pieces between
         # stations, each piece reaching from the fuller of its two leading edges to the fuller of its two trailing edges
@@ -2770,7 +2768,7 @@ def glider_parts(b):
         swq = math.atan(1 / PHI ** 2)                                       # vision: swept back a tad more, atan 1/phi^2 (20.9 degrees)
         tc = math.tan(math.atan(1 / PHI))                                   # its outer third canted down at atan 1/phi
         zle = zc - c0m / 2
-        US = [0.0, 0.2, 0.4, 0.55, 2 / 3, 0.78, 0.87, 0.94, 0.98, 1.0]
+        US = [0.0, 1 / PHI, 2 / 3, 1.0]                                    # vision: few pieces, so few angles: a pour, not a lattice
         chord_ = lambda u, c0_: max(c0_ / PHI ** 4, c0_ * math.sqrt(max(0.0, 1 - u ** 2.2)))   # an elliptic run to a rounded tip
         for sx in (-1, 1):
             st_ = []
@@ -2805,8 +2803,7 @@ def glider_parts(b):
                 x_ = sx * (hsm - rr + rr * math.sin(th_)); y_ = ybk - rr + rr * math.cos(th_)
                 out_.append((x_, y_, zt_ + abs(x_) * math.tan(swq), cft))
             return out_
-        band = ([fin_pt(-1, f) for f in (1.0, 0.5, 0.0)] + [stab_pt(-1, 0.5), stab_pt(1, 0.0), stab_pt(1, 0.5)]
-                + [fin_pt(1, f) for f in (0.0, 0.5, 1.0)])                  # (the corners lapped, not fanned)
+        band = ([fin_pt(-1, f) for f in (1.0, 0.0)] + [stab_pt(1, 0.0)] + [fin_pt(1, f) for f in (0.0, 1.0)])                  # (the corners lapped, not fanned)
         mini += cast_surface(band, 0.5, (0, ybk - hf / 2, zt_ + csm / 2))
         # (no fillets: their two wedges crossed over the drop's back; the surfaces start inside the drop instead)
         yr_, tail_y, tail_z = ybk, ybk, z0b + Lb                            # the mast meets its axis; the emitter at its tail
