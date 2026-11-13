@@ -103,7 +103,7 @@ XBOW = dict(taper="xbow", rise=0.18, floor=0.06, stem="xhead")
 FLY_TAIL = dict(taper="fly_tail", rise=0, floor=0.45, stem="raked_short")
 AC_ROUND = 2.2     # vision: a little fuller than a carved log (2.0): with the crown (X/phi) the AC72's upright oval section
 is_theran = lambda b: any(b.get("bow") is x for x in (AC_BOW, PIERCE, YACHT_BOW, XBOW))   # the Theran build (their pod, rudders, nets)
-BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, glider=True, keel=False, wings="kestrel", bow=XBOW, stern=FLY_TAIL, round=AC_ROUND, crown=True)
+BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, glider=True, keel=False, wings="kestrel", hull="dart", bow=XBOW, stern=FLY_TAIL, round=AC_ROUND, crown=True)
 
 # Fitted modules drawn on the boat, as bits of the shipwright:mods property (mirrored in ship.js).
 MODULE_BITS = {"shield_rail": 0, "ram": 1, "ice_runners": 3, "crossbow": 4, "full_deck": 5, "sewn_hull": 6, "bulkheads": 7, "light_hull": 8,
@@ -1822,9 +1822,11 @@ def glider_parts(b):
             return [(0, -1), (0.72, -1), (1, -0.55), (0.72, 0.2), (0.32, 0.8), (0, 1),
                     (-0.32, 0.8), (-0.72, 0.2), (-1, -0.55), (-0.72, -1)]
     elif hull == "dart":
+        # a cut crystal with a plumb bow (Richard: "a plumb bow that doesn't bulge back out to the tip"): her stem stands
+        # straight from deck to forefoot at the very tip, a knife in plan, and she widens behind it in straight facets
         def wid(t): return 0.85 * W * (lerp(0.04, 1, t / TMAX) if t < TMAX else lerp(1, 0.4, (t - TMAX) / (1 - TMAX)))
-        def bot(t): return lerp(wl + 0.15 * side, -0.35 * side, t / TMAX) if t < TMAX else lerp(-0.35 * side, wl, (t - TMAX) / (1 - TMAX))
-        def top(t): return lerp(wl + 0.3 * side, 1.85 * side, t / TMAX) if t < TMAX else lerp(1.85 * side, 0.8 * side, (t - TMAX) / (1 - TMAX))
+        def bot(t): return lerp(-0.2 * side, -0.35 * side, t / TMAX) if t < TMAX else lerp(-0.35 * side, wl, (t - TMAX) / (1 - TMAX))
+        def top(t): return lerp(1.4 * side, 1.85 * side, t / TMAX) if t < TMAX else lerp(1.85 * side, 0.8 * side, (t - TMAX) / (1 - TMAX))
         def section(t):
             return [(0, -1), (0.62, -0.45), (1, 0.1), (0.5, 0.78), (0, 1), (-0.5, 0.78), (-1, 0.1), (-0.62, -0.45)]
     else:
@@ -1865,13 +1867,21 @@ def glider_parts(b):
             for k in range(K):
                 a, c = R[i][k], R[i][(k + 1) % K]
                 frame += slab(a, c, (a[0], a[1], a[2] + 0.5), (c[0], c[1], c[2] + 0.5), 0.5, (0, cy(i / N), zs[i]))
-    # the cutwater: a gold V under her forefoot, from the nose's tip back to her keel line
-    tip = (0, cy(0), zs[0])
+    # the cutwater: gold where she meets the water or a shore. On a plumb stem, a plate on each side of the stem from
+    # above her waterline down to her forefoot, sweeping back along her flank to a point a quarter of her length aft;
+    # on a raked nose, a V under her forefoot
     t1 = 0.25
-    foot = (0, cy(t1) - hd(t1), -half + 2 * half * t1)
-    for sx in (-1, 1):
-        flank = (sx * 0.62 * W * fat(t1), cy(t1) - 0.55 * hd(t1), foot[2])
-        frame += slab((0, tip[1] + 0.3, tip[2]), (sx * 0.4, tip[1], tip[2] + 0.2), foot, flank, 0.6, (0, cy(t1), foot[2] - 2))
+    z1 = -half + 2 * half * t1
+    if hull == "dart":
+        ys, yf = wl + 0.5 * side, bot(0)
+        for sx in (-1, 1):
+            frame += slab((0, ys, zs[0]), (0, yf, zs[0]), (sx * 0.55 * wid(t1), bot(t1) + 0.6 * (ys - bot(t1)), z1), (sx * 0.62 * wid(t1), bot(t1) + 0.15 * (ys - bot(t1)), z1), 0.6, (0, cy(t1), z1 + 4))
+    else:
+        tip = (0, cy(0), zs[0])
+        foot = (0, cy(t1) - hd(t1), z1)
+        for sx in (-1, 1):
+            flank = (sx * 0.62 * W * fat(t1), cy(t1) - 0.55 * hd(t1), foot[2])
+            frame += slab((0, tip[1] + 0.3, tip[2]), (sx * 0.4, tip[1], tip[2] + 0.2), foot, flank, 0.6, (0, cy(t1), foot[2] - 2))
     # the foiling keel (Richard: "a foiling keel that could be lift too"): a gold strut down from her keel line just
     # ahead of her fullest, as deep as her fins, carrying an inverted-V hydrofoil phi^2 of her breadth across: the foil
     # she rises onto before she flies, her tail riding on the tailplane's canted tips
@@ -2143,7 +2153,7 @@ def geometry(pid, b):
         # Bone runners under the keel (ice runners).
         bones.append({"name": f"runner_{i}", "parent": name, "pivot": [0, 0, zc], "cubes": [
             cube([-0.55 * F, -1.5, z0], [1, 1.5, SEG]), cube([0.55 * F - 1, -1.5, z0], [1, 1.5, SEG])]})
-    bones.append({"name": "ram", "parent": "bow", "pivot": [0, b["wl"], -max_mids(b) * SEG - END], "cubes": ram_cubes(pid, b)})
+    bones.append({"name": "ram", "parent": "bow", "pivot": [0, b["wl"], -max_mids(b) * SEG - END], "cubes": [] if b.get("glider") else ram_cubes(pid, b)})   # the Exokoitos's ram is her gold cutwater
     bones += parts(b)
     launched, _ = hull_bones(b, True)
     geos = []
