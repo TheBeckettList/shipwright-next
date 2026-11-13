@@ -195,9 +195,12 @@ def export(pid, with_uv=False, mids=None, names=False):
                         zm = z + sz / 2
                         quad = [(x, y + sy, zm), (x + sx, y + sy, zm), (x + sx, y, zm), (x, y, zm)]
                     R = R_of(rot) if any(rot) else None
+                    Rc, cp = (R_of(c["rotation"]), c.get("pivot", [0, 0, 0])) if c.get("rotation") else (None, None)
                     flat = []
                     for q in quad:
                         q = [-q[0], q[1], q[2]]
+                        if Rc:                               # the panel's own turn (a chord of the belly) about its pivot
+                            q = turn(q, [-cp[0], cp[1], cp[2]], Rc)
                         if R:
                             q = turn(q, [-piv[0], piv[1], piv[2]], R)
                         flat += [round(q[0] * hs / 16, 3), round((q[1] * ys + lift) / 16, 3), round((q[2] + dz) * hs / 16, 3)]

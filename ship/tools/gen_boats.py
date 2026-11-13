@@ -953,18 +953,37 @@ def cloth(kind, axis, a0, a1, y0, y1, belly, n=6, at=0.0):
     The game shows a face's texture as seen from outside it, with file x mirrored: so of a fore-and-aft cloth the east
     face reads aft-to-fore and the west fore-to-aft, and of a square sail the north face follows file x."""
     out, r = [], SC.REGION[kind]
+    # Each panel is a chord of the belly's curve, from its point at k/n to its point at (k+1)/n, turned about the
+    # vertical to lie along it: neighbouring cloths meet at the seam (one cloth, not panels stepped apart, which left
+    # every sail but its outermost cloths hanging in the air off its yard), lapping on a little as cloths are sewn.
+    bel = lambda u: belly * (1 - (2 * u - 1) ** 2)
     for k in range(n):
-        u0, u1 = k / n, min(1.0, (k + 1.12) / n)          # each panel laps the next a little, as cloths are sewn
-        c0, c1 = a0 + (a1 - a0) * u0, a0 + (a1 - a0) * u1
-        off = belly * (1 - (2 * (k + 0.5) / n - 1) ** 2)
+        u0, u1 = k / n, min(1.0, (k + 1.12) / n)          # the slice of the sheet it shows: each laps the next a little
+        c0, c1 = a0 + (a1 - a0) * k / n, a0 + (a1 - a0) * (k + 1) / n
+        e0, e1 = bel(k / n), bel((k + 1) / n)
+        dl, de = c1 - c0, e1 - e0
+        ln = math.hypot(dl, de) or 1
+        run = ln * (u1 - u0) * n + 0.02                   # the chord, lapped on as far as its slice of the sheet runs
         uv = {f: dict(CLEAR_FACE) for f in ALL_FACES}
-        if axis == "z":
-            o, sz = [at - 0.25 + off, y0, c0], [0.5, y1 - y0, c1 - c0 + 0.02]
+        if axis == "z":                                   # cloth thin in x: local z along the chord (de in x, dl in z)
+            d = [de / ln, 0.0, dl / ln]
+            nrm = [d[2], 0.0, -d[0]]                     # y x d
+            R = [[nrm[i], [0, 1, 0][i], d[i]] for i in range(3)]
+            o = [at + e0 - 0.25 * nrm[0], y0, c0 - 0.25 * nrm[2]]
+            sz = [0.5, y1 - y0, run]
             uv["west"], uv["east"] = face_uv(r, u0, u1), face_uv(r, u0, u1, mirror=True)
-        else:
-            o, sz = [c0, y0, at - 0.25 + off], [c1 - c0 + 0.02, y1 - y0, 0.5]
+        else:                                             # cloth thin in z: local x along the chord (dl in x, de in z)
+            d = [dl / ln, 0.0, de / ln]
+            nrm = [-d[2], 0.0, d[0]]                     # d x y
+            R = [[d[i], [0, 1, 0][i], nrm[i]] for i in range(3)]
+            o = [c0 - 0.25 * nrm[0], y0, at + e0 - 0.25 * nrm[2]]
+            sz = [run, y1 - y0, 0.5]
             uv["north"], uv["south"] = face_uv(r, u0, u1), face_uv(r, u0, u1, mirror=True)
-        out.append({"origin": [round(v, 3) for v in o], "size": [round(v, 3) for v in sz], "uv": uv})
+        c = {"origin": [round(v, 3) for v in o], "size": [round(v, 3) for v in sz], "uv": uv}
+        rot = euler_file(R)
+        if any(abs(v) > 1e-3 for v in rot):
+            c.update(pivot=list(c["origin"]), rotation=rot)
+        out.append(c)
     return out
 
 
