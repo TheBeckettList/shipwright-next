@@ -7,12 +7,17 @@ import { PHI } from "../core/golden.js";
 import { PLANS } from "./config/plans.js";
 import { WOODS, MATERIALS, RIG_STYLES } from "./config/materials.js";
 import { PROPORTIONS } from "./config/proportions.js";
+import { FLEETS, sizeOf } from "../world/boatsizes.js";
 import { coreHull, pullBpt, hullBpt } from "./ourmath.js";
 
 export const KNOTS_TO_BPT = 0.045;     // 6.4 knots -> about 5.8 blocks per second
 const BASE_ACCEL = 0.006;
 const BASE_TURN = 3.4;                 // a 6-block, average-beam, average-weight hull
 const REFERENCE_DENSITY = 600;
+// The standard boat's timber (body.js: a 6-block spruce faering, at the law's measure: world/boatsizes.js sizeOf exact,
+// the wall the model draws her with): girth x length x wall, blocks^2 x world px
+const STANDARD = sizeOf(FLEETS.norse[0], null).exact;
+const STANDARD_TIMBER = { wall: PROPORTIONS.faering?.wall ?? 1, v: STANDARD.L * (STANDARD.B + 2 * STANDARD.depth) * (PROPORTIONS.faering?.wall ?? 1) };
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 // Rudders are fixed by the boat: small hulls steer with an oar on the starboard quarter,
@@ -116,15 +121,19 @@ export function computeHandling(rec, load = 0, crew = 0) {
   const D = plan.baseDepth * rec.dims.depth;
   const ratio = L / B;
 
-  // Weight: shell area times the zone-weighted wood density, plus the rig.
+  // Weight: the hull she is built of, in standard boats (body.js: a 6-block spruce faering): her shell's area times
+  // its wall (the wall law, D-004: w = max(floor, 16 L / K), as the model draws it) times the zone-weighted wood's
+  // density, against the standard boat's own, at the law's depth. The game's weight runs as the square root of that
+  // timber (it feels mass compressed: accel goes as weight^-0.7, about the sail's push on a hull of the rig's law,
+  // mass^-1/3); the root gives every hull built to the wall law weight as L^3/2, the growth v0.9.14 calibrated by hand
+  // with a constant shell tuned to its flat models (6 x (1.5 + 2 x 0.8) blocks, times L^-1/2).
   const endL = plan.endLength;
   const midL = L - 2 * endL;
   const avgDensity =
     (density(rec.sections.bow.mat) * endL + density(rec.sections.mid.mat) * midL + density(rec.sections.stern.mat) * endL) / L;
-  const shell = L * (B + 2 * D);
-  const referenceShell = 6 * (1.5 + 2 * 0.8);
+  const timber = L * (B + 2 * D) * (PROPORTIONS[plan.id]?.wall ?? STANDARD_TIMBER.wall);   // derived: girth x length x wall
   const sail = !!rec.sections.rig?.sail;
-  const hullMass = (shell / referenceShell) * (avgDensity / REFERENCE_DENSITY) * (L / 6) ** -0.5;
+  const hullMass = Math.sqrt(timber / STANDARD_TIMBER.v) * (avgDensity / REFERENCE_DENSITY);
   const mods = rec.modules ?? [];
   const outrigger = !!plan.outrigger || !!plan.twin || mods.includes("outrigger");   // twin hulls steady like an outrigger
   // The ship is the sum of its parts: hull, rig, every module, the sea chest's load, the crew aboard.
