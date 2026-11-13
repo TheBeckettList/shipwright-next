@@ -136,11 +136,18 @@ export function berthOf({ L, B, draft }) {
   };
 }
 
+// vision: what each of a fleet's kinds (world/ships.js fleetOf) does in the League's hands: small the courier, cargo the
+// coaster (the carrier where trade is the life), war the guard (league.md section 2, medium and small by need)
+const LEAGUE_JOB = { small: ["dispatch"], cargo: ["coaster", "carrier"], war: ["guard"] };
 /** Each people's boats at their typical sizes. */
 export const sizes = (t) => (FLEETS[t] ?? FLEETS.european).map((x) => sizeOf(x));
 /** The type a fleet's kind sails (world/ships.js fleetOf: small, cargo, war), by the people's temper. */
-export function typeFor(t, kind, temper = "peaceful") {
+export function typeFor(t, kind, temper = "peaceful", role = null) {
   const F = FLEETS[t] ?? FLEETS.european, by = (c) => F.find((x) => x.cls === c);
+  if (role || F.some((x) => x.role)) {   // the League's fleet is chosen by the job (world/league.js ROLES), not the class
+    const job = role ?? LEAGUE_JOB[kind]?.[temper === "traders" ? 1 : 0] ?? LEAGUE_JOB[kind]?.[0];
+    const x = F.find((y) => y.role === job); if (x) return x;
+  }
   if (kind === "small") return by("small");
   if (kind === "cargo") return (temper === "traders" && by("great")) || by("ship");
   return (temper === "raiders" && by("great")) || by("ship");   // war: the ship; the great hull only where raiding is the people's life

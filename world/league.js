@@ -23,6 +23,10 @@ import { islands } from "./islands.js";
 import { peoples } from "./peoples.js";
 import { THERA } from "./thera.js";
 import { D } from "../core/given.js";
+import { FLEETS } from "./boatsizes.js";
+import { seaState } from "../core/sea.js";
+import { belt } from "../core/wind.js";
+import { latOf } from "../core/globe.js";
 
 // vision: each piece as a kit of items the economy makes (from the pack's module costs, worked back to raw stuff); WOOD is the state's own log
 export const PIECES = {
@@ -93,3 +97,44 @@ const FIB_233 = 233;   // derived: a master for every 233 of capacity (a Fibonac
 /** A kit's bill for a state: WOOD as its seat's own log. */
 export const kitBill = (piece, state) => Object.fromEntries(Object.entries(PIECES[piece].bill).map(([id, n]) => [id === "WOOD" ? state.seat.woods[0] ?? "minecraft:stick" : id, n]));
 export { D };
+
+// ---- the League's fleet (design/s003-specs/league.md, D-004): the -remes are all great ships, each sized by the route
+// it sails (its freeboard over the route's working sea, its stores for the longest open leg: boatsizes.js routeLength);
+// its ship-class and small craft are chosen by the need they meet. The League sits in the doldrums and carries to
+// Thera's westerlies: oars at home, freeboard at the far end
+// vision: the routes the League sails (league.md section 1), each with the job that sails it
+export const ROUTES = {
+  R1: { name: "the Thera run", moves: "the House's coin, the kits, the Exchange's buys shipped home to the presiding seat", roles: ["month-ship"] },
+  R2: { name: "victualling", moves: "the Therans' month, from the continents' markets to Thera", roles: ["victualler"] },
+  R3: { name: "the carrying trade", moves: "others' goods, for the peoples whose own fleets can't reach their market", roles: ["carrier"] },
+  R4: { name: "the island round", moves: "ingots, kit stuff and the levelling between the seats; the presidency's word; the guard", roles: ["coaster", "dispatch", "guard"] },
+  R5: { name: "inshore and harbour", moves: "lighterage at the seats with landing harbours; the -remes' boat", roles: ["tender"] },
+};
+// each job: the fleet type that does it (boatsizes.js FLEETS.league, by role) and why (tags and sources as league.md)
+export const ROLES = {
+  "month-ship": { type: "trireme", route: "R1", need: "the presiding state's ship: the coin out, the House's buys home, one Thera run a month" },   // vision: the month-ship; given: the Olympias, the Zea shipsheds
+  victualler: { type: "monoreme", route: "R2", need: "the Therans' month, bought by the House on the continents" },   // vision; given: the penteconter, the Phocaeans' long-haul ship (Herodotus 1.163)
+  carrier: { type: "bireme", route: "R3", need: "the peoples the League carries for, each route its own length" },   // vision; given: the Phoenician merchant-warship (Sennacherib's reliefs)
+  guard: { type: "hemiolia", route: "R4", need: "defence: the harbour mouth, pirate pursuit, convoy for the first hops" },   // vision; given: the hemiolia, the pirates' craft and the craft built to catch them (Casson, SSAW)
+  coaster: { type: "kerkouros", route: "R4", need: "logistics: ingots and kit stuff between the deep seats" },   // vision; given: the oared heavy transport (Casson, SSAW)
+  dispatch: { type: "keles", route: "R4", need: "the presidency's courier, seat to seat and out to the month-ship, on the doldrum coast" },   // vision; given: the keles (Thucydides 4.120)
+  tender: { type: "skaphe", route: "R5", need: "lighter at the landing seats, the -remes' boat, the diving bell's boat (Bellwater's piece)" },   // vision; given: the skaphe, the ship's boat (Casson, SSAW)
+};
+/** The design sea of the wind belt over a map cell: its significant wave (blocks), core/sea.js of core/wind.js's belt. */
+export const seaAt = (at) => seaState(belt(latOf(at.cz * D.PX)).speed).Hs;
+let kruskal = null;
+/** The longest open-water leg (blocks) a hull must make between the islands under two map cells, hopping by the
+ * shortest gaps (the bottleneck path over islands().hops); 0 on one island. */
+export function longestLeg(a, b) {
+  const I = islands(), isle = (c) => I.near[Math.round(c.cz) * I.W + (Math.round(c.cx) % I.W)], ia = isle(a), ib = isle(b);   // the island a cell is on, or nearest to
+  if (ia < 0 || ib < 0 || ia === ib) return 0;
+  kruskal ??= [...I.hops].sort((x, y) => x.gap - y.gap);
+  const up = new Map(), root = (v) => { while (up.has(v) && up.get(v) !== v) v = up.get(v); return v; };
+  for (const h of kruskal) {
+    up.set(root(h.a), root(h.b));
+    if (root(ia) === root(ib)) return h.gap * D.PX;   // derived: the gap that first joins them is the leg no route avoids
+  }
+  return Infinity;
+}
+/** The League's fleet type for a job. */
+export const fleetType = (role) => FLEETS.league.find((t) => t.role === role);

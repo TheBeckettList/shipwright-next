@@ -79,7 +79,7 @@ function continents() {
   for (const x of I.info) { if (x.id === Lg.island) continue; const c = big.reduce((b, y) => (!b || chunkDist(x, y) < chunkDist(x, b) ? y : b), null); of.set(x.id, c.id); }
   return (base = { big, of });
 }
-const TIER = { city: 1, isle: 2, cont: 3, thera: 4 };   // given: the tiers' order, bottom to top
+export const TIER = { city: 1, isle: 2, cont: 3, thera: 4 };   // given: the tiers' order, bottom to top
 /** The month's network. nodes: key -> { key, tier, hub (a people key, or "thera"), parent, at, island }; of: people key -> { first (its market node), culture (node) }. */
 export function network(fortunes = new Map(), m = 0) {
   const P = peoples().list, by = peoples().byKey, R = ranks(fortunes), Lg = league(), K = continents(), nodes = new Map(), of = new Map();
