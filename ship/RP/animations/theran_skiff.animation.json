@@ -105,7 +105,7 @@
         "pennant": {
           "position": [
             0,
-            "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? (q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.579 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.714 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.812 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.776)))) - 1) * 110.096 : -69.536",
+            "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? (q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.571 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.709 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.808 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.772)))) - 1) * 108.096 : -67.536",
             "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? -q.property('shipwright:mids') * 8 : 20"
           ],
           "rotation": [
@@ -204,14 +204,14 @@
           ],
           "scale": [
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.755 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.873 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.53 : 0.836))))",
-            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.579 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.714 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.812 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.776))))",
+            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.571 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.709 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.808 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.772))))",
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.755 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.873 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.53 : 0.836))))"
           ]
         },
         "rig_square": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 80.216",
+            "(q.property('shipwright:rig_scale') - 1) * 78.216",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -228,7 +228,7 @@
         "rig_lateen": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 53.568",
+            "(q.property('shipwright:rig_scale') - 1) * 51.568",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -245,7 +245,7 @@
         "rig_crab": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 16.676",
+            "(q.property('shipwright:rig_scale') - 1) * 14.676",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * -33.196"
           ],
           "rotation": [
@@ -262,7 +262,7 @@
         "rig_wing": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 13.0",
+            "(q.property('shipwright:rig_scale') - 1) * 11.0",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -279,7 +279,7 @@
         "rig_junk": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 22.849",
+            "(q.property('shipwright:rig_scale') - 1) * 20.849",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [

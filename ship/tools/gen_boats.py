@@ -86,7 +86,15 @@ BOATS = {
 # than its floats, three wings stepped down its middle (short, tallest, middle from bow to stern).
 PIERCE = dict(taper="piercer", rise=0, drop=0.32, floor=0.12, stem="piercer")
 THERAN_STERN = dict(taper="fine", rise=0.05, floor=0.12, stem="transom")
-BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, foils=True, bow=PIERCE, stern=THERAN_STERN)
+# The Therans' hulls are drawn in the line of the America's Cup AC72 (Richard, S003: "the hull to look like the
+# Americas Cup AC72's in the theran theme. I know its not temporally accurate"): a long, slender round-bilged hull
+# (AC_ROUND, a full U that rolls smoothly into a crowned deck), a long fine entry to a near-plumb knife stem with the
+# deck level all the way to it, and a broad open transom with the bottom rocking up to it.
+AC_BOW = dict(taper="ac_bow", rise=0.02, floor=0.22, stem="ac_plumb")
+AC_STERN = dict(taper="ac_stern", rise=0, floor=0.34, stem="transom")
+AC_ROUND = 2.2     # vision: a little fuller than a carved log (2.0): with the crown (X/phi) the AC72's upright oval section
+is_theran = lambda b: b.get("bow") is AC_BOW or b.get("bow") is PIERCE      # the Theran build (their pod, rudders, nets)
+BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, foils=True, bow=AC_BOW, stern=AC_STERN, round=AC_ROUND, crown=True)
 
 # Fitted modules drawn on the boat, as bits of the shipwright:mods property (mirrored in ship.js).
 MODULE_BITS = {"shield_rail": 0, "ram": 1, "ice_runners": 3, "crossbow": 4, "full_deck": 5, "sewn_hull": 6, "bulkheads": 7, "light_hull": 8,
@@ -125,7 +133,7 @@ def multihull(b):
     L = typical_length(b)
     B = 2 * (b["F"] + outer_of(b["section"], b.get("scale", 1)))
     return dict(float_out=max(1.25 * B, 0.28 * L), float_r=0.175 * B, float_len=0.65 * L, boom=0.2 * L,
-                twin_gap=0.3 * L if b.get("twin") else 0, L=L)
+                twin_gap=b.get("gap", 0.3 * L) if b.get("twin") else 0, L=L)
 
 
 # True size. The hull is drawn at its model scale (2 for medium, 4 for large), but things a person
@@ -351,7 +359,7 @@ END_SLICES, END_SLICES_LAUNCHED = 12, {1: 4, 2: 5, 4: 6}   # launched: the near 
 
 def profile(b, hw, fy, sy):
     """Points from the keel (x 0) up to the sheer, on this tradition's curve, out to the planking's outer face."""
-    n, X = ROUND[b["section"]], hw + outer_of(b["section"], SCALE)
+    n, X = b.get("round", ROUND[b["section"]]), hw + outer_of(b["section"], SCALE)   # a hull's own curve, else its tradition's
     # a twin draws two hulls: each a strake lighter; launched, the short curved ends a strake lighter again (the lens's
     # near budget, chief.md section 6: there the curve, not the strake count, is what reads)
     N = (STRAKES_LAUNCHED - (1 if b.get("twin") else 0) - (1 if IN_END else 0)) if SIMPLE else STRAKES
@@ -520,6 +528,18 @@ def shell(b, a, c, za, zc, t=None, cockpit=False):
     if b.get("deck") and not cockpit:
         out += slab((-A[-1][0], A[-1][1], za), (A[-1][0], A[-1][1], za), (-C[-1][0], C[-1][1], zc), (C[-1][0], C[-1][1], zc),
                     sh, (0, -9999, (za + zc) / 2))
+    if b.get("crown") and not cockpit:    # the AC72's crowned deck: the shell carries on past the sheer, rolling in over the top in a
+        X_a, X_c = A[-1][0], C[-1][0]     # quarter ellipse to the centre line, rising X/phi (the hull a closed oval tube, as theirs are)
+        M = 4                             # vision: four facets read as a smooth crown at any of the three scales
+        arc = lambda X, y, k: (X * math.cos(k / M * math.pi / 2), y + X / PHI * math.sin(k / M * math.pi / 2))
+        w_ = b.get("wash", 0)                 # over any washstrake still drawn
+        for sx in (-1, 1):
+            for k in range(M):
+                a0, a1 = arc(X_a, A[-1][1] + w_, k), arc(X_a, A[-1][1] + w_, k + 1)
+                c0, c1 = arc(X_c, C[-1][1] + w_, k), arc(X_c, C[-1][1] + w_, k + 1)
+                out += slab((sx * a0[0], a0[1], za), (sx * a1[0], a1[1], za), (sx * c0[0], c0[1], zc), (sx * c1[0], c1[1], zc),
+                            t, (0, -9999, (za + zc) / 2))
+        return out
     if b.get("sealed") and not cockpit:   # a Theran hull decked whole at her rail (therans.md section 3: sealed cells), its
         wash = b.get("wash", 0)           # edges in against the sheer strake's inner face
         wa, wc = A[-1][0] - gun - 0.05, C[-1][0] - gun - 0.05
@@ -629,7 +649,7 @@ BOATS.update({
 
 BOATS.update({
     # depth 0.85: freeboard enough that the lee hull stays dry at the 3° a catamaran heels to before a hull lifts
-    "theran_ship": medium("v", 9, 0.85, oar=1.8, aspect=0.9, twin=True, bow=PIERCE, stern=THERAN_STERN,
+    "theran_ship": medium("v", 9, 0.85, oar=1.8, aspect=0.9, twin=True, bow=AC_BOW, stern=AC_STERN, round=AC_ROUND, crown=True, foils=True,
                           # (z, size, hull side, cant out from the centre line, rake aft): a wing canted out on each hull,
                           # and behind them two small tail wings canted in toward each other, like a fighter's twin fins
                           masts=[(0.0, 1.0, -1, 14, 0), (0.0, 1.0, 1, 14, 0), (0.33, 0.42, -1, -14, 8), (0.33, 0.42, 1, -14, 8)]),
@@ -673,7 +693,7 @@ BOATS.update({
 
 
 BOATS.update({
-    "theran_flagship": large("v", 10, 0.75, oar=1.8, aspect=0.9, tri=True, bow=PIERCE, stern=THERAN_STERN,
+    "theran_flagship": large("v", 10, 0.75, oar=1.8, aspect=0.9, tri=True, bow=AC_BOW, stern=AC_STERN, round=AC_ROUND, crown=True, foils=True,
                              masts=[(-0.26, 0.6), (0.0, 1.0), (0.26, 0.8)]),   # stepped short, tallest, middle from bow to stern
 })
 
@@ -728,14 +748,25 @@ def _apply_laws():
         # third narrower, take the law's
         legacy = b.get("twin") and not pid.startswith("theran_")
         beam_out = b["F"] + outer_of(st, s, legacy=True) if legacy else 16 * lw["B"] / 2 / s
+        if b.get("twin") and pid.startswith("theran_"):
+            # the Theran catamaran's hulls are each as big as they need be (Richard, S003: "make the hulls the necessary
+            # size, keep the dimensions"): the two together displace what the law's one hull of beam B would, at the
+            # same length and depth, so each is B/2 wide; her overall breadth is kept, so each hull's centre moves out by
+            # B/4 (the gap opens by B/2): slimmer hulls, farther apart, the AC72's stance
+            beam_out = 16 * lw["B"] / 4 / s
+            b["gap"] = 0.3 * typical_length(b) + 16 * lw["B"] / 2 / s
         K = K_BOAT.get(pid, K_SECTION[st])
         SCALE, WALL = s, snap_w(max(CON[st]["shell"], 16 * lw["L"] / K if K else 0))
         b["_law"], b["_wall"] = lw, WALL
         b["F"] = snap(beam_out - outer_of(st, s))         # the same beam outside a thicker wall
         b["fy"] = snap(th(st, "keel")) if (CON[st]["keel"] and b.get("keel", True)) else 0   # the keel, moulded as sided
         b["side"] = snap(16 * lw["depth"] / s)            # keel's foot to the sheer: the law's depth
+        # an AC72 crowned hull (shell()) keeps her sheer on the law's depth: the crown, X/phi over it, is her reserve of
+        # freeboard (an ocean ship's need, 1.44 blocks), not her depth (englab measures depth to the sheer)
         b["wl"] = snap(16 * lw["draft"] / s)              # the waterline over the keel's foot: the law's draught
         b["wash"] = snap(16 * lw["wash"] / s)             # a washstrake over the sheer, where the freeboard falls short
+        if b.get("crown"):                                # an AC72 crowned hull's crown (X/phi) is that reserve: only what it
+            b["wash"] = snap(max(0, b["wash"] - (b["F"] + outer_of(st, s)) / PHI))   # leaves short is a washstrake
         n = max(0, math.floor((lw["depth"] - BULWARK) / DECK_HEIGHT))
         kind = DECK_OVERRIDE.get(pid) or ("full" if n >= 1 else "open" if lw["cls"] == "small" else "half")
         up = 0 if (kind == "biti" or n == 0) else max(0, math.floor(lw["freeboard"] + lw["wash"] - BULWARK + 0.5))   # derived: whole blocks, where feet stand (grid.js topDeckUp)
@@ -792,6 +823,12 @@ def end_shape(b, end, t):
         hw = max(0.8, F * (1 - t ** 1.2))
     elif taper == "blunt":
         hw = F * (1 - 0.5 * t ** 1.5)
+    elif taper == "ac_bow":                       # the AC72's entry: fine and long, narrowing almost straight to a knife,
+        hw = max(0.5, F * (1 - t ** 0.85))        # the deck level to the stem, the forefoot lifting a little
+        return hw, b["fy"] + end["floor"] * side * t ** 2, side + end["rise"] * side * t
+    elif taper == "ac_stern":                     # the AC72's run: broad to a wide open transom, the bottom rocking up
+        hw = F * (1 - 0.22 * t ** 2)
+        return hw, b["fy"] + end["floor"] * side * t ** 1.6, side
     elif taper == "piercer":                      # a wave-piercer: a knife-fine entry, the deck falling toward the stem
         hw = max(0.6, F * (1 - t ** 1.05))
         return hw, b["fy"] + end["floor"] * side * t, side - end.get("drop", 0.3) * side * t ** 1.4
@@ -826,6 +863,8 @@ def stem_curve(kind, s, hw, fy, sy):
     if kind in ("raked", "raked_short"):
         r, head = (0.75, 0.16) if kind == "raked" else (0.45, 0.08)
         return line(8, lambda t: (r * s * t ** 1.4, fy + (h + head * s) * t))
+    if kind == "ac_plumb":                      # the AC72's stem: near plumb, its foot a touch forward of its head
+        return line(3, lambda t: (0.05 * s * (1 - t), fy + (h + 0.02 * s) * t))
     if kind == "piercer":                       # the wave-piercer: the foot reaching furthest out, raked back as it rises
         return line(8, lambda t: (0.42 * s * (1 - t) ** 1.25, fy + (h + 0.04 * s) * t))
     if kind == "blade":
@@ -1266,11 +1305,17 @@ def parts(b):
     # monohull does with one centre foil and a T-rudder.
     if b.get("foils"):
         span, depth_ = 2.6 * F, 1.2 * side
-        bones.append({"name": "foils", "parent": "root", "pivot": [0, 0, 0], "cubes": [
-            cube([-0.6, 1 - depth_, -4], [1.2, depth_, 5]), cube([-span / 2, 1 - depth_ - 0.8, -6], [span, 0.8, 8])]})
+        # each hull's foil (a twin's under both, a trimaran's under her main hull): the strut down to the apex of an
+        # obtuse inverted V (Richard, S003: "kinda like an upside down V but obtuse"), its two arms sweeping down and
+        # out at the golden angle (tan 1/phi^2, about 21 degrees: an included angle near 138)
+        xs = [-multihull(b)["twin_gap"] / 2, multihull(b)["twin_gap"] / 2] if b.get("twin") else [0]
+        cubes_ = []
+        for x0 in xs:
+            cubes_ += [cube([x0 - 0.6, 1 - depth_, -4], [1.2, depth_, 5])] + lambda_foil(x0, 1 - depth_, -6, 8, span, 0.8)
+        bones.append({"name": "foils", "parent": "root", "pivot": [0, 0, 0], "cubes": cubes_})
     # The Theran trimaran: two slim wave-piercing floats (true hulls, rounded and decked), each carried on a single
     # forward-swept gold aka, and an hourglass trampoline of diamond mesh between each float and the main hull.
-    if b.get("twin") and b.get("bow") is PIERCE:
+    if b.get("twin") and is_theran(b):
         # The Theran catamaran's middle, in the same hand as the trimaran: two white beams, each swept forward from
         # the hulls to a chevron at the centre line, a short white pod between the hulls under them (the bridge
         # deck's nacelle, drawn with the mid sections), and an hourglass trampoline either side of the pod.
@@ -1327,7 +1372,7 @@ def parts(b):
         span, depth_ = 2.6 * F, 1.2 * side
         rz, dr = END - 1, 0.8 * depth_
         bones.append({"name": "rudder", "parent": "root", "pivot": [0, 0.45 * side, rz], "cubes": [
-            cube([-0.4, 1 - dr, rz - 1.5], [0.8, side + dr, 3]), cube([-span / 6, 1 - dr - 0.6, rz - 2], [span / 3, 0.6, 4]),
+            cube([-0.4, 1 - dr, rz - 1.5], [0.8, side + dr, 3]), *lambda_foil(0, 1 - dr, rz - 2, 4, span / 3, 0.6),
             cube([-0.5, side + 1, rz - tl], [1, 1, tl])]})
     else:
         bones.append({"name": "rudder", "parent": "root", "pivot": [rx, 0.45 * side, 14], "cubes": [
@@ -1356,7 +1401,7 @@ def parts(b):
             if x["name"] in ("rudder", "rudder_post", "staff"):
                 x["pivot"] = [round(x["pivot"][0] - D / 2, 3), *x["pivot"][1:]]
                 x["cubes"] = [dict(c, origin=[round(c["origin"][0] - D / 2, 3), *c["origin"][1:]]) for c in x["cubes"]]
-        if b.get("bow") is PIERCE:
+        if is_theran(b):
             post = next(x for x in bones if x["name"] == "rudder_post")
             bones.append({"name": "rudder_post_p", "parent": "root", "pivot": [round(post["pivot"][0] + D, 3), *post["pivot"][1:]],
                           "cubes": [dict(c, origin=[round(c["origin"][0] + D, 3), *c["origin"][1:]]) for c in post["cubes"]]})
@@ -1593,10 +1638,10 @@ def hull_bones(b, simple):
             if bone["name"].endswith("_plank") and bone["name"].startswith("mid_"):
                 z0 = -(int(bone["name"].split("_")[1]) + 1) * SEG
                 inner = D / 2 - F
-                if b.get("bow") is PIERCE:              # the Theran pod: a small white hull riding between the two
+                if is_theran(b):              # the Theran pod: a small white hull riding between the two
                     pw = 0.22 * inner
                     bone["cubes"] += shell(dict(section="v", deck=True), (pw, 0.55 * side, side + 0.2 * side), (pw, 0.55 * side, side + 0.2 * side), z0, z0 + SEG)
-        if b.get("bow") is not PIERCE:
+        if not is_theran(b):
             pacific_joining(b, bones, D)
     SIMPLE = False
     return bones, zones
@@ -1652,6 +1697,17 @@ def ram_style(pid):
     if pid.startswith("league"):
         return "fin"
     return RAM_OF.get(pid, "chisel")
+
+
+def lambda_foil(x0, apex_y, z0, chord, span, t):
+    """A Theran foil wing as an obtuse inverted V: two arms from an apex at (x0, apex_y), each reaching span/2 out and
+    falling at the golden angle (tan 1/phi^2), t thick, chord long from z0. Slabs, so each arm is one cube."""
+    out = []
+    for sx in (-1, 1):
+        tip = (x0 + sx * span / 2, apex_y - span / 2 / PHI ** 2)
+        out += slab((x0, apex_y, z0), (tip[0], tip[1], z0), (x0, apex_y, z0 + chord), (tip[0], tip[1], z0 + chord), t,
+                    (x0, apex_y + 99, z0 + chord / 2))
+    return out
 
 
 def ram_cubes(pid, b):
@@ -1950,7 +2006,7 @@ def animation(pid, b):
                          f"{P('wind_rel')} + math.sin(q.life_time * (300 + 500 * {P('wind_str')})) * (2 + 6 * math.min({P('wind_str')}, 1))", 0]},
         "rudder": {"rotation": [0, f"-1 * {P('rudder')}", 0]},
         "rudder_post": {"rotation": [0, f"{P('rudder')}", 0]},
-        **({"rudder_post_p": {"rotation": [0, f"{P('rudder')}", 0]}} if b.get("twin") and b.get("bow") is PIERCE else {}),
+        **({"rudder_post_p": {"rotation": [0, f"{P('rudder')}", 0]}} if b.get("twin") and is_theran(b) else {}),
         "crank_l": {"rotation": ["v.p_crank", 0, 0]},
         "crank_r": {"rotation": ["v.p_crank", 0, 0]},
         # Each side strokes on its own (v.l port, v.r starboard, -1 astern to 1 ahead), on smooth
@@ -2040,10 +2096,10 @@ def controllers(pid, zones):
                [{n: rigged} for n in ["mast"] + [f"mast_{k}" for k in range(1, len(mast_plan(b)))]] + [
                 {"rudder": f"{stage} >= 4 && {prop} == 0 && {P('rudder_type')} == 0"},
                 {"rudder_post": f"{stage} >= 4 && {P('rudder_type')} == 1"},
-                *([{"rudder_post_p": f"{stage} >= 4 && {P('rudder_type')} == 1"}] if b.get("twin") and b.get("bow") is PIERCE else []),
+                *([{"rudder_post_p": f"{stage} >= 4 && {P('rudder_type')} == 1"}] if b.get("twin") and is_theran(b) else []),
                 *([] if b.get("twin") or b.get("tri") else [{"ama": f"{stage} >= 3 && {P('outrigger')}"}]), {"staff": f"{stage} >= 5 && !{P('sail')}"},   # a trimaran's floats are her outrigger: no second one
                 *([{"foils": f"{stage} >= 4"}] if b.get("foils") else []), *([{"amas": f"{stage} >= 3"}] if b.get("tri") else []),
-                *([{"akas": f"{stage} >= 3"}, {"nets": f"{stage} >= 4"}] if b.get("tri") or (b.get("twin") and b.get("bow") is PIERCE) else []),
+                *([{"akas": f"{stage} >= 3"}, {"nets": f"{stage} >= 4"}] if b.get("tri") or (b.get("twin") and is_theran(b)) else []),
                 {"paddle": f"{stage} >= 5 && {prop} == 1"}, {"dpaddle": f"{stage} >= 5 && {prop} == 2"},
                 {"scull": f"{stage} >= 5 && {prop} == 3"}, {"pole": f"{stage} >= 5 && {prop} == 4"},
                 {"crank_l": f"{stage} >= 5 && {P('furnace')}"}, {"crank_r": f"{stage} >= 5 && {P('furnace')}"}] + [
@@ -2236,7 +2292,7 @@ def proportions():
             # multihull layout in blocks at model scale 1 (scripts multiply by the model scale)
             "twin_gap": round(multihull(b)["twin_gap"] / 16, 4),
             # the Theran pod between the hulls (the bridge deck's nacelle, gen hull()): a half width you can sit and walk on
-            "pod_half": round(0.22 * (multihull(b)["twin_gap"] / 2 - b["F"]) / 16, 4) if b.get("twin") and b.get("bow") is PIERCE else 0,
+            "pod_half": round(0.22 * (multihull(b)["twin_gap"] / 2 - b["F"]) / 16, 4) if b.get("twin") and is_theran(b) else 0,
             "float_out": round(multihull(b)["float_out"] / 16, 4),
             "float_len": round(multihull(b)["float_len"] / 16, 4),
             "typical_len": round(multihull(b)["L"] / 16, 4),
