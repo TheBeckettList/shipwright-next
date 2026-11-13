@@ -497,7 +497,7 @@ export const PROPORTIONS = {
     "beam": 1.4909,
     "depth": 0.9375,
     "draft": 0.5625,
-    "wash": 0.0,
+    "wash": 0.125,
     "deck": "open",
     "sheds": false,
     "decks": 0,
@@ -518,7 +518,7 @@ export const PROPORTIONS = {
         0.35
       ]
     },
-    "rail": 0.775,
+    "rail": 0.9,
     "helm": "oar",
     "mast_at": [
       0.0
@@ -981,7 +981,7 @@ export const PROPORTIONS = {
     "beam": 1.5148,
     "depth": 0.9375,
     "draft": 0.5938,
-    "wash": 0.1875,
+    "wash": 0.375,
     "deck": "half",
     "sheds": false,
     "decks": 0,
@@ -998,20 +998,20 @@ export const PROPORTIONS = {
     "mast_count": 4,
     "seats": {
       "lo": [
-        0.5,
-        0.35
+        0.8,
+        0.55
       ],
       "": [
-        0.712,
-        0.462
+        1.087,
+        0.837
       ],
       "hi": [
-        1.084,
-        0.834
+        1.591,
+        1.341
       ]
     },
-    "rail": 1.462,
-    "helm": "oar",
+    "rail": 1.837,
+    "helm": "tiller",
     "mast_at": [
       0.0,
       0.0,
@@ -1500,15 +1500,15 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "theran_flagship": {
-    "beam": 1.1145,
-    "depth": 0.6875,
-    "draft": 0.4219,
-    "wash": 0.0,
+    "beam": 1.1457,
+    "depth": 0.7031,
+    "draft": 0.4375,
+    "wash": 0.0938,
     "deck": "half",
     "sheds": false,
     "decks": 0,
     "wall": 3.5,
-    "mast": 2.2,
+    "mast": 2.25,
     "masts": {
       "square": 2.116,
       "lateen": 1.508,
@@ -1520,26 +1520,26 @@ export const PROPORTIONS = {
     "mast_count": 3,
     "seats": {
       "lo": [
-        0.5,
-        0.35
+        0.8,
+        0.55
       ],
       "": [
-        0.712,
-        0.462
+        1.087,
+        0.837
       ],
       "hi": [
-        1.084,
-        0.834
+        1.591,
+        1.341
       ]
     },
-    "rail": 1.462,
-    "helm": "oar",
+    "rail": 1.837,
+    "helm": "tiller",
     "mast_at": [
       -0.26,
       0.0,
       0.26
     ],
-    "oar": 0.844,
+    "oar": 0.872,
     "sail": {
       "square": 13.005,
       "lateen": 15.895,

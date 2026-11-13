@@ -163,8 +163,8 @@ export const PLANS = {
   }),
   theran_flagship: plan({
     id: "theran_flagship", name: "Theran Trimaran", typicalLB: 7, tradition: "therans", keelWood: "spruce", yardLevel: 3, modelScale: 4, endLength: 6,
-    lengthRange: [28, 36], lengthStep: 4, lengthToBeam: [6, 8.5], fullness: 0.45, tri: true, outrigger: true, buyOnly: true,
-    rigFamily: "fore_and_aft", rigStyle: "wing", propulsion: "oars", rudder: "steering_oar", largeAtLength: 0,
+    lengthRange: [28, 36], lengthStep: 4, lengthToBeam: [6, 8.5], fullness: 0.45, tri: true, buyOnly: true,
+    rigFamily: "fore_and_aft", rigStyle: "wing", propulsion: "paddles", rudder: "steering_oar", largeAtLength: 0,
     fixedModules: ["ram", "navigation", "lookout", "full_deck", "bulkheads", "sewn_hull", "ice_runners", "hold", "bunk", "diving_bell", "crossbow"],
   }),
   // the League's galleys (Waterworld): the -remes, a bank of oars a side for each size, a square sail for the passage,

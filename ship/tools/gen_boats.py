@@ -471,8 +471,9 @@ def shell(b, a, c, za, zc, t=None, cockpit=False):
     A, C = profile(b, *a), profile(b, *c)
     N = len(A) - 1
     inside_y = max(a[2], c[2]) + 2
+    band = b.get("sealed") and (0 if b.get("deck") else b.get("wash", 0)) <= 0 and N > 1   # a Theran top strake drawn as two (below)
     for sx in (-1, 1):
-        for k in range(N):
+        for k in range(N - 1 if band else N):
             p0, p1 = (sx * A[k][0], A[k][1], za), (sx * A[k + 1][0], A[k + 1][1], za)
             q0, q1 = (sx * C[k][0], C[k][1], zc), (sx * C[k + 1][0], C[k + 1][1], zc)
             mid = (za + zc) / 2
@@ -483,18 +484,32 @@ def shell(b, a, c, za, zc, t=None, cockpit=False):
                 out += slab(p1, f(p1, p0), q1, f(q1, q0), t, (sx * 9999, A[k + 1][1], mid))   # proud of the shell
         pa, pc = A[-1], C[-1]
         wash = 0 if b.get("deck") else b.get("wash", 0)
+        sealed = b.get("sealed")
+        if band:                          # a Theran hull: the fresco-blue band, the top of her top strake under the gold sheer
+            k = N - 1                     # (therans.md section 6): the top strake drawn as two, its upper 1/phi^2 blue
+            f = lambda P, Q: (P[0] + (Q[0] - P[0]) / PHI, P[1] + (Q[1] - P[1]) / PHI)
+            ma, mc = f(A[k], A[k + 1]), f(C[k], C[k + 1])
+            out += slab((sx * A[k][0], A[k][1], za), (sx * ma[0], ma[1], za), (sx * C[k][0], C[k][1], zc), (sx * mc[0], mc[1], zc), t, (0, inside_y, (za + zc) / 2))
+            out += theran_uv(slab((sx * ma[0], ma[1], za), (sx * pa[0], pa[1], za), (sx * mc[0], mc[1], zc), (sx * pc[0], pc[1], zc), t, (0, inside_y, (za + zc) / 2)), "blue")
         if wash > 0:                      # the washstrake: a strake over the sheer where the freeboard falls short of the reach's need
-            out += slab((sx * pa[0], pa[1], za), (sx * pa[0], pa[1] + wash, za), (sx * pc[0], pc[1], zc), (sx * pc[0], pc[1] + wash, zc),
-                        gun if SIMPLE else th(st, "wash"), (0, (pa[1] + pc[1]) / 2 + wash / 2, (za + zc) / 2))
-            if SIMPLE:                    # launched, one slab: the washstrake as thick as the gunwale that caps it
+            ws = slab((sx * pa[0], pa[1], za), (sx * pa[0], pa[1] + wash, za), (sx * pc[0], pc[1], zc), (sx * pc[0], pc[1] + wash, zc),
+                      gun if SIMPLE else th(st, "wash"), (0, (pa[1] + pc[1]) / 2 + wash / 2, (za + zc) / 2))
+            out += theran_uv(ws, "blue") if sealed else ws   # a Theran's washstrake is her blue band
+            if SIMPLE and not sealed:     # launched, one slab: the washstrake as thick as the gunwale that caps it
                 continue
+        if sealed:                        # the Theran sheer strake: gold, 2t tall, standing t proud of the shell (therans.md section 3)
+            tw = WALL / SCALE
+            hi_a, hi_c = pa[1] + wash, pc[1] + wash
+            out += theran_uv(slab((sx * (pa[0] + tw), hi_a - 2 * tw, za), (sx * (pa[0] + tw), hi_a, za), (sx * (pc[0] + tw), hi_c - 2 * tw, zc),
+                                  (sx * (pc[0] + tw), hi_c, zc), gun + tw, (0, (hi_a + hi_c) / 2 - tw, (za + zc) / 2)), "gold")
+            continue
         # the gunwale capping the sheer (or the washstrake), on both models: the edge the eye sees against the sky
         out += slab((sx * (pa[0] - gun), pa[1] + wash, za), (sx * pa[0], pa[1] + wash, za), (sx * (pc[0] - gun), pc[1] + wash, zc), (sx * pc[0], pc[1] + wash, zc),
                     gun, (0, -9999, (za + zc) / 2))
     # the floor (sole) across between the strakes, its underside on the water (D-004: under the waterline the game draws
     # the sea inside a hull, so whatever is walked lies on or over it); a hull with no waterline (a float) a quarter of
     # the way up its bilge. A decked hull's deck is her floor.
-    if (not b.get("deck") or cockpit) and b.get("_deck", {}).get("kind", "open") == "open":
+    if (not (b.get("deck") or b.get("sealed")) or cockpit) and b.get("_deck", {}).get("kind", "open") == "open":
         fa = fc = b["wl"] + 1 / SCALE if "wl" in b else None       # its top a world pixel over the water: no flicker, feet barely in it
         if fa is None:
             fa, fc = a[1] + 0.22 * (a[2] - a[1]), c[1] + 0.22 * (c[2] - c[1])
@@ -505,6 +520,12 @@ def shell(b, a, c, za, zc, t=None, cockpit=False):
     if b.get("deck") and not cockpit:
         out += slab((-A[-1][0], A[-1][1], za), (A[-1][0], A[-1][1], za), (-C[-1][0], C[-1][1], zc), (C[-1][0], C[-1][1], zc),
                     sh, (0, -9999, (za + zc) / 2))
+    if b.get("sealed") and not cockpit:   # a Theran hull decked whole at her rail (therans.md section 3: sealed cells), its
+        wash = b.get("wash", 0)           # edges in against the sheer strake's inner face
+        wa, wc = A[-1][0] - gun - 0.05, C[-1][0] - gun - 0.05
+        if min(wa, wc) > 0.3:
+            out += slab((-wa, A[-1][1] + wash, za), (wa, A[-1][1] + wash, za), (-wc, C[-1][1] + wash, zc), (wc, C[-1][1] + wash, zc),
+                        th(st, "deck"), (0, -9999, (za + zc) / 2))
     return out
 
 
@@ -521,7 +542,7 @@ def deck_slabs(b, a, c, za, zc, ends=False):
     decks below it, every DECK_HEIGHT), each a slab w / phi thick lying on the shell's inner face, wherever the hull
     is wide and deep enough to hold it (D-004: decks from depth; chief.md section 3)."""
     dk = b.get("_deck")
-    if not dk or dk["kind"] == "open":
+    if not dk or dk["kind"] == "open" or (SIMPLE and b.get("sealed")):   # launched, a sealed hull's inside is never seen
         return []
     sh, t = th(b["section"], "shell"), dk["t"]
     A, C = profile(b, *a), profile(b, *c)
@@ -875,7 +896,8 @@ def end_section(b, sign, base):
         hw, fy, sy = shape((j + 0.5) / slices)
         if FY > 0:                       # the keel, standing proud under the bottom (both models: D-004)
             keel.append(cube([-kw / 2, fy - FY, z0], [kw, FY + th(st, "shell"), seg]))
-        cockpit = b.get("deck") and sign > 0 and z0 < 14
+        well = b.get("well")              # a Theran cockpit well (the foiler's): open between its ends
+        cockpit = (b.get("deck") and sign > 0 and z0 < 14) or bool(well and well[0] <= z0 and z0 + seg <= well[1])
         plank += shell(b, a, c, za, zc, cockpit=cockpit) + deck_slabs(b, a, c, za, zc, ends=True)
         if not SIMPLE:
             plank += details(b, hw, fy, sy, z0, seg)
@@ -1530,7 +1552,9 @@ def hull_bones(b, simple):
             spots = [z0 + SEG / 4, z0 + 3 * SEG / 4] if CON[st].get("half") else [z0 + SEG / 2]
             for zc in spots:
                 frame += frames(b, F, FY, side, zc)
-        plank = section(b, F, FY, side, z0, SEG) + deck_slabs(b, (F, FY, side), (F, FY, side), z0, z0 + SEG) \
+        well = b.get("well")
+        plank = section(b, F, FY, side, z0, SEG, cockpit=bool(well and well[0] <= z0 and z0 + SEG <= well[1])) \
+            + deck_slabs(b, (F, FY, side), (F, FY, side), z0, z0 + SEG) \
             + ([] if simple else details(b, F, FY, side, z0, SEG, mid=True))
         bones += layer_bones(name, pivot, keel, frame, plank)
         zones["mid"] += [name, f"{name}_keel", f"{name}_frame", f"{name}_plank"]
