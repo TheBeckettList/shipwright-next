@@ -2,7 +2,7 @@
 
 _Lives at `shipwright-next/handover/` in the repo._
 
-**Start here.** This folder is how three developers and their AI assistants pass one project between
+**Start here.** (New session or new project? Read `NEXT_SESSION.md` first.) This folder is how three developers and their AI assistants pass one project between
 them, a stage at a time, without losing anything in between.
 
 The project: **Waterworld** (the golden-law world, laid in Minecraft Bedrock chunk by chunk from the
