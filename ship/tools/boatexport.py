@@ -155,7 +155,7 @@ def export(pid, with_uv=False, mids=None, names=False):
                 continue
             if gid == ".fittings" and n.startswith("mast") and not rig:
                 continue
-            if n.startswith("rudder") and n != ("rudder_post" if b.get("scale", 1) > 1 else "rudder"):
+            if n.startswith("rudder") and n.removesuffix("_p") != ("rudder_post" if b.get("scale", 1) > 1 else "rudder"):
                 continue
             mm = re.match(r"mid_(\d+)", n)
             if mm and int(mm.group(1)) >= mids:

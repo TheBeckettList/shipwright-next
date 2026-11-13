@@ -110,7 +110,6 @@ LATEEN = dict(yard=5.4, rake=31, drop=0.68)     # yard length (half-beams), rake
 CRAB = dict(upper=4.4, lower=4.2, opening=56, tilt=74)   # spar lengths (half-beams), V opening (deg), bisector 16 deg aft of vertical
 JUNK = dict(width=1.9, height=0.72, batten=5)
 WING = dict(aspect=2.8, taper=0.5, thick=0.13)   # the Theran wing: height (of the rig's mast), root chord (half-beams), taper to the head, thickness (of chord)   # width (half-beams), height (of the mast), batten spacing (px)
-CRAB_X = 1.75         # a crab claw hangs beside its mast, to port
 
 
 def typical_length(b):
@@ -1063,15 +1062,18 @@ def rig_kit(b, g):
     z0, z1, y0, y1 = SC.crab_box()
     S = math.sqrt(A / FILL["crab_claw"] / ((z1 - z0) * (y1 - y0)))
     apex = (base + yy(0.06 * a) + 0.13, -zx(0.3 * S))
+    # it hangs to port of its mast, its spars lying against the mast's side (a fixed offset in model px stood them a
+    # quarter block clear of a ship's thinner mast, the whole sail in the air)
+    cx = round((zx(MAST_OF["crab_claw"][1] * a) + spar_t) / 2 - 0.05, 3)
     _, (az, ay), (fz, fy_) = SC.crab_points()
     crab = cloth("crab_claw", "z", apex[1] + zx(z0 * S), apex[1] + zx(z1 * S), apex[0] + yy(y0 * S), apex[0] + yy(y1 * S),
-                 zx(BELLY * S * 0.5), n=8, at=CRAB_X)
+                 zx(BELLY * S * 0.5), n=8, at=cx)
     for tz_, ty_ in ((az, ay), (fz, fy_)):
-        crab += [dict(c, origin=[c["origin"][0] + CRAB_X, *c["origin"][1:]], **({"pivot": [c["pivot"][0] + CRAB_X, *c["pivot"][1:]]} if "pivot" in c else {}))
+        crab += [dict(c, origin=[c["origin"][0] + cx, *c["origin"][1:]], **({"pivot": [c["pivot"][0] + cx, *c["pivot"][1:]]} if "pivot" in c else {}))
                  for c in spar((apex[0], apex[1]), (apex[0] + yy(ty_ * S), apex[1] + zx(tz_ * S)), spar_t)]
-    bones.append({"name": "rig_crab", "parent": "root", "pivot": [CRAB_X, apex[0], apex[1]], "cubes": crab, "_area": A,
+    bones.append({"name": "rig_crab", "parent": "root", "pivot": [cx, apex[0], apex[1]], "cubes": crab, "_area": A,
                   "_mast_top": apex[0] + yy(0.56 * S), "_mast_t": zx(MAST_OF["crab_claw"][1] * a),
-                  "_tt": (CRAB_X + 0.4, apex[0] + yy(0.45 * fy_ * S), apex[1] + zx(0.45 * fz * S) + 1.5)})
+                  "_tt": (cx + 0.4, apex[0] + yy(0.45 * fy_ * S), apex[1] + zx(0.45 * fz * S) + 1.5)})
 
     # Junk: a tall battened lug, set a little forward of the mast; a yard on its sloping head, battens, a boom.
     A = sail_area(b, "junk", g)
@@ -1123,7 +1125,7 @@ def rig_kit(b, g):
     bones.insert(0, {"name": "mast", "parent": "root", "pivot": [0, foot, 0], "cubes": [cube([-mt / 2, foot, -mt / 2], [mt, H + base - foot, mt])]})
     for x in list(bones[1:]):
         px_, py_, pz_ = x["_tt"]
-        bones += telltale_bones(x["name"], [(px_, py_, pz_), (-px_ if x["name"] != "rig_crab" else 2 * CRAB_X - px_, py_, pz_)])
+        bones += telltale_bones(x["name"], [(px_, py_, pz_), (-px_ if x["name"] != "rig_crab" else 2 * x["pivot"][0] - px_, py_, pz_)])
     # The wind pennant flies from the masthead.
     ptop = base + H
     bones.append({"name": "pennant", "parent": "root", "pivot": [0, ptop, 0], "cubes": [
@@ -1133,8 +1135,8 @@ def rig_kit(b, g):
 
 def mast_foot(b):
     """Where a mast is stepped (model px): on the keel, the floor's top; on the platform where twin hulls carry it."""
-    if b.get("twin") and not any(len(m) > 2 and m[2] for m in mast_plan(b)):   # a twin's centreline masts: on her platform
-        return b["side"] - 2
+    if b.get("twin") and not any(len(m) > 2 and m[2] for m in mast_plan(b)):   # a twin's centreline masts: through her
+        return b["side"] + iako_of(b)[1] - 0.1                                    # platform, stepped on the iako under it
     return b["fy"] + th(b["section"], "shell")          # on a keel (a twin's masts stood on her hulls: on that hull's)
 
 
@@ -1313,6 +1315,19 @@ def parts(b):
         cube([-0.5, side + 0.5, END - 0.6 * side], [1, 1, 0.6 * side + 1])]})
     # A stern staff for the pennant on boats with no mast, crank furnace and cranks.
     bones.append({"name": "staff", "parent": "root", "pivot": [0, base, 20], "cubes": [cube([-0.5, base, 19.5], [1, 0.72 * H, 1])]})
+    if b.get("twin"):
+        # A twin steers and flies her staff from her hulls, never from the water between them (eastasian_pacific.md:
+        # the sweep over the starboard hull's stern; therans.md: a rudder on each transom): each is carried out to the
+        # starboard hull (- x), the Theran's rudder drawn again on the port hull as a bone of its own, turning with it.
+        D = multihull(b)["twin_gap"]
+        for x in bones[-3:] + [x for x in bones if x["name"] == "rudder"]:
+            if x["name"] in ("rudder", "rudder_post", "staff"):
+                x["pivot"] = [round(x["pivot"][0] - D / 2, 3), *x["pivot"][1:]]
+                x["cubes"] = [dict(c, origin=[round(c["origin"][0] - D / 2, 3), *c["origin"][1:]]) for c in x["cubes"]]
+        if b.get("bow") is PIERCE:
+            post = next(x for x in bones if x["name"] == "rudder_post")
+            bones.append({"name": "rudder_post_p", "parent": "root", "pivot": [round(post["pivot"][0] + D, 3), *post["pivot"][1:]],
+                          "cubes": [dict(c, origin=[round(c["origin"][0] + D, 3), *c["origin"][1:]]) for c in post["cubes"]]})
     # The helm station (deep hulls): a raised deck aft under the helmsman's seat, a breastwork at its
     # forward edge, and the tradition's helm: a whipstaff (a lever standing through the deck) or a
     # tiller (a bar from the rudder head forward over the deck).
@@ -1547,10 +1562,48 @@ def hull_bones(b, simple):
                 if b.get("bow") is PIERCE:              # the Theran pod: a small white hull riding between the two
                     pw = 0.22 * inner
                     bone["cubes"] += shell(dict(section="v", deck=True), (pw, 0.55 * side, side + 0.2 * side), (pw, 0.55 * side, side + 0.2 * side), z0, z0 + SEG)
-                else:
-                    bone["cubes"].append(cube([-inner, side - th(st, "shell") * 2, z0], [2 * inner, th(st, "shell") * 2, SEG]))
+        if b.get("bow") is not PIERCE:
+            pacific_joining(b, bones, D)
     SIMPLE = False
     return bones, zones
+
+
+def iako_of(b):
+    """The Pacific twins' crossbeams (iako): round(L/phi^2) + 1 of them (Hokule'a's eight on her 19 m), evenly spaced:
+    k to each mid section and k in each end, so her typical length carries the count (eastasian_pacific.md L8). Each
+    is square, phi^2 t (the shell's t), in model px. Returns (k, its side)."""
+    L, s = b["_law"]["L"], b.get("scale", 1)
+    mids = max(1, round(L / s - 3))                   # derived: the mid sections the game shows at her typical length
+    N = round(L / PHI ** 2) + 1                       # given: Hokule'a's eight iako on 19 m (round(19/phi^2) + 1)
+    return max(1, round(N / (mids + 2))), round(PHI ** 2 * b["_wall"] / s, 2)   # t: the launched wall (both models alike)
+
+
+def pacific_joining(b, bones, D):
+    """The Pacific twins joined as they were (eastasian_pacific.md section 3): the iako lie across both sheers, a lashing
+    turn at each, overhanging each outer side by t; the slatted platform (pola) on them, from hull centre to hull
+    centre over the mid sections, the masts stepped through it on the centre line. Every piece rests on what carries
+    it, so the craft is one body (the old platform hung between the gunwales and the masts stood through it)."""
+    st, F = b["section"], b["F"]
+    k, ik = iako_of(b)
+    t, o = b["_wall"] / b.get("scale", 1), outer_of(st, SCALE)
+    def beam_at(zc, hw, sy):
+        X = D / 2 + hw + o + t
+        return cube([-X, sy - 0.05, zc - ik / 2], [2 * X, ik, ik])
+    bow_base = -max_mids(b) * SEG
+    for bone in bones:
+        n = bone["name"]
+        if not n.endswith("_plank"):
+            continue
+        if n.startswith("mid_"):
+            z0 = -(int(n.split("_")[1]) + 1) * SEG
+            bone["cubes"] += [beam_at(z0 + SEG * (j + 0.5) / k, F, b["side"]) for j in range(k)]
+            bone["cubes"].append(cube([-D / 2, b["side"] + ik - 0.1, z0], [D, th(st, "deck"), SEG]))   # the pola
+        elif n in ("stern_plank", "bow_plank"):
+            sign, end = (1, b["stern"]) if n == "stern_plank" else (-1, b["bow"])
+            for j in range(k):
+                dz = SEG * (j + 0.5) / k
+                hw, _, sy = end_shape(b, end, dz / END)
+                bone["cubes"].append(beam_at((0 if sign > 0 else bow_base) + sign * dz, hw, sy))
 
 
 # Rams, by tradition: each one cast or carved onto the stem's foot at the waterline.
@@ -1763,7 +1816,7 @@ def part_group(name):
         return "fittings"                            # wood, like the oars and rudder
     if name.startswith(("rig_", "tt_")) or name == "pennant":
         return "rig"
-    if name in ("rudder", "rudder_post", "paddle", "dpaddle", "scull", "pole", "ama", "staff", "foils", "amas", "akas", "nets") or name.startswith(("oar_", "crank_", "link", "helm_")):
+    if name in ("rudder", "rudder_post", "rudder_post_p", "paddle", "dpaddle", "scull", "pole", "ama", "staff", "foils", "amas", "akas", "nets") or name.startswith(("oar_", "crank_", "link", "helm_")):
         return "fittings"
     if name == "sea_chest":
         return "chest"
@@ -1860,6 +1913,7 @@ def animation(pid, b):
                          f"{P('wind_rel')} + math.sin(q.life_time * (300 + 500 * {P('wind_str')})) * (2 + 6 * math.min({P('wind_str')}, 1))", 0]},
         "rudder": {"rotation": [0, f"-1 * {P('rudder')}", 0]},
         "rudder_post": {"rotation": [0, f"{P('rudder')}", 0]},
+        **({"rudder_post_p": {"rotation": [0, f"{P('rudder')}", 0]}} if b.get("twin") and b.get("bow") is PIERCE else {}),
         "crank_l": {"rotation": ["v.p_crank", 0, 0]},
         "crank_r": {"rotation": ["v.p_crank", 0, 0]},
         # Each side strokes on its own (v.l port, v.r starboard, -1 astern to 1 ahead), on smooth
@@ -1949,6 +2003,7 @@ def controllers(pid, zones):
                [{n: rigged} for n in ["mast"] + [f"mast_{k}" for k in range(1, len(mast_plan(b)))]] + [
                 {"rudder": f"{stage} >= 4 && {prop} == 0 && {P('rudder_type')} == 0"},
                 {"rudder_post": f"{stage} >= 4 && {P('rudder_type')} == 1"},
+                *([{"rudder_post_p": f"{stage} >= 4 && {P('rudder_type')} == 1"}] if b.get("twin") and b.get("bow") is PIERCE else []),
                 *([] if b.get("twin") or b.get("tri") else [{"ama": f"{stage} >= 3 && {P('outrigger')}"}]), {"staff": f"{stage} >= 5 && !{P('sail')}"},   # a trimaran's floats are her outrigger: no second one
                 *([{"foils": f"{stage} >= 4"}] if b.get("foils") else []), *([{"amas": f"{stage} >= 3"}] if b.get("tri") else []),
                 *([{"akas": f"{stage} >= 3"}, {"nets": f"{stage} >= 4"}] if b.get("tri") or (b.get("twin") and b.get("bow") is PIERCE) else []),

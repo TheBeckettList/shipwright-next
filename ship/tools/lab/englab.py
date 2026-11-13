@@ -418,6 +418,8 @@ def measure(pid, law, mids, wl):
                 hull1.append(p)
                 reach = min(reach if reach is not None else math.inf, p["P"][:, 0].min())
         xs = np.concatenate([p["P"][:, 0] for p in hull1]) if hull1 else np.array([0.0])
+        if hull1:                                     # and her depth one hull's too: the iako and platform over the sheers
+            ys = np.concatenate([p["P"][:, 1] for p in hull1])   # are her joining, not her hull
     else:
         xs = np.concatenate([p["P"][:, 0] for p in mid])
     B = float(xs.max() - xs.min())
