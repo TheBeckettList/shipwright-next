@@ -3788,6 +3788,27 @@ test("inherency: the free numbers never rise (the ratchet)", () => {
   assert.ok(total <= base, `free numbers rose to ${total} (ratchet ${base}): name it in limits.js or vision.js, or tag it // given: or // vision:`);
 });
 
+// The engineering lens (tools/lab/englab.py) holds every model against the world's law (D-004): connectivity, mast
+// steps, walls, depth, draught, freeboard, decks, stability, the cost at sea, bounds, rams (D-005). Like the inherency
+// ratchet, a boat's fail count on a check may fall and never rise; the checks in "hard" must be zero fleet-wide.
+test("engineering lens: no boat fails a check more than its ratchet allows, and the hard checks pass", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const out = execFileSync("python3", ["tools/lab/englab.py", "--json"], { cwd: new URL("..", import.meta.url), encoding: "utf8", timeout: 180000 });
+  const base = JSON.parse(readSrc(new URL("./engineering.json", import.meta.url), "utf8"));
+  const rows = out.split("\n").filter((l) => l.startsWith("[ENG] ")).map((l) => JSON.parse(l.slice(6)));
+  assert.ok(rows.length >= Object.keys(base.boats).length, `the lens measured ${rows.length} boats, the ratchet holds ${Object.keys(base.boats).length}`);
+  const bad = [];
+  for (const { k, checks } of rows) {
+    const was = base.boats[k];
+    if (!was) { bad.push(`${k}: a new boat: add its row to tests/engineering.json (englab.py --ratchet)`); continue; }
+    for (const [c, n] of Object.entries(checks)) {
+      if (base.hard.includes(c) && n > 0) bad.push(`${k}: ${c} ${n} (a hard check: must be 0)`);
+      else if (n > (was[c] ?? 0)) bad.push(`${k}: ${c} rose to ${n} (ratchet ${was[c] ?? 0})`);
+    }
+  }
+  assert.deepEqual(bad, [], "run python3 tools/lab/englab.py --boat <id> to see the model beside the law");
+});
+
 test("probe: measures and reports without throwing in the test world", () => {
   const dim = world.getDimension("minecraft:overworld");
   const p = makePlayer(dim);

@@ -128,10 +128,15 @@ def kind(bone):
     return "hull"
 
 
-def export(pid, with_uv=False):
+def export(pid, with_uv=False, mids=None, names=False):
+    """mids: how many mid sections show (the game's v.mids for a length); by default her typical length's.
+    names: also list, beside "boxes", each piece's bone and geometry ("bones": [[bone, group], ...]) for the
+    engineering lens (englab.py), which tells hull from mast from ram by them. Neither changes the default output."""
     b = G.BOATS[pid]
     hs = b.get("scale", 1)
-    mids = max(1, round((G.TYPICAL_BLOCKS[hs] * 16 / hs - 2 * G.END) / G.SEG))   # drawn at her typical length
+    if mids is None:
+        mids = max(1, round((G.TYPICAL_BLOCKS[hs] * 16 / hs - 2 * G.END) / G.SEG))   # drawn at her typical length
+    tags = []
     ys = G.y_scale(hs)
     plan = G.mast_plan(b)
     rig = None if pid in SAILLESS else RIG_OF.get(pid, "square")
@@ -197,6 +202,7 @@ def export(pid, with_uv=False):
                         flat += [round(q[0] * hs / 16, 3), round((q[1] + G.HULL_LIFT) * ys / 16, 3), round((q[2] + dz) * hs / 16, 3)]
                     face = c["uv"]["west" if axis == "z" else "north"]
                     out.append(["cloth", k_, u0, u1] + flat + ([[*face["uv"], *face["uv_size"]]] if with_uv else []))
+                    tags.append([n, gid[1:]])
                     continue
                 pts = corners(c, piv, rot, grow)
                 flat = []
@@ -204,8 +210,11 @@ def export(pid, with_uv=False):
                     flat += [round(x * hs / 16, 3), round((y + G.HULL_LIFT) * ys / 16, 3), round((z + dz) * hs / 16, 3)]
                 spar_uv = isinstance(c.get("uv"), dict) and c["uv"].get("up", {}).get("uv") == list(SC.SPAR[:2])
                 out.append(flat + ["spar" if spar_uv else kind(n)] + (["s" if gid == ".rig" else "h", face_uvs(c)] if with_uv else []))
+                tags.append([n, gid[1:]])
     pal = THERAN if pid.startswith("theran_") else dict(PART)
     res = {"scale": hs, "rig": rig, "parts": {k: pal.get(k, (150, 105, 60)) for k, _ in PART}, "boxes": out}
+    if names:
+        res["bones"] = tags
     if with_uv:                                      # the sheets she's drawn in by default: her keel's wood, white cloth
         theran = pid.startswith("theran_")
         wood = re.search(r'id: "' + pid + r'"[^}]*?keelWood: "(\w+)"', PLANS_SRC)
