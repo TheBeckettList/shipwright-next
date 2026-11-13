@@ -3289,7 +3289,7 @@ test("large ships: drawn at four times the size, need a dry dock, and fit its ba
     assert.ok(h.half * 2 >= 28 && h.half * 2 <= 40, `${p.id}: hull length`);
     assert.ok(h.helmAt < 0 && -h.helmAt === h.half - 4, `${p.id}: helm one model block in from the stern`);
     rec.sections.rig = { sail: true, style: p.rigStyle };
-    if (p.rigFamily) assert.equal(computeHandling(rec).mastsAt.length, { skeid: 1, carrack: 3, baghlah: 2, fuchuan: 3, shuinsen: 3, drua: 1, theran_flagship: 1, league_trireme: 1 }[p.id]);
+    if (p.rigFamily) assert.equal(computeHandling(rec).mastsAt.length, { skeid: 1, carrack: 3, baghlah: 2, fuchuan: 3, shuinsen: 3, drua: 1, theran_flagship: 3, league_trireme: 1 }[p.id]);
     const medium = Object.values(PLANS).find((q) => q.yardLevel === 2 && q.tradition === p.tradition);
     assert.ok(h.turnMax < computeHandling(newRecord(medium, "k", 18)).turnMax, `${p.id}: turns slower than its tradition's ${medium.id}`);
   }
