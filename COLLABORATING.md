@@ -13,7 +13,7 @@ cd shipwright-next
 npm test                      # the lenses, as tests; all should pass before you start
 ```
 
-Then point your Claude Code at **`handover/AI_BRIEF.md`** and have it read, in order: `handover/STATE.md`, the newest
+The world stream starts at **`handover/ONBOARDING-world-architect.md`**. Then point your Claude Code at **`handover/AI_BRIEF.md`** and have it read, in order: `handover/STATE.md`, the newest
 file in `handover/stages/`, `handover/PROJECT.md`, `handover/CONVENTIONS.md`, `handover/math-feed/INDEX.md`,
 `handover/ISSUES.md`. Every house rule there holds for both streams. The ones that bite most often:
 
