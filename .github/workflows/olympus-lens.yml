@@ -1,0 +1,12 @@
+# Olympus: every push to the hall keeps its laws (olympus/olympus.mjs lens).
+name: olympus-lens
+on:
+  push: { branches: [olympus] }
+jobs:
+  lens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: node olympus/olympus.mjs lens
