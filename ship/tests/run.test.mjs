@@ -2722,14 +2722,14 @@ test("every piece sits on the half-pixel grid", async () => {
   }
 });
 
-test("launched, every boat is drawn within its part budget: 340 small, 420 medium", async () => {
+test("launched, every boat is drawn within its part budget: 340 small, 460 medium", async () => {
   for (const pid of ALL_BOATS()) {
     const p = PLANS[pid];
     const mids = Math.min(7, Math.max(1, Math.round(p.lengthRange[1] / p.modelScale - 3)));
     const launched = (await modelsOf(pid)).launched;
     const n = launched.filter((b) => !(b.name.startsWith("mid_") && Number(b.name.split("_")[1]) >= mids))
       .reduce((a, b) => a + (b.cubes?.length ?? 0), 0);
-    const budget = p.modelScale === 1 ? 340 : 420;   // the rounded shell is planked in strakes along its curve
+    const budget = p.modelScale === 1 ? 340 : 460;   // the rounded shell is planked in strakes along its curve; 460 for the Theran cat's pod and wave-piercing ends (S002)
     assert.ok(n + 40 <= budget, `${pid}: launched hull ${n} pieces, leaving under 40 for rig, propulsion and chest`);
     const building = (await modelsOf(pid))[pid].reduce((a, b) => a + (b.cubes?.length ?? 0), 0);
     assert.ok(n < building / 2, `${pid}: launched ${n} vs building ${building}`);
@@ -3289,7 +3289,7 @@ test("large ships: drawn at four times the size, need a dry dock, and fit its ba
     assert.ok(h.half * 2 >= 28 && h.half * 2 <= 40, `${p.id}: hull length`);
     assert.ok(h.helmAt < 0 && -h.helmAt === h.half - 4, `${p.id}: helm one model block in from the stern`);
     rec.sections.rig = { sail: true, style: p.rigStyle };
-    if (p.rigFamily) assert.equal(computeHandling(rec).mastsAt.length, { skeid: 1, carrack: 3, baghlah: 2, fuchuan: 3, shuinsen: 3, drua: 1, theran_flagship: 1, league_trireme: 1 }[p.id]);
+    if (p.rigFamily) assert.equal(computeHandling(rec).mastsAt.length, { skeid: 1, carrack: 3, baghlah: 2, fuchuan: 3, shuinsen: 3, drua: 1, theran_flagship: 3, league_trireme: 1 }[p.id]);
     const medium = Object.values(PLANS).find((q) => q.yardLevel === 2 && q.tradition === p.tradition);
     assert.ok(h.turnMax < computeHandling(newRecord(medium, "k", 18)).turnMax, `${p.id}: turns slower than its tradition's ${medium.id}`);
   }

@@ -48,6 +48,8 @@
   .muted { color: var(--dim); }
   @media (max-width: 640px) { #side { left: 10px; right: 10px; width: auto; top: auto; bottom: 10px; max-height: 55%; } #legend { display: none; } input[type=search] { width: 120px; } }
 </style>
+<script src="world3d.js"></script>
+<script src="boatgl.js"></script>
 </head>
 <body>
 <canvas id="map"></canvas>
@@ -61,6 +63,8 @@
   <input type="search" id="q" placeholder="Find a town…">
   <button class="btn" id="tList">Tagged</button>
   <button class="btn" id="tBoats">Boats</button>
+  <button class="btn" id="t3d">Thera 3D</button>
+  <button class="btn" id="tDev">Development</button>
   <button class="btn" id="exp" title="Copy your notes and tags">Copy notes</button>
   <span id="sync" class="muted" style="font-size:12px"></span>
 </div>
@@ -68,13 +72,21 @@
 <div id="list" class="panel"></div>
 <div id="legend" class="panel"></div>
 <div id="hud" class="panel">—</div>
-<div id="boats" class="panel" style="display:none;left:50%;top:60px;transform:translateX(-50%);padding:10px;width:min(860px,94vw)">
-  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><b>Boats</b><select id="boatSel" style="flex:1"></select><span class="muted" style="font-size:12px">drag to turn, wheel to zoom</span><button class="btn" id="boatsX">✕</button></div>
-  <canvas id="boatCv" width="840" height="460" style="width:100%;border-radius:8px;background:#0f1b30;cursor:grab"></canvas>
+<div id="boats" class="panel" style="display:none;left:50%;top:60px;transform:translateX(-50%);padding:10px;width:min(980px,96vw)">
+  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px"><b>Boats</b><select id="boatSel" style="flex:1;min-width:180px"></select>
+    <select id="hullSel" title="Hull wood"></select><select id="sailSel" title="Sail cloth"></select>
+    <button class="btn on" id="seaT">Sea</button><span class="muted" style="font-size:12px">drag to turn · wheel to zoom · shift-drag to pan</span><button class="btn" id="boatsX">✕</button></div>
+  <canvas id="boatCv" style="width:100%;height:min(560px,62vh);border-radius:8px;background:#22334f;cursor:grab;touch-action:none;display:block"></canvas>
   <div id="boatInfo" class="muted" style="font-size:12px;margin-top:4px"></div>
 </div>
+<div id="w3d" class="panel" style="display:none;inset:58px 10px 10px 10px;padding:0;overflow:hidden">
+  <canvas id="w3dCv" style="width:100%;height:100%;display:block;cursor:grab;touch-action:none"></canvas>
+  <div style="position:absolute;left:10px;top:8px;right:10px;display:flex;gap:10px;align-items:center;pointer-events:none"><b style="pointer-events:auto">Thera in 3D</b><span id="w3dInfo" class="muted" style="font-size:12px"></span><span style="flex:1"></span><button class="btn" id="w3dX" style="pointer-events:auto;background:var(--panel)">✕</button></div>
+  <div class="muted" style="position:absolute;left:10px;bottom:8px;font-size:12px">The built add-on laid block for block (tools/modtest/vox.mjs), in the pack's own tiles · drag to turn · right- or shift-drag to pan · wheel or pinch to zoom</div>
+</div>
+<div id="dev" class="panel" style="display:none;left:10px;top:64px;bottom:10px;width:min(460px,94vw);overflow:auto;padding:12px 14px"></div>
 <script>
-const RELEASES = ["0.9.12", "0.9.2", "0.9.1", "0.9.0", "0.8.9", "0.8.8", "0.8.7"];   // newest first; each release's folder holds data.json and its layers
+const RELEASES = ["0.9.14"];   // newest first; each release's folder holds data.json and its layers (tools/worldviewer.mjs, tools/viewerkit.mjs)
 const LAYERS = [["terrain", "Terrain"], ["biomes", "Biomes"], ["heat", "Climate"], ["wet", "Rain"], ["civs", "Peoples"]];
 const TAGS = ["new", "needs review", "done", "favourite"];
 const cv = document.getElementById("map"), cx = cv.getContext("2d");
@@ -228,41 +240,78 @@ function pick(sx, sy) { if (!D) return null; const r = devicePixelRatio || 1; le
 addEventListener("resize", resize); resize(); open(rel);
 if (window.claude && claude.use) claude.use("db").then((d) => { db = d; if (db) watchNotes(); else setSync("notes saved in this browser"); }).catch(() => setSync("notes saved in this browser"));
 
-// ---- the boats in 3D: each boat's model as boxes (ship/tools/boatexport.py), drawn by a small painter's renderer
-const bp = document.getElementById("boats"), bsel = document.getElementById("boatSel"), bcv = document.getElementById("boatCv"), bcx = bcv.getContext("2d");
-let BOATS = null, bcam = { yaw: 0.7, pitch: 0.38, zoom: 1 }, bfaces = [];
+// ---- the boats in 3D, in the game's own textures (viewer/boatgl.js, boats3d.json from tools/viewerkit.mjs)
+const bp = document.getElementById("boats"), bsel = document.getElementById("boatSel"), hsel = document.getElementById("hullSel"), ssel = document.getElementById("sailSel"), bcv = document.getElementById("boatCv");
+let BOATS = null, bgl = null; const sheetImg = new Map();
 const CLASS = (b) => (b.scale >= 4 ? "great" : b.scale >= 2 ? "ship" : "small");
-function rotP(p, pv, r) { let [x, y, z] = [p[0] - pv[0], p[1] - pv[1], p[2] - pv[2]]; const [a, b, c] = r.map((d) => (d * Math.PI) / 180);
-  [x, y] = [x * Math.cos(c) - y * Math.sin(c), x * Math.sin(c) + y * Math.cos(c)]; [x, z] = [x * Math.cos(b) + z * Math.sin(b), -x * Math.sin(b) + z * Math.cos(b)]; [y, z] = [y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a)];
-  return [x + pv[0], y + pv[1], z + pv[2]]; }
-function buildBoat(id) { const B = BOATS[id]; bfaces = []; let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
-  for (const [ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz, k] of B.boxes) { const C = []; for (const i of [0, 1]) for (const j of [0, 1]) for (const l of [0, 1]) { const q = rotP([ox + i * sx, oy + j * sy, oz + l * sz], [px, py, pz], [rx, ry, rz]); C.push(q); q.forEach((v, n) => { lo[n] = Math.min(lo[n], v); hi[n] = Math.max(hi[n], v); }); }
-    for (const f of [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]]) bfaces.push({ p: f.map((i) => C[i]), c: B.parts[k] }); }
-  const mid = lo.map((v, n) => (v + hi[n]) / 2), span = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
-  for (const f of bfaces) f.p = f.p.map((q) => q.map((v, n) => v - mid[n]));
-  bcam.fit = 380 / span; bcam.floor = lo[1] - mid[1];
-  document.getElementById("boatInfo").textContent = `${B.name}: ${CLASS(B)} class, ${B.rig ? B.rig.replace("_", " ") + " rig" : "no sail"}, about ${Math.round(hi[2] - lo[2])} blocks long, ${B.boxes.length} pieces`; drawBoat(); }
-function drawBoat() { if (!bfaces.length) return; const W = bcv.width, H = bcv.height, S = bcam.fit * bcam.zoom, cy = Math.cos(bcam.yaw), sy = Math.sin(bcam.yaw), cp = Math.cos(bcam.pitch), sp = Math.sin(bcam.pitch);
-  const P = ([x, y, z]) => { const u = x * cy - z * sy, w = x * sy + z * cy; return [W / 2 + u * S, H / 2 + (-y * cp + w * sp) * S, w * cp + y * sp]; };
-  bcx.fillStyle = "#0f1b30"; bcx.fillRect(0, 0, W, H);
-  bcx.strokeStyle = "rgba(120,170,230,0.25)"; bcx.lineWidth = 1; for (let g = -30; g <= 30; g += 2) { for (const [a, b] of [[[g, bcam.floor, -30], [g, bcam.floor, 30]], [[-30, bcam.floor, g], [30, bcam.floor, g]]]) { const A = P(a), Bq = P(b); bcx.beginPath(); bcx.moveTo(A[0], A[1]); bcx.lineTo(Bq[0], Bq[1]); bcx.stroke(); } }
-  const L = [-0.4, 0.8, -0.45], ln = Math.hypot(...L), out = [];
-  for (const f of bfaces) { const q = f.p.map(P), d = q.reduce((s, v) => s + v[2], 0) / 4, a = f.p[0], b = f.p[1], c = f.p[3], u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]], n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]], nl = Math.hypot(...n) || 1;
-    const lit = 0.55 + 0.45 * Math.abs((n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) / nl / ln); out.push([d, q, f.c.map((x) => Math.round(x * lit))]); }
-  out.sort((a, b) => b[0] - a[0]);
-  for (const [, q, c] of out) { bcx.fillStyle = `rgb(${c})`; bcx.strokeStyle = `rgba(0,0,0,0.18)`; bcx.beginPath(); bcx.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) bcx.lineTo(q[i][0], q[i][1]); bcx.closePath(); bcx.fill(); bcx.stroke(); } }
-let bdrag = null;
-bcv.onpointerdown = (e) => { bdrag = [e.clientX, e.clientY, bcam.yaw, bcam.pitch]; bcv.setPointerCapture(e.pointerId); };
-bcv.onpointermove = (e) => { if (!bdrag) return; bcam.yaw = bdrag[2] + (e.clientX - bdrag[0]) * 0.01; bcam.pitch = Math.max(-0.2, Math.min(1.4, bdrag[3] + (e.clientY - bdrag[1]) * 0.01)); drawBoat(); };
-bcv.onpointerup = () => { bdrag = null; };
-bcv.onwheel = (e) => { e.preventDefault(); bcam.zoom = Math.max(0.3, Math.min(5, bcam.zoom * (e.deltaY < 0 ? 1.12 : 0.89))); drawBoat(); };
-bsel.onchange = () => buildBoat(bsel.value);
-document.getElementById("boatsX").onclick = () => { bp.style.display = "none"; };
-document.getElementById("tBoats").onclick = async () => {
-  bp.style.display = bp.style.display === "none" ? "block" : "none"; if (bp.style.display === "none") return;
-  try { BOATS = await (await fetch(`${rel}/boats.json`)).json(); } catch { document.getElementById("boatInfo").textContent = "This release has no boat models."; bfaces = []; bcx.clearRect(0, 0, bcv.width, bcv.height); return; }
-  const ids = Object.keys(BOATS).sort((a, b) => (a.startsWith("theran") ? -1 : 0) - (b.startsWith("theran") ? -1 : 0) || BOATS[a].scale - BOATS[b].scale || BOATS[a].name.localeCompare(BOATS[b].name));
-  bsel.innerHTML = ids.map((id) => `<option value="${id}">${BOATS[id].name} (${CLASS(BOATS[id])})</option>`).join(""); buildBoat(ids[0]); };
+const sheet = (name) => { if (!sheetImg.has(name)) sheetImg.set(name, load(`${rel}/tex/${name}.png`)); return sheetImg.get(name); };
+const nice = (s) => s.replace(/^(hull|sail)_/, "").replace(/_/g, " ");
+function sizeCv(c) { const r = devicePixelRatio || 1; c.width = Math.round(c.clientWidth * r); c.height = Math.round(c.clientHeight * r); }
+async function showBoat(id, fresh) {
+  const B = BOATS[id]; if (fresh) { hsel.value = B.sheets.h; ssel.value = B.sheets.s; }
+  const [h, s] = await Promise.all([sheet(hsel.value), sheet(ssel.value)]);
+  const i = bgl.load(B, { h, s });
+  document.getElementById("boatInfo").textContent = `${B.name}: ${CLASS(B)} class, ${B.rig ? B.rig.replace("_", " ") + " rig" : "no sail"}, ${i.long} blocks long, ${i.wide} wide, ${i.tall} tall · ${i.pieces} pieces · hull ${nice(hsel.value)}, cloth ${nice(ssel.value)} (default: ${nice(B.sheets.h)}, ${nice(B.sheets.s)})`;
+}
+bsel.onchange = () => showBoat(bsel.value, true); hsel.onchange = ssel.onchange = () => showBoat(bsel.value, false);
+document.getElementById("seaT").onclick = (e) => { const on = !e.target.classList.contains("on"); e.target.classList.toggle("on", on); if (bgl) bgl.sea = on; };
+document.getElementById("boatsX").onclick = () => { bp.style.display = "none"; document.getElementById("tBoats").classList.remove("on"); };
+document.getElementById("tBoats").onclick = async (e) => {
+  const on = bp.style.display === "none"; bp.style.display = on ? "block" : "none"; e.target.classList.toggle("on", on); if (!on) return;
+  sizeCv(bcv); if (!bgl) bgl = BoatGL.make(bcv); if (!bgl) { document.getElementById("boatInfo").textContent = "This browser has no WebGL2."; return; }
+  if (!BOATS || BOATS._rel !== rel) { try { BOATS = await (await fetch(`${rel}/boats3d.json`)).json(); BOATS._rel = rel; } catch { document.getElementById("boatInfo").textContent = "This release has no textured boats."; return; } }
+  const ids = Object.keys(BOATS).filter((k) => k[0] !== "_").sort((a, b) => (b.startsWith("theran") - a.startsWith("theran")) || (b.startsWith("league") - a.startsWith("league")) || BOATS[a].scale - BOATS[b].scale || BOATS[a].name.localeCompare(BOATS[b].name));
+  bsel.innerHTML = ids.map((id) => `<option value="${id}">${esc(BOATS[id].name)} (${CLASS(BOATS[id])})</option>`).join("");
+  hsel.innerHTML = BOATS._sheets.filter((k) => k.startsWith("hull_")).map((k) => `<option value="${k}">hull: ${nice(k)}</option>`).join("");
+  ssel.innerHTML = BOATS._sheets.filter((k) => k.startsWith("sail_")).map((k) => `<option value="${k}">cloth: ${nice(k)}</option>`).join("");
+  showBoat(ids[0], true);
+};
+addEventListener("resize", () => { if (bp.style.display !== "none" && bgl) { sizeCv(bcv); bgl.draw(); } if (w3 && w3p.style.display !== "none") { sizeCv(w3cv); w3.draw(); } });
+
+// ---- Thera in 3D (viewer/world3d.js): thera3d.bin/.json from tools/modtest/vox.mjs, blocks.png from tools/viewerkit.mjs
+const w3p = document.getElementById("w3d"), w3cv = document.getElementById("w3dCv"); let w3 = null, w3rel = null;
+// the block records, packed byte for byte in an RGB picture (tools/viewerkit.mjs): read back with colour conversion off
+async function unpack(src, bytes) {
+  const bmp = await createImageBitmap(await (await fetch(src)).blob(), { colorSpaceConversion: "none", premultiplyAlpha: "none" });
+  const c = document.createElement("canvas"); c.width = bmp.width; c.height = bmp.height; const g = c.getContext("2d", { willReadFrequently: true, colorSpace: "srgb" }); g.drawImage(bmp, 0, 0);
+  const rgba = g.getImageData(0, 0, bmp.width, bmp.height).data, out = new Uint8Array(bytes + (bytes & 1));
+  for (let i = 0, j = 0; j < bytes; i += 4) { out[j++] = rgba[i]; if (j < bytes) out[j++] = rgba[i + 1]; if (j < bytes) out[j++] = rgba[i + 2]; }
+  return out.buffer.slice(0, bytes);
+}
+document.getElementById("w3dX").onclick = () => { w3p.style.display = "none"; document.getElementById("t3d").classList.remove("on"); };
+document.getElementById("t3d").onclick = async (e) => {
+  const on = w3p.style.display === "none"; w3p.style.display = on ? "block" : "none"; e.target.classList.toggle("on", on); if (!on) return;
+  sizeCv(w3cv); if (w3 && w3rel === rel) { w3.draw(); return; }
+  const info = document.getElementById("w3dInfo"); info.textContent = "loading the blocks…";
+  try {
+    const meta = await fetch(`${rel}/thera3d.json`).then((r) => r.json());
+    const [buf, atlas] = await Promise.all([meta.packed ? unpack(`${rel}/${meta.packed.file}`, meta.packed.bytes) : fetch(`${rel}/thera3d.bin`).then((r) => r.arrayBuffer()), load(`${rel}/blocks.png`)]);
+    w3 = World3D.make(w3cv, meta, buf, atlas); w3rel = rel;
+    info.textContent = w3 ? `${meta.nx} × ${meta.nz} blocks round the cone from ${meta.x0}, ${meta.z0} · ${meta.count.toLocaleString()} blocks seen, ${w3.faces.toLocaleString()} faces, ${meta.names.length} kinds` : "This browser has no WebGL2.";
+  } catch (err) { info.textContent = "This release has no 3D Thera (" + err.message + ")"; }
+};
+
+// ---- Development: the project's state from handover/ (dev.json, tools/viewerkit.mjs)
+const devp = document.getElementById("dev");
+document.getElementById("tDev").onclick = async (e) => {
+  const on = devp.style.display !== "block"; devp.style.display = on ? "block" : "none"; e.target.classList.toggle("on", on); if (!on) return;
+  let V; try { V = await (await fetch(`${rel}/dev.json`)).json(); } catch { devp.innerHTML = `<button class="btn x" onclick="document.getElementById('tDev').click()">✕</button><p class="muted">This release has no development record.</p>`; return; }
+  const sev = { high: "#c0563a", med: "#b8862e", low: "#4d7fb8" }, pill = (t, c) => `<span style="display:inline-block;border-radius:99px;padding:0 7px;font-size:11px;background:${c};color:#fff;margin-right:4px">${esc(t)}</span>`;
+  const open = V.issues.filter((i) => !/closed/.test(i.status)), closed = V.issues.filter((i) => /closed/.test(i.status));
+  const cur = V.stages[V.stages.length - 1], done = cur ? cur.plan.filter((x) => x.done).length : 0;
+  const sec = (t, body) => `<h3 style="margin:14px 0 6px;font-size:14px">${t}</h3>${body}`;
+  devp.innerHTML = `<button class="btn x" id="devX">✕</button><h2 style="margin:0 0 2px;font-size:17px">Development</h2>
+    <div class="muted">Build ${esc(V.version)}${V.branch ? ` · branch <code>${esc(V.branch)}</code>` : ""} · read from handover/ ${esc(V.built.slice(0, 10))}</div>
+    ${cur ? sec(`${esc(cur.id)} (${esc(cur.who)}): ${esc(cur.title)}`, `<div class="muted" style="margin-bottom:4px">${done} of ${cur.plan.length} done · from ${esc(cur.from)}</div><div style="height:6px;background:#1d3157;border-radius:3px;margin-bottom:8px"><div style="height:6px;width:${Math.round(100 * done / Math.max(1, cur.plan.length))}%;background:var(--gold);border-radius:3px"></div></div>` + cur.plan.map((x) => `<div style="display:flex;gap:6px;margin:3px 0"><span style="color:${x.done ? "#4fe08a" : "var(--dim)"}">${x.done ? "✔" : "○"}</span><span${x.done ? ' class="muted"' : ""}>${esc(x.text)}</span></div>`).join("")) : ""}
+    ${sec("Priorities (STATE.md)", `<ol style="margin:0;padding-left:20px">${V.priorities.map((p) => `<li style="margin:2px 0">${esc(p)}</li>`).join("")}</ol>`)}
+    ${sec(`Open issues (${open.length})`, open.map((i) => `<details style="margin:4px 0"><summary>${pill(i.sev, sev[i.sev] ?? "#555")}<b>${esc(i.id)}</b> ${esc(i.title)} <span class="muted">· ${esc(i.status)}</span></summary><div class="muted" style="font-size:12px;margin:4px 0 0 4px">${esc(i.text)}</div></details>`).join(""))}
+    ${sec(`Closed (${closed.length})`, closed.map((i) => `<div class="muted" style="margin:2px 0">${esc(i.id)} ${esc(i.title)} · ${esc(i.status)}</div>`).join(""))}
+    ${sec("Stages", V.stages.slice().reverse().map((st) => `<div style="margin:4px 0"><b>${esc(st.id)}</b> ${esc(st.who)} · ${esc(st.title)} <span class="muted">· ${st.plan.filter((x) => x.done).length}/${st.plan.length} · ${esc(st.dates)}</span></div>`).join(""))}
+    ${sec("Decisions", V.decisions.map((d) => `<div style="margin:2px 0"><b>${esc(d.id)}</b> ${esc(d.title)} <span class="muted">· ${esc(d.status)}</span></div>`).join(""))}
+    ${sec("Math feed", V.feed.map((f) => `<div style="margin:2px 0"><b>${esc(f.id)}</b> ${pill(f.impact, f.impact === "ACT" ? "#c0563a" : f.impact === "CHECK" ? "#b8862e" : "#3d5a80")}${esc(f.head)}</div>`).join(""))}
+    ${V.commits.length ? sec("Recent commits", V.commits.map(([h, d, m]) => `<div style="margin:2px 0;font-size:12px"><code>${esc(h)}</code> <span class="muted">${esc(d)}</span> ${esc(m)}</div>`).join("")) : ""}`;
+  document.getElementById("devX").onclick = () => document.getElementById("tDev").click();
+};
 </script>
 </body>
 </html>

@@ -517,7 +517,8 @@ BOATS.update({
 
 
 BOATS.update({
-    "theran_ship": medium("v", 9, 0.75, oar=1.8, aspect=0.9, twin=True, bow=PIERCE, stern=THERAN_STERN,
+    # depth 0.85: freeboard enough that the lee hull stays dry at the 3° a catamaran heels to before a hull lifts
+    "theran_ship": medium("v", 9, 0.85, oar=1.8, aspect=0.9, twin=True, bow=PIERCE, stern=THERAN_STERN,
                           # (z, size, hull side, cant out from the centre line, rake aft): a wing canted out on each hull,
                           # and behind them two small tail wings canted in toward each other, like a fighter's twin fins
                           masts=[(0.0, 1.0, -1, 14, 0), (0.0, 1.0, 1, 14, 0), (0.33, 0.42, -1, -14, 8), (0.33, 0.42, 1, -14, 8)]),
@@ -759,7 +760,7 @@ SAIL_RATIO, SAIL_PER_L2 = _ratios()
 RIG_TARGETS = json.loads((ROOT / "tools/rig_targets.json").read_text()) if (ROOT / "tools/rig_targets.json").exists() else {}
 FILL = {k: sum(SC.inside(k, (i + 0.5) / 40, (j + 0.5) / 40) for i in range(40) for j in range(40)) / 1600 for k in SC.REGION}
 # Each sail type's mast: how far over the cloth its head stands (of the sail's size a) and its thickness (of a).
-MAST_OF = {"square": (0.1, 0.05), "lateen": (0.12, 0.055), "crab_claw": (0.0, 0.04), "junk": (0.08, 0.05), "wing": (0.0, 0.035)}
+MAST_OF = {"square": (0.1, 0.05), "lateen": (0.12, 0.055), "crab_claw": (0.0, 0.04), "junk": (0.1, 0.05), "wing": (0.0, 0.035)}
 
 
 def sail_area(b, style, g):
@@ -873,7 +874,7 @@ def rig_kit(b, g):
                   "_tt": (0.4, (foot + yard_at(tz + 0.3 * (pz - tz))) / 2, tz + 0.3 * (pz - tz))})
 
     # Crab claw (Pacific): two spars spring from a tack low forward and open into a V, the cloth a crescent between
-    # their tips. The mast is short: it props the upper spar.
+    # their tips. The mast is short: it props the upper spar about halfway up its length.
     A = sail_area(b, "crab_claw", g)
     a = math.sqrt(A)
     z0, z1, y0, y1 = SC.crab_box()
@@ -886,7 +887,7 @@ def rig_kit(b, g):
         crab += [dict(c, origin=[c["origin"][0] + CRAB_X, *c["origin"][1:]], **({"pivot": [c["pivot"][0] + CRAB_X, *c["pivot"][1:]]} if "pivot" in c else {}))
                  for c in spar((apex[0], apex[1]), (apex[0] + yy(ty_ * S), apex[1] + zx(tz_ * S)), spar_t)]
     bones.append({"name": "rig_crab", "parent": "root", "pivot": [CRAB_X, apex[0], apex[1]], "cubes": crab, "_area": A,
-                  "_mast_top": apex[0] + yy(0.36 * S), "_mast_t": zx(MAST_OF["crab_claw"][1] * a),
+                  "_mast_top": apex[0] + yy(0.56 * S), "_mast_t": zx(MAST_OF["crab_claw"][1] * a),
                   "_tt": (CRAB_X + 0.4, apex[0] + yy(0.45 * fy_ * S), apex[1] + zx(0.45 * fz * S) + 1.5)})
 
     # Junk: a tall battened lug, set a little forward of the mast; a yard on its sloping head, battens, a boom.
@@ -1903,6 +1904,8 @@ def proportions():
             "sail": sail_areas(b),
             # multihull layout in blocks at model scale 1 (scripts multiply by the model scale)
             "twin_gap": round(multihull(b)["twin_gap"] / 16, 4),
+            # the Theran pod between the hulls (the bridge deck's nacelle, gen hull()): a half width you can sit and walk on
+            "pod_half": round(0.22 * (multihull(b)["twin_gap"] / 2 - b["F"]) / 16, 4) if b.get("twin") and b.get("bow") is PIERCE else 0,
             "float_out": round(multihull(b)["float_out"] / 16, 4),
             "float_len": round(multihull(b)["float_len"] / 16, 4),
             "typical_len": round(multihull(b)["L"] / 16, 4),

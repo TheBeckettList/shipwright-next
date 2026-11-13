@@ -1,6 +1,7 @@
 // The world viewer's data for one release: the map's layers as pictures (terrain, biomes, heat, wet, peoples), the
-// settlements, peoples and trade lines as JSON, and Thera from above at a block a pixel (halved). viewer/index.html
-// reads them.   node tools/worldviewer.mjs [version]     -> viewer/<version>/
+// settlements, peoples and trade lines as JSON, Thera from above at a block a pixel (halved) and in 3D round the cone,
+// the boats, and (tools/viewerkit.mjs) the textures and the Development panel's record. Needs a bake (dist/) for
+// Thera. viewer/index.html reads them.   node tools/worldviewer.mjs [version]     -> viewer/<version>/
 import fs from "node:fs";
 import path from "node:path";
 import { execSync } from "node:child_process";
@@ -96,3 +97,9 @@ say(`data: ${st.length} settlements, ${pl.length} peoples, ${routes.length} trad
 
 // the boats in 3D: every boat's model as boxes (ship/tools/boatexport.py), for the viewer's Boats panel
 execSync(`python3 ship/tools/boatexport.py ${path.join(OUT, "boats.json")}`, { cwd: ROOT, stdio: "ignore" }); say("boats written");
+
+// Thera in 3D, block for block round the cone (tools/modtest/vox.mjs), then the pieces in the pack's own textures and
+// the project's state for the Development panel (tools/viewerkit.mjs)
+const N3 = 48;   // vision: forty-eight chunks square: the cone and the inner caldera, light enough for a tablet
+if (!process.env.NO_THERA) { execSync(`node tools/modtest/vox.mjs ${Math.floor(cxB / 16) - N3 / 2} ${Math.floor(czB / 16) - N3 / 2} ${N3} ${N3} "${path.join(OUT, "thera3d.bin")}" "${path.join(OUT, "thera3d.json")}"`, { cwd: ROOT, stdio: "ignore" }); say("Thera in 3D laid"); }
+execSync(`node tools/viewerkit.mjs ${version}`, { cwd: ROOT, stdio: "inherit" });

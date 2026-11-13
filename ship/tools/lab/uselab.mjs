@@ -82,7 +82,7 @@ export function seatsLens({ e, rec, plan, h }, depth) {
   const lines = h.hullLines ?? [0];
   const halfBeam = (h.beam ?? 1) / 2;
   seats.forEach(([x, y, z], k) => {
-    const onHull = lines.some((c) => Math.abs(Math.abs(x) - Math.abs(c)) <= halfBeam + 0.05);
+    const onHull = lines.some((c) => Math.abs(Math.abs(x) - Math.abs(c)) <= halfBeam + 0.05) || Math.abs(x) <= (h.podHalf ?? 0) + 0.05;
     if (!onHull) issues.push(`seat ${k} at x ${x} is over the water between the hulls`);
     const along = -z + h.helmAt;                  // seat z is forward-negative from the helm; along from the centre
     if (Math.abs(along) > h.half + 0.05) issues.push(`seat ${k} off the end of the hull (${along.toFixed(2)} of ±${h.half})`);

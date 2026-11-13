@@ -45,7 +45,7 @@ useWaterworldWind();   // the helm feels the globe's wind
 import { startBank } from "./bank.js";
 startBank();   // the League's counter (world/coinage.js)
 
-export const VERSION = "0.9.13";
+export const VERSION = "0.9.14";
 const DIM = "waterworld:sea";
 console.warn(`[Waterworld] Scripts ${VERSION} loaded`);
 const C = 16;

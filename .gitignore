@@ -17,3 +17,8 @@ shipwright-next-src-*.zip
 .vscode/
 .idea/
 __pycache__/
+
+
+# world viewer releases are generated (tools/worldviewer.mjs); the published artifact carries them
+viewer/[0-9]*/
+tools/modtest/scripts*/

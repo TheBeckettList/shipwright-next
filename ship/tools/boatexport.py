@@ -3,6 +3,8 @@ foils, floats) and its own rig, laid out as the animation lays them at the longe
 the bow slid out, the masts at their places), in blocks, each box with its bone's pivot and rotation.
 
     python3 tools/boatexport.py out.json
+    python3 tools/boatexport.py --uv out.json     each face also carries where it sits on its texture sheet (the hull's
+                                                  wood or the sail's cloth), so the viewer draws the game's own textures
 """
 import json
 import math
@@ -96,6 +98,29 @@ def masks(n=48):
     return {"n": n, "cut": out}
 
 
+# a cube's six faces as (name, the four corners' indices in corners() order (i x, j y, l z: i*4 + j*2 + l), as
+# top-left, top-right, bottom-right, bottom-left seen from outside)
+FACES = (("north", (5, 1, 0, 4)), ("south", (3, 7, 6, 2)), ("east", (7, 5, 4, 6)), ("west", (1, 3, 2, 0)), ("up", (1, 5, 7, 3)), ("down", (2, 6, 4, 0)))
+
+
+def face_uvs(c):
+    """Where each face of a cube sits on its sheet, [face index, u, v, w, h] in texture pixels: per-face uv as the
+    file gives it, or Bedrock's box layout from one corner. Faces the file leaves out aren't drawn."""
+    uv = c.get("uv")
+    out = []
+    if isinstance(uv, dict):
+        for k, (f, _) in enumerate(FACES):
+            if f in uv and abs(uv[f]["uv_size"][0]) * abs(uv[f]["uv_size"][1]) > 0:
+                out.append([k, *[round(v, 3) for v in uv[f]["uv"]], *[round(v, 3) for v in uv[f]["uv_size"]]])
+    elif isinstance(uv, list):
+        u, v = uv
+        sx, sy, sz = (math.floor(abs(a)) for a in c["size"])
+        box = {"up": (u + sz, v, sx, sz), "down": (u + sz + sx, v + sz, sx, -sz), "east": (u, v + sz, sz, sy),
+               "north": (u + sz, v + sz, sx, sy), "west": (u + sz + sx, v + sz, sz, sy), "south": (u + 2 * sz + sx, v + sz, sx, sy)}
+        out = [[k, *box[f]] for k, (f, _) in enumerate(FACES)]
+    return out
+
+
 def kind(bone):
     for k, _ in PART:
         if k in bone:
@@ -103,7 +128,7 @@ def kind(bone):
     return "hull"
 
 
-def export(pid):
+def export(pid, with_uv=False):
     b = G.BOATS[pid]
     hs = b.get("scale", 1)
     mids = max(1, round((G.TYPICAL_BLOCKS[hs] * 16 / hs - 2 * G.END) / G.SEG))   # drawn at her typical length
@@ -170,21 +195,32 @@ def export(pid):
                         if R:
                             q = turn(q, [-piv[0], piv[1], piv[2]], R)
                         flat += [round(q[0] * hs / 16, 3), round((q[1] + G.HULL_LIFT) * ys / 16, 3), round((q[2] + dz) * hs / 16, 3)]
-                    out.append(["cloth", k_, u0, u1] + flat)
+                    face = c["uv"]["west" if axis == "z" else "north"]
+                    out.append(["cloth", k_, u0, u1] + flat + ([[*face["uv"], *face["uv_size"]]] if with_uv else []))
                     continue
                 pts = corners(c, piv, rot, grow)
                 flat = []
                 for (x, y, z) in pts:
                     flat += [round(x * hs / 16, 3), round((y + G.HULL_LIFT) * ys / 16, 3), round((z + dz) * hs / 16, 3)]
                 spar_uv = isinstance(c.get("uv"), dict) and c["uv"].get("up", {}).get("uv") == list(SC.SPAR[:2])
-                out.append(flat + ["spar" if spar_uv else kind(n)])
+                out.append(flat + ["spar" if spar_uv else kind(n)] + (["s" if gid == ".rig" else "h", face_uvs(c)] if with_uv else []))
     pal = THERAN if pid.startswith("theran_") else dict(PART)
-    return {"scale": hs, "rig": rig, "parts": {k: pal.get(k, (150, 105, 60)) for k, _ in PART}, "boxes": out}
+    res = {"scale": hs, "rig": rig, "parts": {k: pal.get(k, (150, 105, 60)) for k, _ in PART}, "boxes": out}
+    if with_uv:                                      # the sheets she's drawn in by default: her keel's wood, white cloth
+        theran = pid.startswith("theran_")
+        wood = re.search(r'id: "' + pid + r'"[^}]*?keelWood: "(\w+)"', PLANS_SRC)
+        res["sheets"] = {"h": "hull_theran" if theran else f"hull_{wood.group(1) if wood else 'oak'}", "s": "sail_theran" if theran else "sail_white"}
+        res["faces"] = [f for f, _ in FACES]
+    return res
 
+
+PLANS_SRC = (ROOT / "BP/scripts/config/plans.js").read_text()
 
 if __name__ == "__main__":
+    with_uv = "--uv" in sys.argv
+    sys.argv = [a for a in sys.argv if a != "--uv"]
     names = dict(re.findall(r'"(\w+)": "([^"]+)"', (ROOT / "tools/gen_entities.py").read_text().split("BOATS = {")[1].split("}")[0]))
-    data = {pid: {"name": names.get(pid, pid), **export(pid)} for pid in G.BOATS}
+    data = {pid: {"name": names.get(pid, pid), **export(pid, with_uv)} for pid in G.BOATS}
     data["_cloth"] = masks()
     Path(sys.argv[1]).write_text(json.dumps(data, separators=(",", ":")))
     print(f"{len(data) - 1} boats, {sum(len(d['boxes']) for k, d in data.items() if k[0] != '_')} pieces -> {sys.argv[1]}")

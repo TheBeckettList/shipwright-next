@@ -11,7 +11,7 @@ import { decode } from "./png.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist"), BP = path.join(DIST, "Waterworld_BP"), RP = path.join(DIST, "Waterworld_RP");
-const VERSION = [0, 9, 13];
+const VERSION = [0, 9, 14];
 const t0 = performance.now(), say = (s) => console.log(`[${((performance.now() - t0) / 1000).toFixed(1)}s] ${s}`);
 
 loadMap();

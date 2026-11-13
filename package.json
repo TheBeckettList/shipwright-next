@@ -9,5 +9,12 @@
     "build": "node tools/buildmod.mjs",
     "modtest": "node tools/modtest/run.mjs",
     "ship:test": "cd ship && node --import ./tests/mocks/register.mjs --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@minecraft/server": "2.8.0",
+    "@minecraft/server-ui": "2.0.0",
+    "esbuild": "^0.28.2",
+    "quickjs-emscripten": "^0.32.0",
+    "typescript": "~5.9"
   }
 }
