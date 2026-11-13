@@ -307,7 +307,7 @@
           "root": true
         },
         {
-          "mast": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4"
+          "mast": "false"
         },
         {
           "rudder": "q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 32), 8)) == 0 && (math.mod(math.floor(q.property('shipwright:kinds') / 2), 2)) == 0"
@@ -429,19 +429,19 @@
           "pennant": "q.property('shipwright:stage') >= 5"
         },
         {
-          "rig_square": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 1"
+          "rig_square": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 1"
         },
         {
-          "rig_lateen": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2"
+          "rig_lateen": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2"
         },
         {
-          "rig_crab": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3"
+          "rig_crab": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3"
         },
         {
-          "rig_junk": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4"
+          "rig_junk": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4"
         },
         {
-          "rig_wing": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5"
+          "rig_wing": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5"
         },
         {
           "rig_glide_body": "q.property('shipwright:stage') >= 3"
@@ -519,6 +519,246 @@
           "rig_glide_r_tip": "q.property('shipwright:stage') >= 3"
         },
         {
+          "rig_glide_sail_l": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_0": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_0_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_1": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_1_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_2": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_2_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_3": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_3_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_4": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_4_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_5": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_5_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_6": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_6_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_7": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_l_7_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_0": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_0_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_1": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_1_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_2": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_2_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_3": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_3_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_4": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_4_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_5": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_5_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_6": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_6_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_7": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_sail_r_7_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_0": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_0_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_1": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_1_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_2": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_2_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_3": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_3_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_4": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_4_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_5": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_5_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_6": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_6_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_7": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_l_7_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_0": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_0_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_1": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_1_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_2": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_2_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_3": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_3_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_4": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_4_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_5": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_5_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_6": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_6_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_7": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_plate_r_7_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_mast_0": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_mast_1": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_mast_2": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_mast_3": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_mast_4": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_mast_5": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_mast_6": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_mast_7": "q.property('shipwright:stage') >= 3"
+        },
+        {
           "rig_glide_tailtip": "q.property('shipwright:stage') >= 3"
         },
         {
@@ -573,34 +813,34 @@
           "rig_glide_r_strut": "q.property('shipwright:stage') >= 3 && q.property('shipwright:fold') < 0.5"
         },
         {
-          "tt_rig_square_a": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 1 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_square_a": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 1 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         },
         {
-          "tt_rig_square_b": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 1 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_square_b": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 1 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         },
         {
-          "tt_rig_lateen_a": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_lateen_a": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         },
         {
-          "tt_rig_lateen_b": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_lateen_b": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         },
         {
-          "tt_rig_crab_a": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_crab_a": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         },
         {
-          "tt_rig_crab_b": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_crab_b": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         },
         {
-          "tt_rig_junk_a": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_junk_a": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         },
         {
-          "tt_rig_junk_b": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_junk_b": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         },
         {
-          "tt_rig_wing_a": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_wing_a": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         },
         {
-          "tt_rig_wing_b": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
+          "tt_rig_wing_b": "false && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"
         }
       ]
     },

@@ -23,7 +23,7 @@ import { manageShields, shieldsLaw, PEG } from "./shields.js";
 import { towTick, castOff, useHandling } from "./tender.js";
 import { turnDrag, oarsInLaw } from "./laws.js";
 import { sailLaw, driveLaw, heelLaw, heelTarget, rollPeriod, driftLaw, wakeLaw } from "./laws.js";
-import { isGlider, hasSherd, foldTick, flightTick, CORE_TOP } from "./glide.js";
+import { isGlider, hasSherd, foldTick, flightTick, clamTick, CORE_TOP } from "./glide.js";
 import { PHI } from "../core/golden.js";
 
 const SIGN_KEY = "shipwright:steer_sign";
@@ -716,7 +716,11 @@ export function steerBoat(e, helm) {
   const sailing = h.sail && s.sailSet && water.wet;
   if (s.lashed && water.wet) lashedDrift(s, windSpeed);
   // Law: the sail. Projection: telltales and the cloth's fill.
-  const sail = sailLaw(h, { sailing, off, windSpeed, sailF, hullF });
+  // the Exokoitos's seed sail is a rigid wing: its own law (clamsail.js), no cloth to fill
+  const sail = glider
+    ? { fill: 0, telltale: 0, target: clamTick(e, s, { sailing, wind: windSpeed, off, flying: !!s.fly?.flying,
+        tack: Math.sign(s.wind.x * Math.cos((s.heading * Math.PI) / 180) + s.wind.z * Math.sin((s.heading * Math.PI) / 180)) || 1 }).target * sailF * hullF }
+    : sailLaw(h, { sailing, off, windSpeed, sailF, hullF });
   const fill = sail.fill, sailTarget = sail.target;
   setProp(e, s, "telltale", Math.round(sail.telltale * 10) / 10, 0.1);
   setProp(e, s, "sail_fill", Math.round(fill * 20) / 20, 0.05);

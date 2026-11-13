@@ -221,6 +221,33 @@
           ],
           "default": 1.0,
           "client_sync": true
+        },
+        "shipwright:clam_up": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0,
+          "client_sync": true
+        },
+        "shipwright:clam_zip": {
+          "type": "float",
+          "range": [
+            0.0,
+            1.0
+          ],
+          "default": 1.0,
+          "client_sync": true
+        },
+        "shipwright:clam_cam": {
+          "type": "float",
+          "range": [
+            -1.0,
+            1.0
+          ],
+          "default": 0.0,
+          "client_sync": true
         }
       }
     },

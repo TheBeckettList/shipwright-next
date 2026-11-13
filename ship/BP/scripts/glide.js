@@ -13,18 +13,18 @@ import { countItems } from "./inventory.js";
 import { setP } from "./props.js";
 import { forwardOf } from "./frame.js";
 import { flyLaw, flyingOf, FLIGHT } from "./flight.js";
+import { clamLaw } from "./clamsail.js";
 import { WATER } from "./config/yards.js";
 import { PHI } from "../core/golden.js";
 
 export const GLIDER = "shipwright:theran_skiff";
 export const SHERD = "minecraft:echo_shard";       // given: vanilla's echo shard; vision: every Theran's sherd
 const MASS = 2335;                                 // derived: her law's displacement, kg (6 x 1.5 x 0.5625 m, block 0.45, sea water)
-const WINGS = 30;                                  // derived: her kestrel wings' area, m^2 (gen_boats: the panels at a block a metre)
+const WINGS = 29;                                  // derived: her two plates spread as wings, m^2 (gen_boats: 2 x 6.85 x 2.12 blocks, a block a metre)
 const FLY = flyingOf({ mass: MASS, wingArea: WINGS });
 const GRAVITY = 0.08;                              // given: Bedrock's gravity on an entity, blocks a tick^2 (made good each tick aloft)
 const AIR_TURN = 2;                                // vision: degrees a tick she turns in the air (a bank, not a rudder)
 const FOLD_STEP = 1 / 21;                          // vision: FIB, the ticks her wings take to spread or fold
-const SPREAD_AT = 1 / PHI;                         // vision: at 1/phi of her lift speed her wings come out
 const SHERD_CHECK = 20;                            // vision: how often the helmsman's pack is looked in, ticks
 
 export const isGlider = (e) => e?.typeId === GLIDER;
@@ -48,8 +48,11 @@ export const CORE_TOP = FLIGHT.CRUISE;
 
 /** Her wings: spread aloft and at speed, folded onto the hull otherwise; eased over FOLD_STEP. */
 export function foldTick(e, s) {
-  const spread = s.fly?.flying || Math.abs(s.speed ?? 0) > FLY.vLift * SPREAD_AT;
-  const want = spread ? 0 : 1;
+  // her plates are her sail and her wings (Richard: "at different speeds the sail zips away, then 1/3 of the wing comes at a
+  // time"): a third of each plate zips from sail to wing as she passes 1/phi^2, 1/phi and the whole of her lift speed
+  const v = Math.abs(s.speed ?? 0);
+  const thirds = s.fly?.flying ? 3 : [1 / PHI ** 2, 1 / PHI, 1].filter((f) => v > FLY.vLift * f).length;
+  const want = 1 - thirds / 3;
   const was = s.fold ?? 1;
   s.fold = was + Math.max(-FOLD_STEP, Math.min(FOLD_STEP, want - was));
   if (Math.abs(s.fold - (s.foldShown ?? -1)) >= 0.05 || (s.fold === want && s.foldShown !== want)) {
@@ -120,4 +123,33 @@ export function flightTick(e, s, helm, { wet, turnRight }) {
     /* not this tick */
   }
   return true;
+}
+
+/**
+ * Her seed sail (clamsail.js): the law's set, shown. Stowed (lying closed on her deck) when it isn't set or she
+ * flies; while it rakes up or down its valves stand open, and they zip once it is where it's going; zipped, they slide
+ * on the mast to the camber the law wants. Returns the law's answer (its target speed is the sail's drive).
+ */
+export function clamTick(e, s, { sailing, wind, off, flying, tack = 1 }) {
+  // (wind.js's angle off the wind is 0 dead downwind; the law's is 0 head to wind)
+  const law = clamLaw({ sailing: sailing && !flying, wind, off: 180 - Math.abs(off), speed: Math.max(0, s.speed ?? 0), tack });
+  const c = (s.clam ??= { up: 1, zip: 1, cam: 0 });
+  const wantUp = sailing && !flying ? law.up : 0;
+  c.up += Math.max(-FOLD_STEP, Math.min(FOLD_STEP, wantUp - c.up));
+  const moving = Math.abs(wantUp - c.up) > 0.02;
+  c.zip += Math.max(-FOLD_STEP * 2, Math.min(FOLD_STEP * 2, (moving && c.up > 0.05 ? 0 : 1) - c.zip));
+  c.cam += Math.max(-FOLD_STEP, Math.min(FOLD_STEP, (c.zip > 0.95 ? law.cam : 0) - c.cam));
+  const r2 = (v) => Math.round(v * 50) / 50;
+  const shown = (s.clamShown ??= {});
+  for (const k of ["up", "zip", "cam"]) {
+    if (Math.abs(r2(c[k]) - (shown[k] ?? -9)) >= 0.04) {
+      try {
+        setP(e, `clam_${k}`, r2(c[k]));
+        shown[k] = r2(c[k]);
+      } catch {
+        /* visual only */
+      }
+    }
+  }
+  return law;
 }
