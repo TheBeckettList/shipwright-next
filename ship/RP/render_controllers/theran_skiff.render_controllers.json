@@ -322,9 +322,6 @@
           "staff": "q.property('shipwright:stage') >= 5 && !(math.mod(math.floor(q.property('shipwright:flags') / 1), 2))"
         },
         {
-          "foils": "q.property('shipwright:stage') >= 4"
-        },
-        {
           "paddle": "q.property('shipwright:stage') >= 5 && (math.mod(math.floor(q.property('shipwright:kinds') / 32), 8)) == 1"
         },
         {
@@ -439,6 +436,18 @@
         },
         {
           "rig_wing": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5"
+        },
+        {
+          "rig_glide_l": "q.property('shipwright:stage') >= 4"
+        },
+        {
+          "rig_glide_l_out": "q.property('shipwright:stage') >= 4"
+        },
+        {
+          "rig_glide_r": "q.property('shipwright:stage') >= 4"
+        },
+        {
+          "rig_glide_r_out": "q.property('shipwright:stage') >= 4"
         },
         {
           "tt_rig_square_a": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 1 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"

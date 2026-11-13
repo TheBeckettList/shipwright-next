@@ -276,6 +276,20 @@
             "q.property('shipwright:rig_scale')"
           ]
         },
+        "rig_glide_l": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
+        "rig_glide_r": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
         "rig_junk": {
           "position": [
             0,

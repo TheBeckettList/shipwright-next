@@ -162,7 +162,7 @@ def export(pid, with_uv=False, mids=None, names=False):
                 continue
             if gid == ".rig":
                 base = re.sub(r"_\d+$", "", n)
-                if not rig or (base != G.RIG_BONES[rig] and not n.startswith("pennant")):
+                if not n.startswith("rig_glide") and (not rig or (base != G.RIG_BONES[rig] and not n.startswith("pennant"))):
                     continue
             k = int(n.rsplit("_", 1)[1]) if re.search(r"(mast|rig_\w+)_\d+$", n) else 0
             dz = 0.0
@@ -172,7 +172,7 @@ def export(pid, with_uv=False, mids=None, names=False):
                 dy = (mf[rig] - 1) * (bone["pivot"][1] - foot)
                 bone = dict(bone, pivot=[bone["pivot"][0], bone["pivot"][1] + dy, bone["pivot"][2]],
                             cubes=[dict(c, origin=[c["origin"][0], c["origin"][1] + dy, c["origin"][2]]) for c in bone["cubes"]])
-            if n.startswith(("foils", "amas", "akas", "nets")):
+            if n.startswith(("foils", "amas", "akas", "nets")) or n in ("rig_glide_l", "rig_glide_r"):   # amidships, with her foils
                 dz = -mids * 8
             elif n.startswith("bow") or n == "ram":
                 dz = (G.max_mids(b) - mids) * G.SEG   # the bow slides aft to close up on the last mid section

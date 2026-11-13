@@ -96,9 +96,14 @@ AC_STERN = dict(taper="ac_stern", rise=0, floor=0.34, stem="transom")
 # the medium"): the deck runs straight and level to a high knife point far forward, and the stem falls back from it in
 # one long straight line to the waterline, so the whole forefoot overhangs; full at the deck, fine at the water.
 YACHT_BOW = dict(taper="yacht", rise=0.06, floor=0.82, stem="knife")
+# The Exokoitos (the skiff; Richard, S003: a firefly or flying fish, "a thick x-bow like 'head' that tapers to a
+# cockpit"): an X-bow head, full and high, its stem falling back from a low forward foot over a rounded brow; and a
+# firefly's tail, the body narrowing and its bottom lifting aft to where the tail boom springs.
+XBOW = dict(taper="xbow", rise=0.18, floor=0.06, stem="xhead")
+FLY_TAIL = dict(taper="fly_tail", rise=0, floor=0.45, stem="raked_short")
 AC_ROUND = 2.2     # vision: a little fuller than a carved log (2.0): with the crown (X/phi) the AC72's upright oval section
-is_theran = lambda b: any(b.get("bow") is x for x in (AC_BOW, PIERCE, YACHT_BOW))   # the Theran build (their pod, rudders, nets)
-BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, foils=True, bow=AC_BOW, stern=AC_STERN, round=AC_ROUND, crown=True)
+is_theran = lambda b: any(b.get("bow") is x for x in (AC_BOW, PIERCE, YACHT_BOW, XBOW))   # the Theran build (their pod, rudders, nets)
+BOATS["theran_skiff"] = dict(section="v", F=7.5, side=9.5, oar=1.8, aspect=0.9, glider=True, bow=XBOW, stern=FLY_TAIL, round=AC_ROUND, crown=True)
 
 # Fitted modules drawn on the boat, as bits of the shipwright:mods property (mirrored in ship.js).
 MODULE_BITS = {"shield_rail": 0, "ram": 1, "ice_runners": 3, "crossbow": 4, "full_deck": 5, "sewn_hull": 6, "bulkheads": 7, "light_hull": 8,
@@ -827,6 +832,12 @@ def end_shape(b, end, t):
         hw = max(0.8, F * (1 - t ** 1.2))
     elif taper == "blunt":
         hw = F * (1 - 0.5 * t ** 1.5)
+    elif taper == "xbow":                         # the X-bow head: full almost to the tip (a brow, not a point), the deck
+        hw = F * (1 - 0.55 * t ** 2.2)            # rising a little into it
+        return hw, b["fy"] + end["floor"] * side * t ** 2, side + end["rise"] * side * math.sin(t * math.pi / 2)
+    elif taper == "fly_tail":                     # the firefly's tail: narrowing, the bottom lifting, the deck falling
+        hw = max(0.8, F * (1 - t ** 1.4))
+        return hw, b["fy"] + end["floor"] * side * t ** 1.5, side - 0.2 * side * t ** 2
     elif taper == "yacht":                        # Yacht A: the bottom rising in one straight line to the deck's knife point
         hw = max(0.5, F * (1 - t ** 1.3))         # (floor 0.82 of the side at the tip), the deck full until late, the sheer
         return hw, b["fy"] + end["floor"] * side * t, side + end["rise"] * side * t   # lifting a little toward it
@@ -870,6 +881,8 @@ def stem_curve(kind, s, hw, fy, sy):
     if kind in ("raked", "raked_short"):
         r, head = (0.75, 0.16) if kind == "raked" else (0.45, 0.08)
         return line(8, lambda t: (r * s * t ** 1.4, fy + (h + head * s) * t))
+    if kind == "xhead":                         # the X-bow's stem: its foot furthest out, low; falling back as it rises
+        return line(8, lambda t: (0.3 * s * (1 - t) ** 0.6, fy + (h + 0.18 * s) * t))
     if kind == "knife":                         # Yacht A's tip: the short knife edge left between the risen floor and the deck
         return line(2, lambda t: (0.06 * s * t, fy + (h + 0.02 * s) * t))
     if kind == "ac_plumb":                      # the AC72's stem: near plumb, its foot a touch forward of its head
@@ -1014,6 +1027,10 @@ def face_uv(r, u0=0.0, u1=1.0, mirror=False):
 CLEAR_FACE = {"uv": list(SC.CLEAR[:2]), "uv_size": list(SC.CLEAR[2:])}
 ALL_FACES = ("north", "south", "east", "west", "up", "down")
 uv_all = lambda r: {f: {"uv": list(r[:2]), "uv_size": list(r[2:])} for f in ALL_FACES}
+# Two solid patches in the free bottom-right corner of the Theran hull sheet (gen_assets.py paints them): fresco blue
+# and gold, for the pieces drawn in the Therans' colours rather than their marble (the blue band, gold sheer, glass)
+THERAN_PATCH = {"gold": (112, 120, 8, 8), "blue": (120, 120, 8, 8)}
+theran_uv = lambda cubes, tone: [dict(c, uv=uv_all(THERAN_PATCH[tone])) for c in cubes]
 
 
 def cloth(kind, axis, a0, a1, y0, y1, belly, n=6, at=0.0):
@@ -1322,6 +1339,8 @@ def parts(b):
         for x0 in xs:
             cubes_ += [cube([x0 - 0.6, 1 - depth_, -4], [1.2, depth_, 5])] + lambda_foil(x0, 1 - depth_, -6, 8, span, 0.8)
         bones.append({"name": "foils", "parent": "root", "pivot": [0, 0, 0], "cubes": cubes_})
+    if b.get("glider"):
+        bones += glider_parts(b)
     # The Theran trimaran: two slim wave-piercing floats (true hulls, rounded and decked), each carried on a single
     # forward-swept gold aka, and an hourglass trampoline of diamond mesh between each float and the main hull.
     if b.get("twin") and is_theran(b):
@@ -1374,7 +1393,14 @@ def parts(b):
         bones.append({"name": "nets", "parent": "root", "pivot": [0, 0, 0], "cubes": nets})
     # Steering oar on the starboard quarter, reaching below the bottom.
     rx, rl, rb, tl = -(F + 2), d["rudder"], d["rudder_blade"], d["tiller"]
-    if b.get("foils"):
+    if b.get("glider"):
+        g = glider_frame(b)
+        # The Exokoitos steers with her tail fin: hung at the end of the boom, back and down, deepest of all in the water
+        # (deeper than the tailplane's tips), standing over the boom as her vertical stabiliser when she flies. It turns.
+        zf, ye = END + g["Lb"], g["ye"]
+        bones.append({"name": "rudder", "parent": "root", "pivot": [0, ye, zf], "cubes": [
+            *slab((0, 1 - side, zf - g["cf"] / 2), (0, ye + 0.9 * side, zf - 0.3 * g["cf"]), (0, 1 - side, zf + g["cf"] / 2), (0, ye + 0.9 * side, zf + 0.5 * g["cf"]), 0.8, (99, 0, zf))]})
+    elif b.get("foils"):
         # A foiler steers with a T-rudder hung on the centre of her transom: the blade reaches as deep as the main
         # foil (depth 0.8 of the strut's, so it flies a little higher, trimming her bow up), a small T-wing at its
         # foot (a third of the main span) lifts the stern, and a tiller reaches in over the transom. It turns as one.
@@ -1708,6 +1734,71 @@ def ram_style(pid):
     return RAM_OF.get(pid, "chisel")
 
 
+def glider_frame(b):
+    """The Exokoitos's measures, model px, in the foils bone's frame (z 0 midships; she is bought at one length, so her
+    typical one): her half length, the tail boom Lt/phi^3 long dropping back and down, the tailplane 2/3 of her length
+    across (Richard: "the horizontal stabiliser being 2/3 the width of the body", read across her length so its tips
+    reach the water), the fin's and tailplane's chord Lt/phi^5, the wing's span phi Lt."""
+    F, side = b["F"], b["side"]
+    Lt = typical_length(b)
+    mids = max(1, round((Lt - 2 * END) / SEG))
+    half = mids * 8 + END
+    return dict(F=F, side=side, Lt=Lt, half=half, Lb=Lt / PHI ** 3, ye=0.35 * side, span=2 / 3 * Lt, cf=Lt / PHI ** 5,
+                wspan=PHI * Lt, top=side + (F + outer_of(b["section"], SCALE)) / PHI)
+
+
+def glider_parts(b):
+    """The Exokoitos's own parts. In the foils bone (fittings: her white and gold): the canopy over the cockpit behind
+    the head, the tail boom, the tailplane with its tips canted down into the water as foils (not as deep as the fin).
+    In the rig (the sail sheet: cloth and gold spars): the wings, an F4U Corsair's inverted gull, each in two panels on
+    a light gold frame, the inner hinged at the hull and the outer at the knee: spread to glide, and folded twice at sea
+    (the inner up against her flank, the outer back down over it) so they lie on her as a design in her hull."""
+    g = glider_frame(b)
+    F, side, half, Lt = g["F"], g["side"], g["half"], g["Lt"]
+    foil = []
+    # the canopy: a blue glass bubble behind the head, over the cockpit, in four stepped courses
+    z0, z1 = -0.62 * half, -0.2 * half
+    for k in range(4):
+        w, y = 0.62 * F * (1 - k / 5), g["top"] - 0.5 + k * 0.32 * side / 4
+        zk0, zk1 = z0 + k * 0.08 * (z1 - z0), z1 - k * 0.14 * (z1 - z0)
+        foil += theran_uv([cube([-w, y, zk0], [2 * w, 0.32 * side / 4 + 0.3, zk1 - zk0])], "blue")
+    # the tail boom: from her stern deck, back and down to the tail
+    zs, ze, ye = half - 4, half + g["Lb"], g["ye"]
+    foil += slab((-0.7, side, zs), (0.7, side, zs), (-0.7, ye, ze), (0.7, ye, ze), 1.2, (0, -99, (zs + ze) / 2))
+    # the tailplane: flat over the boom's end for 1/phi of its half span, then each tip canted down into the water
+    hs, xk, cs = g["span"] / 2, g["span"] / 2 / PHI, g["cf"]
+    ytip = 1 - 0.4 * side                                 # in the water, shallower than the fin's foot (1 - side)
+    foil += slab((-xk, ye, ze - cs / 2), (xk, ye, ze - cs / 2), (-xk, ye, ze + cs / 2), (xk, ye, ze + cs / 2), 0.7, (0, -99, ze))
+    for sx in (-1, 1):
+        foil += slab((sx * xk, ye, ze - cs / 2), (sx * hs, ytip, ze - 0.4 * cs), (sx * xk, ye, ze + cs / 2), (sx * hs, ytip, ze + 0.3 * cs), 0.7, (0, -99, ze))
+    bones = [{"name": "foils", "parent": "root", "pivot": [0, 0, 0], "cubes": foil}]
+    # the wings: root at her flank a little forward of midships; the inner panel falling to the knee (anhedral at the
+    # golden angle, tan 1/phi^2), the outer rising to the tip (tan 1/phi^3); chords root Lt/phi^2.5, outer /phi
+    yw, zw, hsw = 0.7 * side, -0.12 * half, g["wspan"] / 2
+    s1, s2 = hsw / PHI, hsw / PHI ** 2
+    a1, a2 = math.atan(1 / PHI ** 2), math.atan(1 / PHI ** 3)
+    cr = Lt / PHI ** 2.5
+    co = cr / PHI
+    cloth, spar = uv_all(SC.SOLID), uv_all(SC.SPAR)
+    def panel(x0, y0, x1, y1, c0, c1, zc):
+        """A panel of cloth on a frame between two ribs (chords c0 at x0, c1 at x1), leading edges level at zc - c/2."""
+        cub = [dict(q, uv=cloth) for q in slab((x0, y0, zc - c0 / 2), (x1, y1, zc - c1 / 2), (x0, y0, zc + c0 / 2), (x1, y1, zc + c1 / 2), 0.25, (x0, y0 - 9, zc))]
+        cub += [dict(q, uv=spar) for q in slab((x0, y0 + 0.3, zc - c0 / 2 - 0.3), (x1, y1 + 0.3, zc - c1 / 2 - 0.3), (x0, y0 + 0.3, zc - c0 / 2 + 0.5), (x1, y1 + 0.3, zc - c1 / 2 + 0.5), 0.6, (x0, y0 - 9, zc))]   # the leading-edge spar
+        cub += [dict(q, uv=spar) for q in slab((x0, y0 + 0.2, zc + c0 / 2 - 0.4), (x1, y1 + 0.2, zc + c1 / 2 - 0.4), (x0, y0 + 0.2, zc + c0 / 2), (x1, y1 + 0.2, zc + c1 / 2), 0.4, (x0, y0 - 9, zc))]   # the trailing edge
+        for x, y, c in ((x0, y0, c0), (x1, y1, c1)):                         # the ribs at its ends
+            cub.append({"origin": [round(x - 0.25, 3), round(y - 0.2, 3), round(zc - c / 2, 3)], "size": [0.5, 0.6, round(c, 3)], "uv": spar})
+        return cub
+    for side_, sx in (("l", 1), ("r", -1)):
+        rx = sx * F
+        kx, ky = rx + sx * s1 * math.cos(a1), yw - s1 * math.sin(a1)
+        tx, ty = kx + sx * s2 * math.cos(a2), ky + s2 * math.sin(a2)
+        bones.append({"name": f"rig_glide_{side_}", "parent": "root", "pivot": [round(rx, 3), round(yw, 3), round(zw, 3)],
+                      "cubes": panel(rx, yw, kx, ky, cr, co, zw)})
+        bones.append({"name": f"rig_glide_{side_}_out", "parent": f"rig_glide_{side_}", "pivot": [round(kx, 3), round(ky, 3), round(zw, 3)],
+                      "cubes": panel(kx, ky, tx, ty, co, co / PHI, zw)})
+    return bones
+
+
 def lambda_foil(x0, apex_y, z0, chord, span, t):
     """A Theran foil wing as an obtuse inverted V: two arms from an apex at (x0, apex_y), each reaching span/2 out and
     falling at the golden angle (tan 1/phi^2), t thick, chord long from z0. Slabs, so each arm is one cube."""
@@ -1998,6 +2089,8 @@ def animation(pid, b):
         # Wing: turns on its mast to its angle of attack; furled, it telescopes down into itself.
         "rig_wing": {"position": [0, lift("rig_wing"), slide("rig_wing")], "rotation": [0, "v.ftrim * 0.5", 0], "scale": [rs, f"{rs} * (0.3 + 0.7 * v.furl)", rs]},
         "foils": {"position": [0, 0, f"-{mids} * 8"]},
+        # the Exokoitos's wings ride amidships with her foils (the fold, by v.glide, comes with her flight)
+        **({w: {"position": [0, 0, f"-{mids} * 8"]} for w in ("rig_glide_l", "rig_glide_r")} if b.get("glider") else {}),
         "amas": {"position": [0, 0, f"-{mids} * 8"], "scale": [1, 1, f"math.clamp(({mids} + 3) / {round(typical_length(b) / 16, 3)}, 0.6, 1.4)"]},
         "akas": {"position": [0, 0, f"-{mids} * 8"], "scale": [1, 1, f"math.clamp(({mids} + 3) / {round(typical_length(b) / 16, 3)}, 0.6, 1.4)"]},
         "nets": {"position": [0, 0, f"-{mids} * 8"], "scale": [1, 1, f"math.clamp(({mids} + 3) / {round(typical_length(b) / 16, 3)}, 0.6, 1.4)"]},
@@ -2127,6 +2220,7 @@ def controllers(pid, zones):
         "part_visibility": [{"*": False}, {"yaw": True}, {"root": True}, {"pennant": f"{stage} >= 5"},
                             {"rig_square": f"{rigged} && {style} == 1"}, {"rig_lateen": f"{rigged} && {style} == 2"},
                             {"rig_crab": f"{rigged} && {style} == 3"}, {"rig_junk": f"{rigged} && {style} == 4"}, {"rig_wing": f"{rigged} && {style} == 5"}]
+                           + ([{w: f"{stage} >= 4"} for w in ("rig_glide_l", "rig_glide_l_out", "rig_glide_r", "rig_glide_r_out")] if b.get("glider") else [])
                            + [{f"{r}_{k}": f"{rigged} && {style} == {i}"} for k in range(1, len(mast_plan(b)))
                               for i, r in ((1, "rig_square"), (2, "rig_lateen"), (3, "rig_crab"), (4, "rig_junk"), (5, "rig_wing"))]
                            + [{f"tt_{r}_{s}": f"{rigged} && {style} == {i} && {stage} >= 5 && {P('sail_fill')} > 0"}

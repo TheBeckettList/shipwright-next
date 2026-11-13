@@ -645,6 +645,14 @@ def main():
         img.save(tex / f"hull_{name}.png")
     for i, (name, hexc) in enumerate(WOOL):
         sail_texture(hexc, 100 + i).save(tex / f"sail_{name}.png")
+    # The Theran hull sheet (hand-painted marble) gets its two solid patches for gen_boats.THERAN_PATCH: gold and fresco
+    # blue, in the bottom-right corner no hull face samples
+    th = Image.open(tex / "hull_theran.png").convert("RGBA")
+    for (x0, y0, w, h), col in ((gen_boats.THERAN_PATCH["gold"], (214, 172, 62)), (gen_boats.THERAN_PATCH["blue"], (46, 92, 170))):
+        for y in range(y0, y0 + h):
+            for x in range(x0, x0 + w):
+                th.putpixel((x, y), col + (255,))
+    th.save(tex / "hull_theran.png")
     # The Therans' cloth: white, gold-taped, on gold spars.
     sail_texture("f6f4ee", 199, trim=(214, 172, 62), spar=(214, 172, 62)).save(tex / "sail_theran.png")
 
