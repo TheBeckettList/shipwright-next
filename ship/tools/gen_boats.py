@@ -1903,28 +1903,6 @@ def glider_parts(b):
     tk = TMAX - 0.06
     zk, yk = -half + 2 * half * tk, cy(tk) - hd(tk)
     ck = Lt / PHI ** 5                                    # a fine chord, bow to stern (Richard: "less thick")
-    # her foil, a hydrofoil's (Richard: "copy the foiling keel ... keep the foiling keel's wing sizing and spacing,
-    # just make 'em cant a little"), its proportions the photograph's, read by golden ratios off the front wing's span
-    # (phi^2 of her breadth, the keel foil's, kept): the front wing's root chord span/phi^3; the rear stabiliser's span
-    # span/phi^2 and chord the front's/phi; the fuselage 0.7 of the span long (the photograph's), its nose just ahead
-    # of the front wing, the stabiliser at its tail well clear of the wing; the
-    # mast a straight blade down from her keel line, chord the front wing's/phi, standing over the front wing's rear
-    # sized by her lift (Richard: "the keel needs to be way bigger, do some rough physics"): her law's displacement,
-    # 6 x 1.5 x 0.5625 m at a block coefficient of 0.45, is about 2.3 t, 22.9 kN; the front wing carries nine tenths of
-    # it at a lift coefficient of 0.5, so to fly at her design wind (7 m/s) it needs about 1.6-1.9 m^2. The keel foil's
-    # old span (phi^2 of her breadth) gave 0.28 m^2; phi^2 times as large in every measure gives 1.9 m^2, flying her at
-    # 6.5 m/s (12-13 knots)
-    yb = 1 - side
-    span_f = PHI ** 4 * W
-    c0 = span_f / PHI ** 3
-    cm = c0 / PHI
-    zf0 = zk - c0 / PHI                                   # the fuselage's nose
-    zf1 = zf0 + 0.7 * span_f                              # its tail (vision: the photograph's)
-    zm = zf0 + 1.0 + c0 / 2                               # the mast's leading edge, over the front wing's rear half
-    frame += slab((0, yk + 0.5, zm), (0, yb, zm), (0, yk + 0.5, zm + cm), (0, yb, zm + cm), 0.9, (99, 0, zk))
-    frame += slab((-0.6, yb, zf0), (0.6, yb, zf0), (-0.6, yb, zf1), (0.6, yb, zf1), 1.1, (0, yb + 99, (zf0 + zf1) / 2))
-    frame += swept_wing(yb - 0.55, zf0 + 1.0, c0, span_f, "lambda", 0.8)
-    frame += swept_wing(yb - 0.55, zf1 - c0 / PHI * 1.4, c0 / PHI, span_f / PHI ** 2, "tips", 0.6)
     bones = [{"name": "rig_glide_body", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(frame + gskin)},
              {"name": "rig_glide_body_skin", "parent": "rig_glide_body", "pivot": [0, 0, 0], "cubes": skin(cloth)}]
     # the core: an asterion crystal turned on its corners (three cubes, an icosahedron's look), at her heart
@@ -1992,6 +1970,7 @@ def glider_parts(b):
         for (a0_, a1_), (b0_, b1_) in zip(pts, pts[1:]):
             cl += slab(a0_, a1_, b0_, b1_, 0.2, (x0, y0 - 9, l0))
         return gold(fr), skin(cl)
+    wingpts = {}
     for side_, sx in (("l", 1), ("r", -1)):
         rx = sx * W * fat(TMAX) * 0.95
         if style == "corsair":            # an F4U Corsair's inverted gull: the inner panel down to the knee, the outer up
@@ -2011,18 +1990,19 @@ def glider_parts(b):
             lr = zw - cr / 2
             lk, lt = lr + s1 / PHI ** 3, lr + s1 / PHI ** 3 + s2 / PHI   # swept little inboard, hard at the hand
             (f1, c1), (f2, c2) = panel(rx, yw, kx, ky, cr, co, lr, lk), panel(kx, ky, tx, ty, co, ct, lk, lt)
+            wingpts[sx] = (rx, yw, kx, ky, tx, ty, lr, lk, lt, cr, co, ct)
             # her lift struts: a gold V from her flank under the wing root out to the knee's underside, at a quarter
             # and three quarters of the knee's chord (a high wing's, braced)
             hy, hz = yw - hd(TMAX) / PHI ** 2, zw
             for v_ in (0.25, 0.75):
                 kz_ = lk + v_ * co
-                f1 += gold(rod((rx, hy, hz), (kx, ky - 0.06 * co, kz_), 0.35))
+                f1 += gold(strut((rx, hy, hz), (kx, ky - 0.06 * co, kz_), 0.35))
             # and a jury strut from each strut's middle up to the wing, as a braced wing has
             for v_ in (0.25, 0.75):
                 kz_ = lk + v_ * co
                 m_ = ((rx + kx) / 2, (hy + ky) / 2, (hz + kz_) / 2)
                 w_ = (rx + (kx - rx) / 2, yw + (ky - yw) / 2 - 0.06 * (cr + co) / 2, lr + (lk - lr) / 2 + v_ * (cr + co) / 2)
-                f1 += gold(rod(m_, w_, 0.25))
+                f1 += gold(strut(m_, w_, 0.25))
             p1, p2 = (rx, yw, zw), (kx, ky, lk + co / 2)
         elif style == "pectoral":         # the flying fish's own: one long broad fin a side, gold rays fanned from the root,
             span = hsw * 1.05             # cloth between; a little dihedral, the outer half hinged to fold back over the inner
@@ -2098,6 +2078,38 @@ def glider_parts(b):
         bones += [{"name": "rig_glide_sail", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(sf)},
                   {"name": "rig_glide_sail_skin", "parent": "rig_glide_sail", "pivot": [0, 0, 0], "cubes": skin(sc)}]
     # the cubes slab() fits come with their own uv; frames and skins above take the sheet's regions
+    # her foil: a little Exokoitos of gold under her, her own reflection in the water (Richard: "make the keel a kind
+    # of mini version of the boat itself, wing-wise ... reflect the boat above in outline"): her body, her wings and her
+    # tail at 1/phi^3 of her size, turned over as a reflection is, so the wings' inner panels dip to the knee and the
+    # outer ones rise, and the tailplane's tips cant up; a mast from her keel line down to its back, nothing under it.
+    # Sized by her lift: her law's displacement (6 x 1.5 x 0.5625 m at a block coefficient of 0.45) is about 2.3 t,
+    # 22.9 kN; carrying nine tenths of it at a lift coefficient of 0.5 at her design wind (7 m/s) wants 1.6-1.9 m^2 of
+    # wing; her wings, about 30 m^2, at 1/phi^3 give 1.7 m^2, flying her at about 6.7 m/s (13 knots)
+    km = 1 / PHI ** 3
+    yb = 1 - side + 2                                     # the reflection's wing roots, near her old foil's depth
+    zc = zk                                               # its wing roots under her mast
+    T = lambda P: (km * P[0], yb - km * (P[1] - ymid), zc + km * (P[2] - zw))
+    mini = []
+    for i in range(0, N, 2):                               # its body: her rings, every other station, solid gold
+        Ra, Rb = R[i], R[min(N, i + 2)]
+        cin = T((0, cy((i + 1) / N), (zs[i] + zs[min(N, i + 2)]) / 2))
+        for k in range(K):
+            mini += slab(T(Ra[k]), T(Ra[(k + 1) % K]), T(Rb[k]), T(Rb[(k + 1) % K]), 0.35, cin)
+    for sx, (rx_, yw_, kx_, ky_, tx_, ty_, lr_, lk_, lt_, cr_, co_, ct_) in wingpts.items():
+        for (x0, y0, l0, c0), (x1, y1, l1, c1) in (((rx_, yw_, lr_, cr_), (kx_, ky_, lk_, co_)), ((kx_, ky_, lk_, co_), (tx_, ty_, lt_, ct_))):
+            for ua, ub in ((0, 0.5), (0.5, 1)):            # two strips a panel, so the taper shows
+                P_ = lambda u, v: T((x0 + (x1 - x0) * u, y0 + (y1 - y0) * u, l0 + (l1 - l0) * u + v * (c0 + (c1 - c0) * u)))
+                mini += slab(P_(ua, 0), P_(ub, 0), P_(ua, 1), P_(ub, 1), 0.5, T((0, ymid - 99, zw)))
+    for sgn in (-1, 1):                                    # its booms
+        mini += strut(T((sgn * xr, yr, zr)), T((sgn * xb, ye, ze)), 0.3)
+    mini += slab(T((-xb, ye, ze - cs / 2)), T((xb, ye, ze - cs / 2)), T((-xb, ye, ze + cs / 2)), T((xb, ye, ze + cs / 2)), 0.45, T((0, ye - 99, ze)))   # its tailplane
+    for sgn in (-1, 1):                                    # and its tips, canted up as her own cant down
+        mini += slab(T((sgn * xb, ye, ze - cs / 2)), T((sgn * hs, ytip, ze - 0.4 * cs)), T((sgn * xb, ye, ze + cs / 2)), T((sgn * hs, ytip, ze + 0.3 * cs)), 0.45, T((0, ye - 99, ze)))
+    # the mast: her keel line down to the reflection's back, at its wing root
+    ytop, ybot = cy(tk) - hd(tk) + 0.5, T((0, cy(TMAX) - hd(TMAX), zw))[1]
+    cm = km * cr / PHI
+    mini += slab((0, ytop, zc - cm / 2), (0, ybot, zc - cm / 2), (0, ytop, zc + cm / 2), (0, ybot, zc + cm / 2), 0.9, (99, 0, zc))
+    bones[0]["cubes"] = bones[0]["cubes"] + gold(mini)
     return bones
 
 
@@ -2106,7 +2118,7 @@ GLIDE_BONES = ("rig_glide_body", "rig_glide_body_skin", "rig_glide_core", "rig_g
                "rig_glide_r", "rig_glide_r_skin", "rig_glide_r_out", "rig_glide_r_out_skin")
 
 
-def rod(A, B, r):
+def strut(A, B, r):
     """A gold strut from A to B, about 2r square: its width laid square to its run in the plane across her (so a
     strut running out and up keeps its climb; a width along z would turn the box a quarter about y, where the file's
     angles lock)."""
