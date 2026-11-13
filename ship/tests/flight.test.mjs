@@ -1,0 +1,36 @@
+// The Exokoitos's flight laws (BP/scripts/flight.js): she flies only from speed, a glide comes down, the burning core
+// holds her up, and nothing runs away.
+import test from "node:test";
+import assert from "node:assert/strict";
+import { flyLaw, flyingOf, FLIGHT } from "../BP/scripts/flight.js";
+
+const f = flyingOf({ mass: 2335, wingArea: 30 });   // vision: her law's displacement (kg) and her wings (m^2)
+const fly = (v0, helm, ticks = 1200) => {             // vision: a minute at most
+  let s = { v: v0, g: 0, h: 0, flying: false }, top = 0, t = 0, flew = false;
+  for (; t < ticks; t++) { s = flyLaw(s, helm(t), f); top = Math.max(top, s.h); flew ||= s.flying; if (s.landed) break; }
+  return { s, top, t, flew };
+};
+
+test("she lifts at about 9 blocks a second, under her cruise", () => {
+  assert.ok(f.vLift * 20 > 8 && f.vLift * 20 < 10, `lift speed ${(f.vLift * 20).toFixed(1)} b/s`);
+  assert.ok(f.vLift < FLIGHT.CRUISE);
+});
+test("too slow, she stays a boat however hard she's pulled", () => {
+  const r = fly(f.vLift * 0.9, () => ({ pitch: -40, burning: true }), 200);
+  assert.equal(r.flew, false);
+});
+test("level helm on the water: no flight", () => {
+  assert.equal(fly(FLIGHT.CRUISE, () => ({ pitch: 0, burning: true }), 200).flew, false);
+});
+test("an unpowered glide comes back down to the water", () => {
+  const r = fly(FLIGHT.CRUISE, (t) => ({ pitch: t < 80 ? -40 : 0, burning: false }));
+  assert.ok(r.flew && r.s.landed, "landed");
+  assert.ok(r.top > 10 && r.top < 30, `zoom top ${r.top.toFixed(1)}`);
+});
+test("the burning core holds her level near cruise, and she never passes the ceiling", () => {
+  const r = fly(FLIGHT.CRUISE, (t) => ({ pitch: t < 60 ? -40 : 0, burning: true }));
+  assert.ok(!r.s.landed, "still flying after a minute");
+  assert.ok(Math.abs(r.s.v - FLIGHT.CRUISE) / FLIGHT.CRUISE < 0.15, `speed ${(r.s.v * 20).toFixed(1)} b/s`);
+  const up = fly(FLIGHT.CRUISE, () => ({ pitch: -40, burning: true }), 2400);
+  assert.ok(up.top <= FLIGHT.CEILING + 3, `top ${up.top.toFixed(1)}`);   // vision: the few blocks her levelling takes
+});
