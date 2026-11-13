@@ -2810,10 +2810,13 @@ def glider_parts(b):
             z_ = zt_ + abs(min(abs(x_), hsm)) * math.tan(swq) + max(0.0, ybk - y_) * math.tan(rake_)
             st_.append(((x_, y_, z_), c_, (0, 0, 1), n_))
         loft(st_)
-        # every face of the casting, one thin gold plate
+        # every face of the casting: as one polygon mesh (Richard: "make it from a gold brick and just CNC it": one
+        # billet milled to its surface, no seams), or, for the viewer and as a fallback, one thin gold plate a face
+        KEEL_MESH = os.environ.get("KEEL_MESH", "1") != "0"
         mini = []
-        for (P0, P1, Q0, Q1), ins in cast_q:
-            mini += slab(P0, P1, Q0, Q1, SKIN, ins)
+        if not KEEL_MESH:
+            for (P0, P1, Q0, Q1), ins in cast_q:
+                mini += slab(P0, P1, Q0, Q1, SKIN, ins)
         b["_cast_n"] = len(cast_q)
         b["_cast_drop"] = (prof, rb, z0b, Lb)
         yr_, tail_y, tail_z = ybk, ybk, z0b + Lb                            # the blade meets its axis; the emitter at its tail
@@ -2862,8 +2865,9 @@ def glider_parts(b):
             bq.append(((0.0, y_, z_), ck * flare, (0, math.sin(rk) * 0, 1), (1.0, 0.0, 0.0)))
         n0 = len(cast_q)
         loft(bq)
-        for (P0, P1, Q0, Q1), ins in cast_q[n0:]:
-            mini += slab(P0, P1, Q0, Q1, SKIN, ins)
+        if not KEEL_MESH:
+            for (P0, P1, Q0, Q1), ins in cast_q[n0:]:
+                mini += slab(P0, P1, Q0, Q1, SKIN, ins)
     else:
         for (ya, ca, ta), (yb2, cb, tb) in (((ytop, cm * 1.3, 1.0), (ymid_m, cm, 0.8)), ((ymid_m, cm, 0.8), (ybot, cm * 0.85, 0.65))):
             mini += slab((0, ya, zc - ca / 2), (0, yb2, zc - cb / 2), (0, ya, zc + ca / 2), (0, yb2, zc + cb / 2), (ta + tb) / 2, (99, 0, zc))
@@ -2879,6 +2883,26 @@ def glider_parts(b):
         cb = next(x_ for x_ in bones if x_["name"] == "rig_glide_core")
         cb["cubes"] = cb["cubes"] + [{"origin": [-glow / 2, oy - glow / 2, oz + 1.0], "size": [glow, glow, 0.6], "uv": core_uv},
                                      {"origin": [-0.5, oy - 0.5, oz + 1.6], "size": [1.0, 1.0, 0.5], "pivot": [0, oy, oz + 1.85], "rotation": [0, 0, 45], "uv": core_uv}]
+    if b.get("sail") == "clam" and KEEL_MESH and cast_q:
+        # the milled keel: the casting's faces as one poly_mesh, both sides of each face (so no winding can hide it),
+        # coloured from the gold strip of the sheet (pixel UVs, v counted up from the sheet's foot)
+        _n, _d = b.get("_cast_n", 0), b.get("_cast_dy", 0)
+        pos, nor, uvs, polys = [], [], [[90.0, 128 - 125.5]], []
+        for i_, ((P0, P1, Q0, Q1), _ins) in enumerate(cast_q):
+            dd = _d if i_ < _n else 0
+            ring_ = [P0, P1, Q1, Q0]
+            ring_ = [[round(P_[0], 4), round(P_[1] + dd, 4), round(P_[2], 4)] for P_ in ring_]
+            u_ = [ring_[1][k] - ring_[0][k] for k in range(3)]; v_ = [ring_[3][k] - ring_[0][k] for k in range(3)]
+            nv = [u_[1] * v_[2] - u_[2] * v_[1], u_[2] * v_[0] - u_[0] * v_[2], u_[0] * v_[1] - u_[1] * v_[0]]
+            nn = math.sqrt(sum(c * c for c in nv)) or 1
+            nv = [round(c / nn, 4) for c in nv]
+            base = len(pos); pos += ring_
+            nor += [nv, [-c for c in nv]]
+            ni = len(nor) - 2
+            polys.append([[base + k, ni, 0] for k in range(4)])
+            polys.append([[base + k, ni + 1, 0] for k in (3, 2, 1, 0)])
+        bones.append({"name": "rig_glide_keel", "parent": "rig_glide_body", "pivot": [0, 0, 0],
+                      "poly_mesh": {"normalized_uvs": False, "positions": pos, "normals": nor, "uvs": uvs, "polys": polys}})
     if os.environ.get("KEEL_DUMP"):                                         # (the foil alone, for a look at it)
         _n, _d = b.get("_cast_n", 0), b.get("_cast_dy", 0)
         _q = [[[P_[0], P_[1] + (_d if i_ < _n else 0), P_[2]] for P_ in q_] for i_, (q_, _ins) in enumerate(cast_q)] if b.get("sail") == "clam" else []
@@ -2887,7 +2911,7 @@ def glider_parts(b):
     return bones
 
 
-GLIDE_BONES = ("rig_glide_body", "rig_glide_body_skin", "rig_glide_core", "rig_glide_tail", "rig_glide_tail_skin", "rig_glide_sail", "rig_glide_sail_skin",
+GLIDE_BONES = ("rig_glide_body", "rig_glide_body_skin", "rig_glide_keel", "rig_glide_core", "rig_glide_tail", "rig_glide_tail_skin", "rig_glide_sail", "rig_glide_sail_skin",
                *[f"rig_glide_{sd}{p_}" for sd in ("l", "r") for p_ in ("", "_turn", "_arch", "_skin", "_mid", "_mid_skin", "_out", "_out_skin", "_tip")])
 GLIDE_STRUTS = ("rig_glide_l_strut", "rig_glide_r_strut")   # shown only with her wings spread
 GLIDE_BONES = GLIDE_BONES + tuple(f"rig_glide_{w_}_{sd}{k_}{q_}" for w_ in ("sail", "plate") for sd in ("l", "r") for k_ in [""] + [f"_{k}" for k in range(8)] for q_ in ("", "_skin")) + tuple(f"rig_glide_mast_{k}" for k in range(8)) + ("rig_glide_tailtip", "rig_glide_tailtip_skin", "rig_glide_hstab", "rig_glide_hstab_skin", *[f"rig_glide_rud_{sd}{p_}{q_}" for sd in ("l", "r") for p_ in ("", "_mid", "_aft") for q_ in ("", "_skin")])

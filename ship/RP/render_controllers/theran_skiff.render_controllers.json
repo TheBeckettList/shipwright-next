@@ -450,6 +450,9 @@
           "rig_glide_body_skin": "q.property('shipwright:stage') >= 3"
         },
         {
+          "rig_glide_keel": "q.property('shipwright:stage') >= 3"
+        },
+        {
           "rig_glide_core": "q.property('shipwright:stage') >= 3"
         },
         {
