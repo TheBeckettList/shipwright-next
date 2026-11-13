@@ -311,24 +311,45 @@
             "-q.property('shipwright:mids') * 8"
           ]
         },
-        "rig_glide_tailset": {
+        "rig_glide_tailtip": {
           "position": [
             0,
             0,
             "-q.property('shipwright:mids') * 8 + 16 * (1 - q.property('shipwright:fold'))"
           ]
         },
-        "rig_glide_fin_l": {
+        "rig_glide_hstab": {
           "rotation": [
             0,
-            "-1 * q.property('shipwright:rudder')",
+            "1 * q.property('shipwright:rudder') / 1.6180",
             0
           ]
         },
-        "rig_glide_fin_r": {
+        "rig_glide_rud_l_mid": {
           "rotation": [
             0,
-            "-1 * q.property('shipwright:rudder')",
+            "1 * q.property('shipwright:rudder') / 1.6180 * 0.1723",
+            0
+          ]
+        },
+        "rig_glide_rud_l_aft": {
+          "rotation": [
+            0,
+            "1 * q.property('shipwright:rudder') / 1.6180 * 0.1723",
+            0
+          ]
+        },
+        "rig_glide_rud_r_mid": {
+          "rotation": [
+            0,
+            "1 * q.property('shipwright:rudder') / 1.6180 * 0.1723",
+            0
+          ]
+        },
+        "rig_glide_rud_r_aft": {
+          "rotation": [
+            0,
+            "1 * q.property('shipwright:rudder') / 1.6180 * 0.1723",
             0
           ]
         },
