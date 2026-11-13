@@ -1267,8 +1267,8 @@ test("every boat has a plan, a behaviour entity, a model and a name", async () =
     for (let L = lo; L <= hi; L++) assert.ok(beamRange(p, L)[0] <= beamRange(p, L)[1], `${p.id} beam range at ${L}`);
   }
   const plans = Object.values(PLANS).filter((p) => p.id !== "testship");
-  assert.equal(plans.length, 32, "twelve small boats, twelve medium ships and eight large ones (the Therans' three and the League's galleys with them)");
-  assert.equal(plans.filter((p) => p.yardLevel === 3).length, 8, "the large ones need a dry dock");
+  assert.equal(plans.length, 36, "thirteen small boats, thirteen medium ships and ten large ones (the Therans' and the League's with them: the League's -remes all great, its hemiolia and kerkouros ships, its keles and skaphe small)");
+  assert.equal(plans.filter((p) => p.yardLevel === 3).length, 10, "the large ones need a dry dock");
 });
 
 test("each boat builds from its own tradition's materials", () => {
@@ -3294,7 +3294,7 @@ test("a dry dock (level 3): a big dock dug 3 deep with keel blocks, where the gr
 
 test("large ships: drawn at four times the size, need a dry dock, and fit its basin", async () => {
   const large = Object.values(PLANS).filter((p) => p.yardLevel === 3);
-  assert.deepEqual(large.map((p) => p.id).sort(), ["baghlah", "carrack", "drua", "fuchuan", "league_trireme", "shuinsen", "skeid", "theran_flagship"]);
+  assert.deepEqual(large.map((p) => p.id).sort(), ["baghlah", "carrack", "drua", "fuchuan", "league_bireme", "league_monoreme", "league_trireme", "shuinsen", "skeid", "theran_flagship"]);
   for (const p of large) {
     assert.equal(p.modelScale, 4);
     const rec = newRecord(p, "k", 36);
@@ -3302,7 +3302,7 @@ test("large ships: drawn at four times the size, need a dry dock, and fit its ba
     assert.ok(h.half * 2 >= 28 && h.half * 2 <= 40, `${p.id}: hull length`);
     assert.ok(h.helmAt < 0 && -h.helmAt === h.half - 4, `${p.id}: helm one model block in from the stern`);
     rec.sections.rig = { sail: true, style: p.rigStyle };
-    if (p.rigFamily) assert.equal(computeHandling(rec).mastsAt.length, { skeid: 1, carrack: 3, baghlah: 2, fuchuan: 3, shuinsen: 3, drua: 1, theran_flagship: 3, league_trireme: 1 }[p.id]);
+    if (p.rigFamily) assert.equal(computeHandling(rec).mastsAt.length, { skeid: 1, carrack: 3, baghlah: 2, fuchuan: 3, shuinsen: 3, drua: 1, theran_flagship: 3, league_monoreme: 1, league_bireme: 1, league_trireme: 2 }[p.id]);
     const medium = Object.values(PLANS).find((q) => q.yardLevel === 2 && q.tradition === p.tradition);
     assert.ok(h.turnMax < computeHandling(newRecord(medium, "k", 18)).turnMax, `${p.id}: turns slower than its tradition's ${medium.id}`);
   }

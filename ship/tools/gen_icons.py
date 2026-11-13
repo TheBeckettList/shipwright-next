@@ -184,12 +184,14 @@ BOAT_WOOD = {
     "shuinsen": (226, 178, 172), "drua": (160, 115, 80),
     "theran_skiff": (232, 226, 210), "theran_ship": (232, 226, 210), "theran_flagship": (232, 226, 210),
     "league_monoreme": (150, 104, 62), "league_bireme": (150, 104, 62), "league_trireme": (150, 104, 62),
+    "league_hemiolia": (150, 104, 62), "league_kerkouros": (150, 104, 62), "league_keles": (150, 104, 62), "league_skaphe": (150, 104, 62),
 }
 BOAT_RIG = {"faering": "square", "longship": "square", "rowboat": "square", "cog": "square", "outrigger": "crab",
             "voyaging_canoe": "crab", "sewn_boat": "lateen", "dhow": "lateen", "sampan": "junk", "junk": "junk",
             "wasen": "square", "bezaisen": "square", "skeid": "square", "carrack": "square", "baghlah": "lateen",
             "fuchuan": "junk", "shuinsen": "square", "drua": "crab", "theran_ship": "square", "theran_flagship": "square",
-            "league_monoreme": "square", "league_bireme": "square", "league_trireme": "square"}
+            "league_monoreme": "square", "league_bireme": "square", "league_trireme": "square",
+            "league_hemiolia": "square", "league_kerkouros": "square", "league_keles": "square"}
 
 
 def render_boat_icon(pid):

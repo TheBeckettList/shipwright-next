@@ -66,6 +66,7 @@ const BUILT = {
   theran_skiff: ["flat", 1.5], theran_ship: ["flat", 1.5], theran_flagship: ["flat", 1.5],   // vision: the Therans' bulkheaded composite hulls read with the 144 rung (therans.md: max(1.5, L/144))
   faering: ["light", 1], longship: ["light", 1], skeid: ["light", 1],   // given: clinker, shell-first
   league_monoreme: ["light", 2], league_bireme: ["light", 2], league_trireme: ["light", 2],   // given: mortise-and-tenon, shell-first (league.md: Kyrenia, Olympias)
+  league_hemiolia: ["light", 2], league_kerkouros: ["light", 2], league_keles: ["light", 2], league_skaphe: ["light", 2],   // given: the League's small and ship-class hulls, built the same way
   sewn_boat: ["light", 2], dhow: ["light", 2],   // vision: sewn plank is built shell-first, so the light rung, though the dhow's section is drawn carvel
   outrigger: ["light", 1.5], voyaging_canoe: ["light", 1.5], drua: ["light", 1.5],   // given: the Pacific's sewn plank on dugout bases
   bark_canoe: ["light", 1], freight_canoe: ["light", 1], umiak: ["light", 0.5], kayak: ["light", 0.5],   // given: bark and skin over a light frame

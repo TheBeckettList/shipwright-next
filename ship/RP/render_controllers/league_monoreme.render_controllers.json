@@ -853,6 +853,12 @@
         },
         {
           "deck_crossbow": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 16), 2) == 1"
+        },
+        {
+          "deck_boat": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 512), 2) == 1"
+        },
+        {
+          "deck_sboat": "q.property('shipwright:stage') >= 5 && math.mod(math.floor(q.property('shipwright:mods') / 1024), 2) == 1"
         }
       ]
     },

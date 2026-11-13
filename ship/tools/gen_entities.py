@@ -18,7 +18,7 @@ BOATS = {
     "cog": "Cog", "freight_canoe": "Freight Canoe", "voyaging_canoe": "Voyaging Canoe", "dhow": "Dhow", "junk": "Junk",
     "bezaisen": "Bezaisen", "war_canoe": "War Canoe", "flatboat": "Flatboat", "umiak": "Umiak",
     "skeid": "Skeid", "carrack": "Carrack", "baghlah": "Baghlah", "fuchuan": "Fuchuan", "shuinsen": "Shuinsen", "drua": "Drua",
-    "league_monoreme": "Monoreme", "league_bireme": "Bireme", "league_trireme": "Trireme", "theran_skiff": "Theran Skiff", "theran_ship": "Theran Ship", "theran_flagship": "Theran Flagship",
+    "league_monoreme": "Monoreme", "league_bireme": "Bireme", "league_trireme": "Trireme", "league_hemiolia": "Hemiolia", "league_kerkouros": "Kerkouros", "league_keles": "Keles", "league_skaphe": "Skaphe", "theran_skiff": "Theran Skiff", "theran_ship": "Theran Ship", "theran_flagship": "Theran Flagship",
 }
 MEDIUM = ["longship", "cog", "freight_canoe", "voyaging_canoe", "dhow", "junk", "bezaisen", "war_canoe", "flatboat", "umiak"]
 # Seat heights to calibrate in game (/scriptevent shipwright:seat low|mid|high); mid is the default.

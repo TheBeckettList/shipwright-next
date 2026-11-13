@@ -639,16 +639,30 @@ BOATS.update({
 })
 
 
-# The League's galleys, the -remes: long, slim, carvel-built rowing ships of the inner sea, a bank of oars a side for
-# each size (one, two, three), a square sail for the passage, a three-bladed bronze ram at the waterline, the bow
-# raked over it and the stern sweeping up and curling in over the helm (the aphlaston). They row to fight and sail
-# only for the passage, so their sail is a little over half a sailing ship's (sail_share; plans.js sailShare).
+# The League's galleys, the -remes: long, slim rowing ships of the inner sea, built shell-first (mortise-and-tenon
+# planking edge to edge, the frames put in after: the Kyrenia wreck, the Olympias; drawn flush, as "carvel"), a bank of
+# oars a side for each size (one, two, three), a square sail for the passage, a three-bladed bronze ram at the
+# waterline, the bow raked over it with the painted eyes (ophthalmoi; given: the marble eyes from Piraeus) and the stern
+# sweeping up and curling forward over the helm into the fanned aphlaston. They row to fight and sail only for the
+# passage, so their sail is a little over half a sailing ship's (sail_share; plans.js sailShare). All three -remes are
+# great ships (D-004, design/s003-specs/league.md): each is sized by its route. The monoreme, a penteconter, rows on
+# tholes at her gunwale (no ports); the trireme's top bank, the thranites, rows from the outrigger (parexeiresia, B/phi^5
+# a side: the Olympias' 5.45 m beam over all) and she steps a boat-sail mast (the akateion) forward of her main. Their
+# ship-class and small craft by the need they meet: the hemiolia (the guard; a half file of oars forward over her full
+# file, Casson SSAW), the kerkouros (the coaster: beamy, decked over), the keles (the courier, single-banked) and the
+# skaphe (the ship's boat and lighter, oars only, open).
 GALLEY_BOW = dict(taper="pointed", rise=0.22, floor=0.2, stem="raked")
-GALLEY_STERN = dict(taper="pointed", rise=0.55, floor=0.3, stem="norse_tall")
-BOATS["league_monoreme"] = dict(section="carvel", F=8, side=11, oar=2.3, aspect=0.9, ports=True, banks=1, sail_share=0.55, bow=GALLEY_BOW, stern=GALLEY_STERN)
+GALLEY_STERN = dict(taper="pointed", rise=0.55, floor=0.3, stem="aphlaston")
+GALLEY = dict(oar=2.3, aspect=0.9, sail_share=0.55, eyes=True, bow=GALLEY_BOW, stern=GALLEY_STERN)
+BOATS["league_keles"] = dict(GALLEY, section="carvel", F=8, side=11, tholes=True, banks=1)
+BOATS["league_skaphe"] = dict(section="carvel", F=10.5, side=12, oar=1.55, aspect=0.9, tholes=True,
+                              bow=dict(taper="pointed", rise=0.2, floor=0.25, stem="raked_short"), stern=dict(taper="blunt", rise=0.15, floor=0.2, stem="raked_short"))
 BOATS.update({
-    "league_bireme": medium("carvel", 7, 0.62, oar=2.3, aspect=0.9, ports=True, banks=2, sail_share=0.55, bow=GALLEY_BOW, stern=GALLEY_STERN),
-    "league_trireme": large("carvel", 8, 0.62, oar=2.3, aspect=0.9, ports=True, banks=3, sail_share=0.55, bow=GALLEY_BOW, stern=GALLEY_STERN),
+    "league_hemiolia": medium("carvel", 7, 0.62, **GALLEY, ports=True, banks=1.5),
+    "league_kerkouros": medium("carvel", 5, 0.62, **dict(GALLEY, eyes=False), ports=True, banks=1),
+    "league_monoreme": large("carvel", 6, 0.62, **GALLEY, tholes=True, banks=1),
+    "league_bireme": large("carvel", 7, 0.62, **GALLEY, ports=True, banks=2),
+    "league_trireme": large("carvel", 8, 0.62, **GALLEY, ports=True, banks=3, parexeiresia=True, masts=[(-0.3, 0.55), (0.02, 1.0)]),
 })
 
 
@@ -686,11 +700,15 @@ K_BOAT = {"cog": FIB[10],                                  # given: frame-first,
           "fuchuan": FIB[11],                              # given: bulkheaded, the Quanzhou ship
           "shuinsen": FIB[10],                             # given: keeled, framed carvel (eastasian_pacific.md)
           "league_monoreme": FIB[12], "league_bireme": FIB[12], "league_trireme": FIB[12],   # given: mortise-and-tenon shells (Olympias)
+          "league_hemiolia": FIB[12], "league_kerkouros": FIB[12], "league_keles": FIB[12], "league_skaphe": FIB[12],
           "theran_skiff": FIB[11], "theran_ship": FIB[11], "theran_flagship": FIB[11]}       # vision: the Therans' moulded hulls, as bulkheaded
 # Decks by class (chief.md section 3): n = floor((D - 1) / 2) decks (a bulwark and a 2-block tween each); full (n >= 1),
 # half (the ends) on undecked ships, open on small boats. Culture readings: the junk's full deck (eastasian_pacific.md),
 # the trireme's katastroma (league.md), the Norse deck boards on the biti at the waterline (northern.md, Gokstad).
-DECK_OVERRIDE = {"junk": "full", "league_trireme": "full", "skeid": "biti", "longship": "biti"}
+# The League's (league.md section 3): the trireme's katastroma and the bireme's fighting deck full, the kerkouros decked
+# over as a cargo hull, the monoreme half-decked on her ends (her hold between the benches).
+DECK_OVERRIDE = {"junk": "full", "league_trireme": "full", "league_bireme": "full", "league_kerkouros": "full", "league_monoreme": "half",
+                 "skeid": "biti", "longship": "biti"}
 snap_w = lambda v: round(v * 2) / 2                       # derived: the half world pixel, finish()'s grid
 
 
@@ -762,6 +780,23 @@ def details(b, hw, fy, sy, z0, L, mid=False):
     return out
 
 
+def outrigger_reach(b):
+    """How far the trireme's outrigger (parexeiresia) stands out from her side, model px: a beam over phi^5 (given check:
+    the Olympias, 4.6 m over her hull, 5.45 over all; league.md section 3); none on other hulls."""
+    return 16 * b["_law"]["B"] / PHI ** 5 / b.get("scale", 1) if b.get("parexeiresia") else 0
+
+
+def parexeiresia(b, z0):
+    """The outrigger along a mid section, both models: a box beam each side at the sheer, from inside the shell out to
+    its reach, its depth the reach over phi (at least two world pixels); the thranites' oars work on its outer edge."""
+    ob = outrigger_reach(b)
+    if not ob:
+        return []
+    o, sh, sy = outer_of(b["section"], SCALE), th(b["section"], "shell"), b["side"] + b["wash"]
+    h = max(2 / SCALE, ob / PHI)
+    return [cube([b["F"] + o - sh if sx > 0 else -(b["F"] + o + ob), sy - h, z0], [ob + sh, h, SEG]) for sx in (1, -1)]
+
+
 # ---------------------------------------------------------------- ends
 def end_shape(b, end, t):
     F, side = b["F"], b["side"]
@@ -801,6 +836,8 @@ def stem_curve(kind, s, hw, fy, sy):
         return rise_and_curl(1.0, 0.42, 0.16, 3.6)
     if kind == "norse_tall":
         return rise_and_curl(1.3, 0.5, 0.18, 3.6)
+    if kind == "aphlaston":                    # the galley's stern: up, raked out, curling forward over the helm (APHLASTON)
+        return rise_and_curl(*APHLASTON)
     if kind == "recurve":
         return rise_and_curl(0.7, 0.32, 0.14, 2.6)
     if kind in ("raked", "raked_short"):
@@ -818,6 +855,29 @@ def stem_curve(kind, s, hw, fy, sy):
     if kind == "end_board":
         return line(4, lambda t: (0.12 * s * t, fy + (h + 0.4 * s) * t))
     return line(2, lambda t: (0.0, fy + (h + 0.12 * s) * t))        # plumb
+
+
+# The aphlaston (given: the galleys on Attic vases and the Lenormant relief): the sternpost sweeps up a side height over
+# the sheer, raked out, and turns forward through a little over a quarter turn, its head fanned into a crest of thin
+# timbers splayed out from the curl (height, lean, curl radius, turn: of the side height, radians)
+APHLASTON = (1.15, 0.55, 0.24, 2.2)
+FAN = 5                                       # vision: the aphlaston's fanned timbers
+
+
+def aphlaston_fan(s, sy, tip, sign, w):
+    """The aphlaston's crest: thin timbers splayed out from the curl's centre along its outer edge, each a side height
+    over phi^3 long."""
+    height, lean, r, turn = APHLASTON
+    top, zt = sy + height * s, lean * s
+    cz, out = zt - r * s, []
+    for k in range(FAN):
+        a = turn * (0.35 + 0.65 * k / (FAN - 1))      # spread over the curl's outer arc, from its rise to its head
+        r0, r1 = r * s * 0.9, r * s + s / PHI ** 3
+        z0, y0 = cz + r0 * math.cos(a), top + r0 * math.sin(a)
+        z1, y1 = cz + r1 * math.cos(a), top + r1 * math.sin(a)
+        Z = lambda dz: tip + sign * dz
+        out += slab((-w / 2, y0, Z(z0)), (w / 2, y0, Z(z0)), (-w / 2, y1, Z(z1)), (w / 2, y1, Z(z1)), max(0.5, 0.06 * s), (0, y0 - 99, Z(cz)))
+    return out
 
 
 def stem(b, end, sign, tip, hw, fy, sy):
@@ -852,6 +912,8 @@ def stem(b, end, sign, tip, hw, fy, sy):
         reach = min(za, zb)
         if hi > lo and reach > 0.2:
             out.append(cube([-w / 2 + 0.15, lo, at(tip, sign, -0.6, reach + 0.6)], [w - 0.3, hi - lo + 0.2, reach + 0.6]))
+    if kind == "aphlaston":
+        out += aphlaston_fan(s, sy, tip, sign, w * 0.6)
     if kind == "end_board":                                 # the outrigger's board across the end, over the stem
         out.append(cube([-0.35 * F, sy + 0.25 * s, at(tip, sign, 0.05 * s, 1)], [0.7 * F, 0.22 * s, 1]))
     if kind == "lug":
@@ -1165,16 +1227,21 @@ def parts(b):
     # Each oar runs from its handle inboard (where the rower, or the power linkage, works it) out
     # through the oarlock. Thickness is drawn at true size (see TRUE_SIZE): only the length grows.
     inb = d["oar_inboard"]
+    ob = outrigger_reach(b)                        # the trireme's top bank works from her outrigger's outer edge
+    banks = b.get("banks", 1)
     for i in range(MAX_OARS):
         z = -(i + 0.5) * SEG
         for sname, sx in (("r", -1), ("l", 1)):
             lock = (F + 0.5) * sx
             shaft0 = lock - inb if sx > 0 else lock - ol
             blade0 = lock + ol - blade if sx > 0 else lock - ol
-            oars = [cube([shaft0, side - 1.5, z - 0.5], [ol + inb, 1, 1]), cube([blade0, side - 1.75, z - 0.15 * ol], [blade, 0.5, 0.3 * ol])]
+            oars = [cube([shaft0 + ob * sx, side - 1.5, z - 0.5], [ol + inb, 1, 1]), cube([blade0 + ob * sx, side - 1.75, z - 0.15 * ol], [blade, 0.5, 0.3 * ol])]
             # A galley's further banks: each lower one through its own ports, staggered aft a third of a room
-            # (the rowers sit in echelon, as in the trireme), its oars a little shorter.
-            for k in range(1, b.get("banks", 1)):
+            # (the rowers sit in echelon, as in the trireme), its oars a little shorter. A hemiolia's half bank
+            # (banks 1.5) rows only in her forward half: her aft benches clear to strike the mast (Casson, SSAW).
+            for k in range(1, math.ceil(banks)):
+                if k + 1 > banks and i < MAX_OARS // 2:
+                    continue
                 dy, dz_, sh_ = -k * 0.26 * side, k * SEG / 3, 1 - 0.12 * k
                 oars.append(cube([shaft0 + (0 if sx > 0 else ol * (1 - sh_)), side - 1.5 + dy, z - 0.5 + dz_], [(ol + inb) * sh_, 1, 1]))
                 bl0 = lock + ol * sh_ - blade if sx > 0 else lock - ol * sh_
@@ -1497,7 +1564,7 @@ def hull_bones(b, simple):
             for zc in spots:
                 frame += frames(b, F, FY, side, zc)
         plank = section(b, F, FY, side, z0, SEG) + deck_slabs(b, (F, FY, side), (F, FY, side), z0, z0 + SEG) \
-            + ([] if simple else details(b, F, FY, side, z0, SEG, mid=True))
+            + ([] if simple else details(b, F, FY, side, z0, SEG, mid=True)) + parexeiresia(b, z0)
         bones += layer_bones(name, pivot, keel, frame, plank)
         zones["mid"] += [name, f"{name}_keel", f"{name}_frame", f"{name}_plank"]
         if not simple:
@@ -1571,6 +1638,15 @@ def ram_cubes(pid, b):
             out.append(box([-w / 2, y0 - h / 2, z0 - (k + 1) * L / n], [w, h, L / n + 0.1]))
         out.append(box([-0.6 * F / 2, y0 - 0.22 * s, z0 - 0.6], [0.6 * F, 0.44 * s, 1.2]))           # the collar
     elif style == "fin":
+        if b.get("eyes"):                       # the painted eyes (ophthalmoi) on the bow's flanks, over the ram, two-thirds up the side
+            t_ = 0.72
+            ehw, efy, esy = end_shape(b, end, t_)
+            ey = efy + 0.62 * (esy - efy)
+            ex = next((x for x, y in profile(b, ehw, efy, esy) if y >= ey), ehw)
+            ez = -max_mids(b) * SEG - END * t_
+            d, dt = max(2 / SCALE, 0.14 * s), 1 / SCALE        # a side height over seven, at least two world pixels
+            for sx in (-1, 1):
+                out.append(box([ex - dt if sx > 0 else -ex - dt, ey - d / 2, ez - d / 2], [2 * dt, d, d]))
         L = 0.6 * s
         out.append(box([-0.22 * F, y0 - 0.2 * s, z0 - 0.45 * L], [0.44 * F, 0.4 * s, 0.45 * L + 0.6]))  # the cowl
         for dy in (-0.15, 0.0, 0.15):                                                                     # three blades

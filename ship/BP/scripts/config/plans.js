@@ -168,20 +168,44 @@ export const PLANS = {
     fixedModules: ["ram", "navigation", "lookout", "full_deck", "bulkheads", "sewn_hull", "ice_runners", "hold", "bunk", "diving_bell", "crossbow"],
   }),
   // the League's galleys (Waterworld): the -remes, a bank of oars a side for each size, a square sail for the passage,
-  // the three-bladed bronze ram. The League builds them in its own yards and sells them (buyOnly).
-  league_monoreme: plan({
-    id: "league_monoreme", name: "Monoreme", typicalLB: 6, tradition: "league", keelWood: "oak", buyOnly: true,
-    lengthRange: [6, 10], lengthToBeam: [5, 7], fullness: 0.42, rigFamily: "square", rigStyle: "square", fastening: "rivets",
+  // the three-bladed bronze ram. The League builds them in its own yards and sells them (buyOnly). The -remes are all
+  // great ships (D-004, league.md): the League sits in the doldrums and carries to Thera's westerlies, so oars at home
+  // and freeboard at the far end; each takes its route's length (world/boatsizes.js routeLength). Their ship-class
+  // and small craft are chosen by the job: the hemiolia the guard, the kerkouros the coaster, the keles the courier,
+  // the skaphe the lighter and ship's boat (world/league.js ROLES)
+  league_keles: plan({
+    id: "league_keles", name: "Keles", typicalLB: 6, tradition: "league", keelWood: "oak", buyOnly: true,
+    lengthRange: [8, 10], lengthToBeam: [5, 7], fullness: 0.42, rigFamily: "square", rigStyle: "square", fastening: "rivets",
     propulsion: "oars", rudder: "steering_oar", banks: 1, sailShare: 0.55,
   }),
+  league_skaphe: plan({
+    id: "league_skaphe", name: "Skaphe", typicalLB: 3.25, tradition: "league", keelWood: "oak", buyOnly: true,
+    lengthRange: [5, 8], lengthToBeam: [2.6, 4], fullness: 0.55, rigFamily: null, fastening: "rivets",
+    propulsion: "oars", rudder: "steering_oar", banks: 1,
+  }),
+  league_hemiolia: plan({
+    id: "league_hemiolia", name: "Hemiolia", typicalLB: 7, tradition: "league", keelWood: "oak", yardLevel: 2, modelScale: 2, endLength: 3,
+    lengthRange: [16, 21], lengthStep: 2, lengthToBeam: [6, 8], fullness: 0.42, buyOnly: true,
+    rigFamily: "square", rigStyle: "square", fastening: "rivets", propulsion: "oars", rudder: "steering_oar", largeAtLength: 0, banks: 1.5, sailShare: 0.55,
+  }),
+  league_kerkouros: plan({
+    id: "league_kerkouros", name: "Kerkouros", typicalLB: 5, tradition: "league", keelWood: "oak", yardLevel: 2, modelScale: 2, endLength: 3,
+    lengthRange: [18, 22], lengthStep: 2, lengthToBeam: [4, 6], fullness: 0.5, buyOnly: true,
+    rigFamily: "square", rigStyle: "square", fastening: "rivets", propulsion: "oars", rudder: "steering_oar", largeAtLength: 0, banks: 1, sailShare: 0.55,
+  }),
+  league_monoreme: plan({
+    id: "league_monoreme", name: "Monoreme", typicalLB: 6, tradition: "league", keelWood: "oak", yardLevel: 3, modelScale: 4, endLength: 6,
+    lengthRange: [28, 30], lengthStep: 2, lengthToBeam: [5, 7], fullness: 0.42, buyOnly: true,
+    rigFamily: "square", rigStyle: "square", fastening: "rivets", propulsion: "oars", rudder: "steering_oar", largeAtLength: 0, banks: 1, sailShare: 0.55,
+  }),
   league_bireme: plan({
-    id: "league_bireme", name: "Bireme", typicalLB: 7, tradition: "league", keelWood: "oak", yardLevel: 2, modelScale: 2, endLength: 3,
-    lengthRange: [14, 22], lengthStep: 2, lengthToBeam: [6, 8], fullness: 0.42, buyOnly: true,
+    id: "league_bireme", name: "Bireme", typicalLB: 7, tradition: "league", keelWood: "oak", yardLevel: 3, modelScale: 4, endLength: 6,
+    lengthRange: [30, 34], lengthStep: 2, lengthToBeam: [6, 8], fullness: 0.42, buyOnly: true,
     rigFamily: "square", rigStyle: "square", fastening: "rivets", propulsion: "oars", rudder: "steering_oar", largeAtLength: 0, banks: 2, sailShare: 0.55,
   }),
   league_trireme: plan({
     id: "league_trireme", name: "Trireme", typicalLB: 8, tradition: "league", keelWood: "oak", yardLevel: 3, modelScale: 4, endLength: 6,
-    lengthRange: [30, 38], lengthStep: 4, lengthToBeam: [7, 9], fullness: 0.4, buyOnly: true,
+    lengthRange: [36, 38], lengthStep: 2, lengthToBeam: [7, 9], fullness: 0.4, buyOnly: true,
     rigFamily: "square", rigStyle: "square", fastening: "rivets", propulsion: "oars", rudder: "steering_oar", largeAtLength: 0, banks: 3, sailShare: 0.55,
   }),
   skeid: plan({

@@ -58,7 +58,7 @@ export const TRADITIONS = {
   east_asian: { name: "East Asian", boat: "Sampan" },
   arctic: { name: "Arctic", boat: "Kayak" },
   therans: { name: "Theran", boat: "Theran Skiff" },
-  league: { name: "League", boat: "Monoreme" },
+  league: { name: "League", boat: "Keles" },
 };
 
 // Arctic is learned from bones plus a hide, not wood.
