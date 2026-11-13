@@ -2777,26 +2777,19 @@ def glider_parts(b):
         # stabs"; "widen the h stab so it's a real foil"; "make the rudders again swept and not taper up, align with the
         # hull line"): a flat stab, the wing's shape at 1/phi, and from each tip a fin dropping down, canted out and swept
         # aft as her rudders are, an even chord, its root along the stab's line
+        # (Richard: "do the h and v stabs again: they're a box, not a capital pi"): the fins hang from the stab's very
+        # tips, flush, as her rudders hang from her stab's: the stab tapers straight to a tip whose chord is the fins'
         zt_ = z0b + Lb * (1 - 1 / PHI ** 2)
-        hsm, csm = Lm / PHI, c0m / PHI                                      # vision: 1/phi of the wing's span and chord
+        hsm, csm = Lm / PHI ** 2, c0m / PHI                                 # vision: half span 1/phi^2 of the wing's, chord 1/phi
+        cft = csm / PHI                                                     # the tip's chord, and the fins'
         for sx in (-1, 1):
-            st_ = []
-            for u in US:
-                c_ = chord_(u, csm)
-                st_.append((sx * hsm * u, ybk, zt_ + hsm * u * math.tan(swq) + (csm - c_) * 0.75, c_))
+            st_ = [(sx * hsm * u, ybk, zt_ + hsm * u * math.tan(swq), csm + (cft - csm) * u) for u in (0.0, 0.5, 1.0)]
             mini += cast_surface(st_, 0.5, (0, ybk - 99, zt_))
         hf = max(3.0, km_ * 22)                                             # vision: the fins' depth, her rudders' at 1/phi^3
         cant_, rake_ = math.atan(1 / PHI ** 3), math.atan(1 / PHI ** 2)
-        uf = 1 / PHI                                                        # the fins hang from the stab at 1/phi of its span
         for sx in (-1, 1):
-            c_root = chord_(uf, csm)
-            x0_, z0_ = sx * hsm * uf, zt_ + hsm * uf * math.tan(swq) + (csm - c_root) * 0.75
-            cf = c_root                                                     # an even chord, the stab's there
-            fin = []
-            for k in range(6):                                              # down the fin, in sixths
-                f = k / 5
-                fin.append((x0_ + sx * hf * f * math.tan(cant_), ybk + 0.3 - hf * f, z0_ + hf * f * math.tan(rake_), cf))
-            # the fin's stations run down, not out: lay them as the wing's, with x and y swapped in role
+            x0_, z0_ = sx * hsm, zt_ + hsm * math.tan(swq)
+            fin = [(x0_ + sx * hf * (k / 5) * math.tan(cant_), ybk + 0.3 - hf * (k / 5), z0_ + hf * (k / 5) * math.tan(rake_), cft) for k in range(6)]
             for (xa, ya, la, ca), (xb_, yb2, lb, cb) in zip(fin, fin[1:]):
                 mini += slab((xa, ya + LAP, la), (xb_, yb2 - LAP, lb), (xa, ya + LAP, la + ca), (xb_, yb2 - LAP, lb + cb), 0.5, (0, ybk, la - 99))
         # fillets: where the wing and the stab grow from the drop, a wedge each side over their roots
