@@ -2548,7 +2548,7 @@ def glider_parts(b):
         Lp = 16 * PHI ** 4                                                    # vision: a plate 6.85 blocks long
         c0p, c1p = 16 * PHI ** 2, 16 * PHI                                    # vision: its chord at the root and the tip
         swp = Lp / PHI ** 3                                                   # vision: its leading edge swept back atan 1/phi^3
-        b["_plates"] = dict(L=Lp, area=2 * Lp * (c0p + c1p) / 2 / 256)       # derived: both plates' area, m^2 (glide.js's WINGS)
+        b["_plates"] = dict(L=Lp, area=2 * Lp * (c0p + c1p) / 2 / 256, c0=c0p, c1=c1p, swp=swp)   # derived: both plates' area, m^2 (glide.js's WINGS)
         cp = lambda u: c0p + (c1p - c0p) * u
         bow_ = lambda u, v: cp(u) / PHI ** 4 / 2 * math.sin(math.pi * v) ** 0.7 * (0.4 + 0.6 * math.sin(math.pi * (0.5 + 0.5 * u)))   # its section's bow
         pre = [float(v) for v in os.environ.get("CLAM_PREVIEW", "1,0").split(",")]   # (stills: the sail's share, the cam)
@@ -2724,6 +2724,46 @@ def glider_parts(b):
             (F_, Rt_), (Ff_, Rf_) = b["_rud_FR"][sd], b["_rud_feet"][sd]
             mini += slab(T(F_), T(Ff_), T(Rt_), T(Rf_), 0.5, (0, T((0, ymid, 0))[1] - 99, T(F_)[2]))
         mini += slab(T(FRr[0]), T(FRl[0]), T(FRr[1]), T(FRl[1]), 0.5, (0, T((0, ymid, 0))[1] + 99, T(FRl[0])[2]))
+    if b.get("sail") == "clam" and b.get("_plates") and b.get("_rud_FR"):
+        # simpler (Richard: "make it look way simpler geometry, and mirror the craft's wings and stab setup, just small;
+        # it needs an h stab for lift on the tail anyway"; "make the fuselage a simplified one, like a normal drop keel
+        # shape; then on the rear, have the emitter for the power source"): a teardrop bulb, her plates' wing on it at
+        # 1/phi^3, and at its tail a level stab with two fins on its tips, her rudders mirrored (up, canted out)
+        pl, km_ = b["_plates"], km
+        Lb = km_ * LB                                                       # derived: the bulb, her length at 1/phi^3
+        rb = Lb / (2 * PHI ** 3)                                            # vision: a drop's fineness, its girth 1/phi^3 of its length
+        z0b = zc - Lb / PHI ** 2                                            # its nose: its wing at the third of its length
+        ybk = yb                                                            # its axis, the wing's plane
+        prof = [(0.0, 0.25), (0.1, 0.8), (1 / PHI ** 2, 1.0), (1 / PHI, 0.72), (1.0, 0.18)]   # vision: a drop, full at 0.38
+        nf = 6
+        ring_ = lambda f, r: [(r * rb * math.cos(2 * math.pi * (k + 0.5) / nf), ybk + r * rb * math.sin(2 * math.pi * (k + 0.5) / nf), z0b + Lb * f) for k in range(nf)]
+        mini = []
+        for (f0, r0), (f1, r1) in zip(prof, prof[1:]):
+            A_, B_ = ring_(f0, r0), ring_(f1, r1)
+            for k in range(nf):
+                mini += slab(A_[k], A_[(k + 1) % nf], B_[k], B_[(k + 1) % nf], 0.5, (0, ybk, z0b + Lb * (f0 + f1) / 2))
+        # its wing: her plates' planform at 1/phi^3, out from the bulb, in thirds
+        c0m, c1m, sm, Lm = km_ * pl["c0"], km_ * pl["c1"], km_ * pl["swp"], km_ * (pl["L"] + W)
+        zle = zc - c0m / 2
+        for sx in (-1, 1):
+            for j in range(3):
+                u0, u1 = j / 3, (j + 1) / 3
+                ca, cb = c0m + (c1m - c0m) * u0, c0m + (c1m - c0m) * u1
+                xa, xb_ = sx * Lm * u0, sx * Lm * u1
+                mini += slab((xa, ybk, zle + sm * u0), (xb_, ybk, zle + sm * u1), (xa, ybk, zle + sm * u0 + ca), (xb_, ybk, zle + sm * u1 + cb), 0.6, (0, ybk - 99, zle))
+        # its tail: a level stab across the bulb's tail, a fin up from each tip, canted out as her rudders are down
+        zt_ = z0b + Lb * (1 - 1 / PHI ** 3)
+        hsm = max(2.5, km_ * 2 * 16 * 1.5 / 2 / PHI)                        # vision: its half span, at least 2.5 px to read
+        csm = max(2.0, km_ * 16 * PHI)                                      # vision: its chord
+        mini += slab((-hsm, ybk, zt_), (hsm, ybk, zt_), (-hsm * 0.8, ybk, zt_ + csm), (hsm * 0.8, ybk, zt_ + csm), 0.5, (0, ybk - 99, zt_))
+        hf = max(3.0, km_ * 22)                                             # vision: the fins' height, her rudders' depth at 1/phi^3
+        cant_ = math.atan(1 / PHI ** 3)
+        for sx in (-1, 1):
+            A_ = (sx * hsm * 0.9, ybk, zt_)
+            T_ = (A_[0] + sx * hf * math.tan(cant_), ybk + hf, zt_ + hf / PHI ** 2)
+            mini += slab(A_, T_, (A_[0], ybk, zt_ + csm), (T_[0], T_[1], T_[2] + csm / PHI), 0.5, (0, ybk, zt_ - 99))
+        yr_, tail_y, tail_z = ybk, ybk, z0b + Lb                            # the mast meets its axis; the emitter at its tail
+        b["_bulb_rb"] = rb
     # dropped (Richard: "drop the keel and foil and resize in turn with the rudders as they are"): its midline down to
     # the rudders' feet, the mast running down with it
     if b.get("tail") == "stealth":
@@ -2738,14 +2778,28 @@ def glider_parts(b):
     ytop, ybot = cy(tk) - hd(tk) + 0.5, yr_
     cm = km * cr / PHI
     ymid_m = (ytop + ybot) / 2
-    for (ya, ca, ta), (yb2, cb, tb) in (((ytop, cm * 1.3, 1.0), (ymid_m, cm, 0.8)), ((ymid_m, cm, 0.8), (ybot, cm * 0.85, 0.65))):
-        mini += slab((0, ya, zc - ca / 2), (0, yb2, zc - cb / 2), (0, ya, zc + ca / 2), (0, yb2, zc + cb / 2), (ta + tb) / 2, (99, 0, zc))
+    if b.get("sail") == "clam":
+        # her keel blade as her rudders are (Richard: "shape the keel more like the rudder geometry to match it, not the
+        # materials, but the less stepped, more swept"): one straight blade of their chord, raked aft at their
+        # atan 1/phi^2, its foot on the bulb at the wing's root, its head into her hull; square to its rake, so it is one
+        # true piece with no steps
+        rk = math.atan(1 / PHI ** 2)
+        ck = 16 / PHI                                                       # vision: the rudders' racing chord
+        dn = [0, -math.cos(rk), math.sin(rk)]                               # down the blade: raked aft
+        ch = [0, math.sin(rk), math.cos(rk)]                                # along its chord, square to the rake
+        hk = (ytop + 1.5 - ybot) / math.cos(rk)                             # its length, from inside her hull to the bulb
+        foot = (0, ybot, zc - ck / 2)
+        head = tuple(foot[i] - hk * dn[i] for i in range(3))
+        mini += slab(head, foot, tuple(head[i] + ck * ch[i] for i in range(3)), tuple(foot[i] + ck * ch[i] for i in range(3)), 0.9, (99, 0, zc))
+    else:
+        for (ya, ca, ta), (yb2, cb, tb) in (((ytop, cm * 1.3, 1.0), (ymid_m, cm, 0.8)), ((ymid_m, cm, 0.8), (ybot, cm * 0.85, 0.65))):
+            mini += slab((0, ya, zc - ca / 2), (0, yb2, zc - cb / 2), (0, ya, zc + ca / 2), (0, yb2, zc + cb / 2), (ta + tb) / 2, (99, 0, zc))
     if b.get("tail") == "stealth":
         # its power outlet (Richard: "on the rear point of the keel fuselage, have a kinda obvious power outlet too, like
         # how furnaces, smokers and blast furnaces power others"): a gold nozzle flaring aft from the spindle's point, and
         # in its mouth a lit face of her core, the asterion's light, there to feed whatever she tows or docks to
         oz, oy = outlet[2], outlet[1] + dy
-        rn = 1.0                                                            # vision: the nozzle's throat
+        rn = b.get("_bulb_rb", 5) * 0.18 if b.get("_bulb_rb") else 1.0     # vision: the nozzle's throat, the drop's tail
         mini += strut((0, oy, oz - 1.5), (0, oy, oz + 0.6), rn)              # its throat
         mini += strut((0, oy, oz + 0.6), (0, oy, oz + 1.4), rn * PHI)        # its flared lip
         glow = 1.2 * PHI
