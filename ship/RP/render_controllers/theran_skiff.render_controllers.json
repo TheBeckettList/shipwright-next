@@ -471,6 +471,12 @@
           "rig_glide_l_skin": "q.property('shipwright:stage') >= 3"
         },
         {
+          "rig_glide_l_mid": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_l_mid_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
           "rig_glide_l_out": "q.property('shipwright:stage') >= 3"
         },
         {
@@ -483,10 +489,22 @@
           "rig_glide_r_skin": "q.property('shipwright:stage') >= 3"
         },
         {
+          "rig_glide_r_mid": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_r_mid_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
           "rig_glide_r_out": "q.property('shipwright:stage') >= 3"
         },
         {
           "rig_glide_r_out_skin": "q.property('shipwright:stage') >= 3"
+        },
+        {
+          "rig_glide_l_strut": "q.property('shipwright:stage') >= 3 && q.property('shipwright:fold') < 0.5"
+        },
+        {
+          "rig_glide_r_strut": "q.property('shipwright:stage') >= 3 && q.property('shipwright:fold') < 0.5"
         },
         {
           "tt_rig_square_a": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) && q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 1 && q.property('shipwright:stage') >= 5 && q.property('shipwright:sail_fill') > 0"

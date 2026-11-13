@@ -146,8 +146,18 @@ def export(pid, with_uv=False, mids=None, names=False):
            json.loads((ROOT / f"RP/models/entity/{pid}.geo.json").read_text())["minecraft:geometry"]}
     out, mf, tf = [], G.mast_factors(b), G.mast_thickness(b)
     for gid in (".launched", ".fittings", ".rig", ".outfit"):
+        byname = {bn["name"]: bn for bn in geo[gid]["bones"]}
+        def ancestors(bone):                             # the turned bones above this one, nearest first (the game turns
+            out_, p_ = [], byname.get(bone.get("parent"))  # a bone's cubes by its own rotation, then by each parent's)
+            while p_:
+                if any(p_.get("rotation", [0, 0, 0])):
+                    out_.append((p_["pivot"], R_of(p_["rotation"])))
+                p_ = byname.get(p_.get("parent"))
+            return out_
         for bone in geo[gid]["bones"]:
             n = bone["name"]
+            chain = ancestors(bone)
+            up = lambda q: [*__import__("functools").reduce(lambda q_, pr: turn(q_, [-pr[0][0], pr[0][1], pr[0][2]], pr[1]), chain, q)]
             if gid == ".outfit" and (n != "ram" or not pid.startswith(("league_", "theran_"))):
                 continue                                 # D-005: a ram only where it was used (unfitted ships show none)
             rows = (b.get("ports") or b.get("banks")) and re.match(r"oar_(\d+)_[rl]$", n) and int(n.split("_")[1]) < mids
@@ -203,12 +213,15 @@ def export(pid, with_uv=False, mids=None, names=False):
                             q = turn(q, [-cp[0], cp[1], cp[2]], Rc)
                         if R:
                             q = turn(q, [-piv[0], piv[1], piv[2]], R)
+                        q = up(q) if chain else q
                         flat += [round(q[0] * hs / 16, 3), round((q[1] * ys + lift) / 16, 3), round((q[2] + dz) * hs / 16, 3)]
                     face = c["uv"]["west" if axis == "z" else "north"]
                     out.append(["cloth", k_, u0, u1] + flat + ([[*face["uv"], *face["uv_size"]]] if with_uv else []))
                     tags.append([n, gid[1:]])
                     continue
                 pts = corners(c, piv, rot, grow)
+                if chain:
+                    pts = [up(q) for q in pts]
                 flat = []
                 for (x, y, z) in pts:
                     flat += [round(x * hs / 16, 3), round((y * ys + lift) / 16, 3), round((z + dz) * hs / 16, 3)]
