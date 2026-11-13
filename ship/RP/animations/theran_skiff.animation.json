@@ -293,7 +293,7 @@
         "rig_glide_sail": {
           "position": [
             0,
-            0,
+            "-(1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 109.666",
             "-q.property('shipwright:mids') * 8"
           ]
         },
@@ -314,83 +314,83 @@
         "rig_glide_sail_l_0": {
           "scale": [
             1,
-            "math.clamp(math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold')) * 3 - 0, 0, 1)",
+            "math.clamp(1 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
             1
           ]
         },
         "rig_glide_sail_l_1": {
           "scale": [
             1,
-            "math.clamp(math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold')) * 3 - 1, 0, 1)",
+            "math.clamp(2 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
             1
           ]
         },
         "rig_glide_sail_l_2": {
           "scale": [
             1,
-            "math.clamp(math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold')) * 3 - 2, 0, 1)",
+            "math.clamp(3 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
             1
           ]
         },
         "rig_glide_sail_r_0": {
           "scale": [
             1,
-            "math.clamp(math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold')) * 3 - 0, 0, 1)",
+            "math.clamp(1 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
             1
           ]
         },
         "rig_glide_sail_r_1": {
           "scale": [
             1,
-            "math.clamp(math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold')) * 3 - 1, 0, 1)",
+            "math.clamp(2 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
             1
           ]
         },
         "rig_glide_sail_r_2": {
           "scale": [
             1,
-            "math.clamp(math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold')) * 3 - 2, 0, 1)",
+            "math.clamp(3 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
             1
           ]
         },
         "rig_glide_plate_l_0": {
           "scale": [
-            "math.clamp((1 - q.property('shipwright:fold')) * 3 - 0, 0, 1)",
+            "math.clamp(1 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
             1,
             1
           ]
         },
         "rig_glide_plate_l_1": {
           "scale": [
-            "math.clamp((1 - q.property('shipwright:fold')) * 3 - 1, 0, 1)",
+            "math.clamp(2 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
             1,
             1
           ]
         },
         "rig_glide_plate_l_2": {
           "scale": [
-            "math.clamp((1 - q.property('shipwright:fold')) * 3 - 2, 0, 1)",
+            "math.clamp(3 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
             1,
             1
           ]
         },
         "rig_glide_plate_r_0": {
           "scale": [
-            "math.clamp((1 - q.property('shipwright:fold')) * 3 - 0, 0, 1)",
+            "math.clamp(1 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
             1,
             1
           ]
         },
         "rig_glide_plate_r_1": {
           "scale": [
-            "math.clamp((1 - q.property('shipwright:fold')) * 3 - 1, 0, 1)",
+            "math.clamp(2 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
             1,
             1
           ]
         },
         "rig_glide_plate_r_2": {
           "scale": [
-            "math.clamp((1 - q.property('shipwright:fold')) * 3 - 2, 0, 1)",
+            "math.clamp(3 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
             1,
             1
           ]
@@ -398,34 +398,34 @@
         "rig_glide_mast_0": {
           "scale": [
             1,
-            "math.clamp(math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold')) * 3 - 0, 0, 1)",
+            "math.clamp(1 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
             1
           ]
         },
         "rig_glide_mast_1": {
           "scale": [
             1,
-            "math.clamp(math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold')) * 3 - 1, 0, 1)",
+            "math.clamp(2 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
             1
           ]
         },
         "rig_glide_mast_2": {
           "scale": [
             1,
-            "math.clamp(math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold')) * 3 - 2, 0, 1)",
+            "math.clamp(3 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
             1
           ]
         },
         "rig_glide_plate_l": {
           "position": [
-            0,
+            "-1 * (1 - (1 - q.property('shipwright:fold'))) * 109.666",
             0,
             "-q.property('shipwright:mids') * 8"
           ]
         },
         "rig_glide_plate_r": {
           "position": [
-            0,
+            "1 * (1 - (1 - q.property('shipwright:fold'))) * 109.666",
             0,
             "-q.property('shipwright:mids') * 8"
           ]
