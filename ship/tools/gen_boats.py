@@ -2089,24 +2089,56 @@ def glider_parts(b):
     yb = 1 - side + 2                                     # the reflection's wing roots, near her old foil's depth
     zc = zk                                               # its wing roots under her mast
     T = lambda P: (km * P[0], yb - km * (P[1] - ymid), zc + km * (P[2] - zw))
-    # one shape, plainly (Richard: "way too detailed ... look like one shape"; "scrap the accurate fuselage"): a plain
-    # rod for a fuselage from her nose to her tailplane, each wing panel one gold plate, the tailplane one plate and
-    # its tips one each, all one thickness, meeting edge to edge
-    TH = 0.7
+    # one poured piece (Richard: "one shape ... less square ... one poured piece of metal, or 3D printed"): every part
+    # flows into the next and thins toward its ends, as a casting does: a spindle for a fuselage, fullest at the wing
+    # root and drawn to a point at nose and tail; the wings in narrow strips whose chord and thickness both run down
+    # from the root to a fine tip; the tailplane the same; fillets where the wings meet the spindle
     mini = []
-    yr_ = T((0, ymid, 0))[1]
-    mini += strut((0, yr_, T((0, 0, zs[0]))[2]), T((0, ye, ze + cs / 2)), 0.45)          # the fuselage, nose to tailplane
+    def cast(pts, l0, c0, sweep, n, t0, t1, inside):
+        """A cast wing along a bent span pts (x, y from the root out), its chord running from c0 to a point (a little
+        over an ellipse), the leading edge curving back by sweep and the trailing edge sweeping forward into the tip;
+        n strips, finer toward the tip, thinning from t0 to t1."""
+        seg = [math.hypot(b_[0] - a_[0], b_[1] - a_[1]) for a_, b_ in zip(pts, pts[1:])]
+        tot = sum(seg)
+        def path(u):
+            d = u * tot
+            for (a_, b_), L_ in zip(zip(pts, pts[1:]), seg):
+                if d <= L_ or L_ == seg[-1]:
+                    f = min(1.0, d / L_) if L_ else 0
+                    return a_[0] + (b_[0] - a_[0]) * f, a_[1] + (b_[1] - a_[1]) * f
+                d -= L_
+        chord = lambda u: max(c0 / PHI ** 4, c0 * max(0.0, 1 - u ** 1.3) ** 0.8)
+        lead = lambda u: l0 + sweep * u ** 1.2 + (c0 - chord(u)) * 0.45
+        us = [1 - (1 - k / n) ** 1.4 for k in range(n + 1)]
+        out = []
+        for ua, ub in zip(us, us[1:]):
+            (xa, ya), (xb_, yb_) = path(ua), path(ub)
+            out += slab(T((xa, ya, lead(ua))), T((xb_, yb_, lead(ub))), T((xa, ya, lead(ua) + chord(ua))), T((xb_, yb_, lead(ub) + chord(ub))),
+                        t0 + (t1 - t0) * (ua + ub) / 2, inside)
+        return out
     up_ = T((0, ymid - 99, zw))
+    yr_ = T((0, ymid, 0))[1]
+    nose_z, root_z, tail_z = T((0, 0, zs[0]))[2], T((0, 0, zw))[2], T((0, ye, ze + cs / 2))[2]
+    tail_y = T((0, ye, ze))[1]
+    spindle = [(nose_z, yr_, 0.12), (nose_z + (root_z - nose_z) * 0.35, yr_, 0.55), (root_z, yr_, 0.85),
+               (root_z + (tail_z - root_z) * 0.3, yr_ + (tail_y - yr_) * 0.3, 0.6), (root_z + (tail_z - root_z) * 0.7, yr_ + (tail_y - yr_) * 0.7, 0.38),
+               (tail_z, tail_y, 0.15)]
+    for (za, ya, ra), (zb, yb_, rb) in zip(spindle, spindle[1:]):
+        mini += strut((0, ya, za), (0, yb_, zb), (ra + rb) / 2)
     for sx, (rx_, yw_, kx_, ky_, tx_, ty_, lr_, lk_, lt_, cr_, co_, ct_) in wingpts.items():
-        for (x0, y0, l0, c0), (x1, y1, l1, c1) in (((0, yw_, lr_, cr_), (kx_, ky_, lk_, co_)), ((kx_, ky_, lk_, co_), (tx_, ty_, lt_, ct_))):
-            mini += slab(T((x0, y0, l0)), T((x1, y1, l1)), T((x0, y0, l0 + c0)), T((x1, y1, l1 + c1)), TH, up_)
-    mini += slab(T((-xb, ye, ze - cs / 2)), T((xb, ye, ze - cs / 2)), T((-xb, ye, ze + cs / 2)), T((xb, ye, ze + cs / 2)), TH, T((0, ye - 99, ze)))   # the tailplane
-    for sgn in (-1, 1):                                    # its tips, canted up as her own cant down
-        mini += slab(T((sgn * xb, ye, ze - cs / 2)), T((sgn * hs, ytip, ze - 0.4 * cs)), T((sgn * xb, ye, ze + cs / 2)), T((sgn * hs, ytip, ze + 0.3 * cs)), TH, T((0, ye - 99, ze)))
+        # the wing, cast along her bent path (centre line, knee, tip)
+        mini += cast([(0, yw_), (kx_, ky_), (tx_, ty_)], lr_, cr_, lt_ - lr_, 12, 0.8, 0.45, up_)
+        # the fillet: a wedge where the wing's root meets the spindle, under its leading half
+        f0, f1 = T((0, yw_, lr_)), T((0, yw_, lr_ + cr_ * 0.6))
+        mini += slab((f0[0], f0[1] + 0.5, f0[2]), (sx * 1.2, f0[1], f0[2] + 0.4), (f1[0], f1[1] + 0.5, f1[2]), (sx * 1.2, f1[1], f1[2]), 0.6, (0, f0[1] - 99, f0[2]))
+    for sgn in (-1, 1):                                    # the tailplane, cast the same, its tips canted up
+        mini += cast([(0, ye), (sgn * xb, ye), (sgn * hs, ytip)], ze - cs / 2, cs * PHI, cs / PHI, 6, 0.7, 0.4, T((0, ye - 99, ze)))
     # the mast: her keel line down to the reflection's back, at its wing root
     ytop, ybot = cy(tk) - hd(tk) + 0.5, yr_
     cm = km * cr / PHI
-    mini += slab((0, ytop, zc - cm / 2), (0, ybot, zc - cm / 2), (0, ytop, zc + cm / 2), (0, ybot, zc + cm / 2), 0.9, (99, 0, zc))
+    ymid_m = (ytop + ybot) / 2
+    for (ya, ca, ta), (yb2, cb, tb) in (((ytop, cm * 1.3, 1.0), (ymid_m, cm, 0.8)), ((ymid_m, cm, 0.8), (ybot, cm * 0.85, 0.65))):
+        mini += slab((0, ya, zc - ca / 2), (0, yb2, zc - cb / 2), (0, ya, zc + ca / 2), (0, yb2, zc + cb / 2), (ta + tb) / 2, (99, 0, zc))
     bones[0]["cubes"] = bones[0]["cubes"] + gold(mini)
     return bones
 
