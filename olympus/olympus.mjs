@@ -18,6 +18,7 @@
 //   node olympus/olympus.mjs speak --god builder --title "..." [--kind tablet] [--answers <id>] [--asks <god>] [--refs a,b] [--body file|-]
 //   node olympus/olympus.mjs read [--sitting n] [--god key] [--full]
 //   node olympus/olympus.mjs digest [--sitting n]                    the Measure's record of a sitting (default: the last closed)
+//   node olympus/olympus.mjs matrix                                  the answer matrix, the lead's councils, what each god owes
 //   node olympus/olympus.mjs lens                                    every tablet well formed and the web's laws kept
 import fs from "node:fs";
 import path from "node:path";
@@ -106,6 +107,10 @@ function digest() {
 export function lens() {
   const bad = [], all = tablets(), ids = new Set();
   if (P.ORBIT.length !== RUNGS.breath || P.GODS.length !== P.BREATH + 1) bad.push("the pantheon is not nine, one still and a breath");
+  { const cs = councils(), tri = cs.filter((c) => c.kind === "triad"), led = cs.filter((c) => c.kind === "ledger");   // AG(2,3): 12 lines, 4 through the still point
+    const pairOnce = P.GODS.every((g, i) => P.GODS.every((h, j) => j <= i || cs.filter((c) => c.gods.includes(g.key) && c.gods.includes(h.key)).length === 1));
+    const rows = ["land", "sea"].every((w) => tri.some((c) => c.gods.every((k) => P.godByKey[k].where === w)));
+    if (cs.length !== 12 || tri.length !== 8 || led.length !== 4 || !pairOnce || !rows) bad.push("the councils are not the plane over three: 12 lines, 8 triads, 4 ledgers, each pair once, each stream's row a triad"); }
   for (const t of all) {
     if (t.bad) { bad.push(`${t.file}: no front matter`); continue; }
     const g = P.godByKey[t.god]; if (!g) { bad.push(`${t.file}: no god ${t.god}`); continue; }
@@ -122,6 +127,67 @@ export function lens() {
   return { ok: !bad.length, lines: [`${all.length} tablets, ${new Set(all.map((t) => t.sitting)).size} sittings; the pantheon nine, the breath ${RUNGS.breath}, a sitting ${MONTH} ticks`, ...bad.map((b) => `FAIL ${b}`)] };
 }
 
+// ---- the matrix behind the hall (R's stream: the Mover's math, offered to all; olympus/MATH.md)
+//
+// The nine gods are the nine points of the plane over the field of three, AG(2,3). Its twelve lines are the hall's
+// councils: three gods whose vectors sum to the still point, so their claims cancel (core/pantheon.js resolveClaims).
+//   the four lines through the Measure   a god, its opposite and the Measure: the shared ledgers (v, -v, 0)
+//   the eight lines that miss it         the triads. Each god sits in three of them, each pair of gods in exactly one,
+//                                        and the land row and the sea row are triads themselves: each stream's
+//                                        own gods balance
+// F permutes the lines too: it carries a triad to a triad and a ledger to a ledger, so the councils turn with the
+// breath as the lead does.
+//
+// The web as matrices on the eight (the Measure apart): C, the cycle (row v, column F.v: who answers whom), and
+// C^4 = the opposites (F^4 = -I: who takes the debts). The hall's own record is a third: R[i][j], the answers god j
+// gave god i's tablets. A hall that keeps the web has R's weight on C; weight elsewhere is cross-talk (questions
+// asked across, which the law allows), and an unanswered tablet's weight moves along C^4 at a sitting's close.
+const add3 = (u, v) => [((u[0] + v[0] + 4) % 3) - 1, ((u[1] + v[1] + 4) % 3) - 1];
+const isZero = (v) => v[0] === 0 && v[1] === 0;
+/** The twelve councils: { kind: "ledger" | "triad", gods: [key, key, key] }. */
+export function councils() {
+  const out = [], G = P.GODS;
+  for (let i = 0; i < G.length; i++) for (let j = i + 1; j < G.length; j++) for (let k = j + 1; k < G.length; k++)
+    if (isZero(add3(add3(G[i].v, G[j].v), G[k].v))) out.push({ kind: [i, j, k].includes(P.BREATH) ? "ledger" : "triad", gods: [G[i].key, G[j].key, G[k].key] });
+  return out;
+}
+/** The councils of the sitting's lead: its ledger with its opposite, and its three triads. */
+export const councilsOf = (key) => councils().filter((c) => c.gods.includes(key));
+/** The hall's answer matrix: R[writer][answerer] over every answer, and the web's share of it (on C, or by question). */
+export function matrix(all = tablets()) {
+  const keys = P.GODS.map((g) => g.key), R = keys.map(() => keys.map(() => 0)), byId = new Map(all.map((t) => [t.id, t]));
+  let onWeb = 0, asked = 0, total = 0;
+  for (const t of all) {
+    const c = t.answers !== "-" ? byId.get(t.answers) : null; if (!c) continue;
+    const i = keys.indexOf(c.god), j = keys.indexOf(t.god); R[i][j]++; total++;
+    if (t.god === c.to) onWeb++; else if (c.asks === t.god) asked++;
+  }
+  return { keys, R, total, onWeb, asked, cross: total - onWeb - asked };
+}
+/** What each god owes at a tick: tablets addressed to it (by the web or by a question) still unanswered, and the debts
+ * passed to it from closed sittings, in words weighted psi^hops (an answer owes psi of its cause). */
+export function owed(tick = timeAt().tick, all = tablets()) {
+  const answered = new Set(all.filter((t) => t.answers !== "-" && t.tick <= tick).map((t) => t.answers)), out = {};
+  for (const g of P.GODS) out[g.key] = { open: 0, debt: 0, words: 0 };
+  for (const t of all) {
+    if (t.tick > tick || answered.has(t.id) || !["tablet", "question", "offering"].includes(t.kind)) continue;
+    const owner = t.asks && t.asks !== "-" ? t.asks : t.to, closed = Math.floor(tick / MONTH) > t.sitting;
+    const who = closed ? t.opposite : owner, w = Math.round(words(t.body) * Math.abs(P.PSI));
+    out[who][closed ? "debt" : "open"]++; out[who].words += w;
+  }
+  return out;
+}
+function showMatrix() {
+  const now = timeAt(), m = matrix(), lead = now.lead.key, pad = (s, n) => String(s).padEnd(n);
+  console.log(`The answer matrix (row: the writer; column: who answered), ${m.total} answer${m.total === 1 ? "" : "s"}: ${m.onWeb} on the web (F.v), ${m.asked} asked by question, ${m.cross} across\n`);
+  console.log(pad("", 9) + m.keys.map((k) => pad(k.slice(0, 7), 8)).join(""));
+  m.keys.forEach((k, i) => console.log(pad(k, 9) + m.R[i].map((n, j) => pad(n ? n : (P.next(P.godByKey[k]).key === m.keys[j] ? "." : " "), 8)).join("")));
+  console.log(`\n(. marks the web's edge, F.v, where an answer belongs)\n\nThe councils of the lead, ${now.lead.title}:`);
+  for (const c of councilsOf(lead)) console.log(`  ${c.kind === "ledger" ? "ledger" : "triad "}  ${c.gods.map((k) => P.godByKey[k].title).join(" + ")}`);
+  const o = owed(now.tick); console.log("\nOwed now (open: addressed and unanswered; debt: passed from a closed sitting; words at psi):");
+  for (const g of P.GODS) { const x = o[g.key]; if (x.open || x.debt) console.log(`  ${pad(g.title, 32)} open ${x.open}, debt ${x.debt}, ${x.words} words`); }
+}
+
 const cmd = process.argv[2];
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("olympus.mjs")) {
   try {
@@ -129,6 +195,7 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
     else if (cmd === "speak") speak();
     else if (cmd === "read") read();
     else if (cmd === "digest") digest();
+    else if (cmd === "matrix") showMatrix();
     else if (cmd === "lens") { const r = lens(); console.log(r.lines.join("\n")); process.exit(r.ok ? 0 : 1); }
     else console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").filter((l) => l.startsWith("//")).slice(0, 24).map((l) => l.slice(3)).join("\n"));
   } catch (e) { console.error(e.message); process.exit(1); }
