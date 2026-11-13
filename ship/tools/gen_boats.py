@@ -2751,7 +2751,11 @@ def glider_parts(b):
                 u0, u1 = j / 3, (j + 1) / 3
                 ca, cb = c0m + (c1m - c0m) * u0, c0m + (c1m - c0m) * u1
                 xa, xb_ = sx * Lm * u0, sx * Lm * u1
-                mini += slab((xa, ybk, zle + sm * u0), (xb_, ybk, zle + sm * u1), (xa, ybk, zle + sm * u0 + ca), (xb_, ybk, zle + sm * u1 + cb), 0.6, (0, ybk - 99, zle))
+                # its outer third canted down at atan 1/phi (Richard: "now have the wingtip cant"), as a foil's tips are
+                tc = math.tan(math.atan(1 / PHI))
+                ya_ = ybk - (Lm * max(0.0, u0 - 2 / 3)) * tc
+                yb2_ = ybk - (Lm * max(0.0, u1 - 2 / 3)) * tc
+                mini += slab((xa, ya_, zle + sm * u0), (xb_, yb2_, zle + sm * u1), (xa, ya_, zle + sm * u0 + ca), (xb_, yb2_, zle + sm * u1 + cb), 0.6, (0, ybk - 99, zle))
         # its tail, as her own stern is (Richard: "redo the tail to match the rear of the boat: flat h stab with drop v
         # stabs"; "widen the h stab so it's a real foil"): a flat stab swept as her wing, 1/phi of its span, and from
         # each tip a fin dropping down, canted out and raked aft as her rudders are
