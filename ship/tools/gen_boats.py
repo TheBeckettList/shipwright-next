@@ -2298,49 +2298,91 @@ def glider_parts(b):
                 u = (z_ - Fl[2]) / cR
                 return yfoil + (cR * (1 - math.sqrt(max(0.0, 1 - (1 - u) ** 2))) if u < 1 else 0.0)
             yfoot = lambda z_: (yfoot_w(z_) - H1[1] - z_ * zl[1]) / yl[1]        # the foot, in the hinge's frame
-            # gold and cloth (Richard: "leading edge and 25% back on v stabs are gold, back to where the rake meets the
-            # rear of the rudder wing"): gold from the leading edge a quarter of the chord back at the top, the line
-            # raking down and aft to the trailing edge at the foot; all below it gold, her cloth above
-            zA, zB = Fl[2] + C / 4, Rl[2]                                       # given: a quarter of the chord
-            yB = lambda z_: 0.0 if z_ <= zA else yfoot(zB) * (z_ - zA) / (zB - zA)
+            # gold and cloth, and the Theran mark (Richard: "make some designs on the rudder in our Theran mythos fashion,
+            # instead of the triangular gold weird thing"; "the same-ish amount of gold, but pretty"):
+            #   above        gold from the head to 1/phi^3 of a block under her waterline (sturdy where it leaves her)
+            #   the edges    a gold leading edge 1/phi^3 of the chord deep, and a gold band along the foot
+            #   the wave     under the waterline gold, a running wave, the Minoan sea's, a ribbon of gold
+            #   the spiral   in the window of cloth below, the golden spiral, a quarter turn a phi: the Therans' faith
+            #                ("our math is the religion"), drawn in gold on both faces
             ywl = lambda z_: (wl - 16 / PHI ** 3 - H1[1] - z_ * zl[1]) / yl[1]   # her waterline less a bit, in the hinge's frame
+            gLE, hbF, RIB = C / PHI ** 3, 1.2, 0.7
+            def quad(za_, ya0, ya1, zb_, yb0, yb1, x_=None):                     # a face in the rudder's plane, as a quad
+                x_ = out if x_ is None else x_
+                return ((x_, ya0, za_), (x_, ya1, za_), (x_, yb1, zb_), (x_, yb0, zb_))
             def cols(z0, z1, n):                                                 # a strip's piece from z0 to z1, in n columns
                 g_, c_ = [], []
                 for j in range(n):
                     za_, zb_ = z0 + (z1 - z0) * j / n, z0 + (z1 - z0) * (j + 1) / n
-                    # laid span-wise (its width down the hinge, its length along the chord), so the file's angles never
-                    # lock: a quarter turn about z, not about y
-                    q_ = lambda y0a, y1a, y0b, y1b, t_: slab((out - sx * (0.9 - t_) / 2, y0a, za_), (out - sx * (0.9 - t_) / 2, y1a, za_),
-                                                             (out - sx * (0.9 - t_) / 2, y0b, zb_), (out - sx * (0.9 - t_) / 2, y1b, zb_), t_, (-sx * 99, -L / 2, (za_ + zb_) / 2))
-                    ba, bb = max(yB(za_), yfoot(za_)), max(yB(zb_), yfoot(zb_))
-                    # (Richard: "make the rudder gold cover the above-waterline portion, and a bit below, to make it
-                    # look more sturdy"): gold from its head down to 1/phi^3 of a block under her waterline, the cloth
-                    # only between that and the leading-edge gold below
-                    wa, wb = min(0.0, max(ywl(za_), ba)), min(0.0, max(ywl(zb_), bb))
+                    fa, fb = yfoot(za_), yfoot(zb_)
+                    wa, wb = min(0.0, max(ywl(za_), fa)), min(0.0, max(ywl(zb_), fb))
+                    le = zb_ <= Fl[2] + gLE + 1e-6
+                    if le:                                                       # the leading edge: gold, head to foot
+                        g_.append(quad(za_, 0.0, fa, zb_, 0.0, fb)); continue
                     if wa < -0.05 or wb < -0.05:
-                        g_ += q_(0.0, wa, 0.0, wb, 0.6)
-                    if wa - ba > 0.05 or wb - bb > 0.05:
-                        c_ += q_(wa, ba, wb, bb, 0.3)
-                    g_ += q_(ba, yfoot(za_), bb, yfoot(zb_), 0.6)
+                        g_.append(quad(za_, 0.0, wa, zb_, 0.0, wb))
+                    ca, cb = min(wa, fa + hbF), min(wb, fb + hbF)
+                    if wa - ca > 0.05 or wb - cb > 0.05:
+                        c_.append(quad(za_, wa, ca, zb_, wb, cb))
+                    g_.append(quad(za_, ca, fa, zb_, cb, fb))                    # the foot's band
                 return g_, c_
+            # the mark's ribbons, as quads on both faces (a hair proud of the cloth), each laid in the strip it lies in
+            def ribbon(pts):
+                out_ = []
+                for (za_, ya_), (zb_, yb_) in zip(pts, pts[1:]):
+                    dz, dy_ = zb_ - za_, yb_ - ya_
+                    n_ = math.hypot(dz, dy_) or 1
+                    nz, ny = -dy_ / n_ * RIB / 2, dz / n_ * RIB / 2
+                    for xo in (out + sx * 0.06, out - sx * 0.06):
+                        out_.append(((za_ + zb_) / 2, ((xo, ya_ + ny, za_ + nz), (xo, ya_ - ny, za_ - nz), (xo, yb_ - ny, zb_ - nz), (xo, yb_ + ny, zb_ + nz))))
+                return out_
+            zw0, zw1 = Fl[2] + gLE + 0.6, Rl[2] - 0.4                          # the window's run along the chord
+            zm_ = (zw0 + zw1) / 2
+            wave = [(zw0 + (zw1 - zw0) * k / 16, ywl(zw0 + (zw1 - zw0) * k / 16) - 1.4 - 0.9 * math.sin(2 * math.pi * k / 8)) for k in range(17)]
+            # the running spirals over the foot's band: three linked, the frieze of Akrotiri's walls
+            def scroll(zc_, yc2, r_, turns=1.25, sgn=1):
+                return [(zc_ + sgn * r_ * PHI ** (-(t_ / (math.pi / 2))) * math.cos(t_), yc2 + r_ * PHI ** (-(t_ / (math.pi / 2))) * math.sin(t_))
+                        for t_ in [k * math.pi / 6 for k in range(int(turns * 12) + 1)]]
+            yfr = yfoot(zm_) + hbF + 2.2
+            rS = (zw1 - zw0) / 7
+            frieze = []
+            for k in range(3):
+                zk_ = zw0 + rS * 1.2 + k * (zw1 - zw0 - 2.4 * rS) / 2
+                frieze += ribbon(scroll(zk_, yfoot(zk_) + hbF + rS + 0.4, rS, 1.6, 1 if k % 2 == 0 else -1))
+            # the golden spiral, as big as the window holds, its outer arm sweeping down to the frieze
+            ytop_w = ywl(zm_) - 3.2
+            ybot_w = yfr + rS + 1.0
+            R0 = min((ytop_w - ybot_w) / 2, (zw1 - zw0) / 2) * 0.95
+            yc_ = (ytop_w + ybot_w) / 2
+            spiral = [(zm_ + R0 * PHI ** (-(t_ / (math.pi / 2))) * math.cos(t_), yc_ + R0 * PHI ** (-(t_ / (math.pi / 2))) * math.sin(t_))
+                      for t_ in [k * math.pi / 10 for k in range(46)]]
+            RIB = 0.9
+            marks = ribbon(wave) + (ribbon(spiral) if R0 > 1.5 else []) + frieze
             to_file = lambda pcs: [dict(c, origin=[round(c["origin"][0] + H1[0], 3), round(c["origin"][1] + H1[1], 3), round(c["origin"][2] + H1[2], 3)],
                                          **({"pivot": [round(c["pivot"][0] + H1[0], 3), round(c["pivot"][1] + H1[1], 3), round(c["pivot"][2] + H1[2], 3)]} if "pivot" in c else {}))
                                    for c in pcs]                                 # the hinge frame's origin at H1, in the file
             hp = [round(v, 3) for v in H1]
             th = math.radians(rud_pre / PHI) * Ls / (C * (ws[1] + 2 * ws[2]))    # each hinge's turn for the stab's swing
             z0_, z3_ = Fl[2], Rl[2]
-            nc = lambda w_: max(1, round(w_ / 1.0))                              # columns about a pixel wide (the gold line's steps fine)
+            nc = lambda w_: max(1, round(w_ / 1.0))                              # columns about a pixel wide (the waterline's slope fine)
             p2 = [round(H1[0], 3), round(H1[1], 3), round(H1[2] + z2, 3)]
-            parts = [(f"rig_glide_rud_{side_}", "rig_glide_tailtip", hp, cols(z0_, z1, nc(z1 - z0_))),
-                     (f"rig_glide_rud_{side_}_mid", f"rig_glide_rud_{side_}", hp, cols(z1, z2, nc(z2 - z1))),
-                     (f"rig_glide_rud_{side_}_aft", f"rig_glide_rud_{side_}_mid", p2, cols(z2, z3_, nc(z3_ - z2)))]
-            for k_, (nm_, par_, pv_, (gpcs, spcs)) in enumerate(parts):
-                bn = {"name": nm_, "parent": par_, "pivot": list(pv_), "cubes": gold(to_file(gpcs))}
+            spans = [(z0_, z1), (z1, z2), (z2, z3_)]
+            qf = lambda qs: [tuple((P_[0] + H1[0], P_[1] + H1[1], P_[2] + H1[2]) for P_ in q) for q in qs]   # the hinge frame's origin at H1
+            parts = [(f"rig_glide_rud_{side_}", "rig_glide_tailtip", hp), (f"rig_glide_rud_{side_}_mid", f"rig_glide_rud_{side_}", hp),
+                     (f"rig_glide_rud_{side_}_aft", f"rig_glide_rud_{side_}_mid", p2)]
+            for k_, (nm_, par_, pv_) in enumerate(parts):
+                za_, zb_ = spans[k_]
+                gq, cq = cols(za_, zb_, nc(zb_ - za_))
+                gq += [q for zmid, q in marks if za_ <= zmid < zb_ or (k_ == 2 and zmid >= zb_)]
+                if os.environ.get("RUD_DUMP") and side_ == "l":
+                    with open(os.environ["RUD_DUMP"], "a") as fh_:
+                        fh_.write(json.dumps({"gold": gq, "cloth": cq}) + "\n")
+                bn = {"name": nm_, "parent": par_, "pivot": list(pv_), "cubes": [], "poly_mesh": mesh_of(qf(gq), GOLD_PX)}
                 if k_ == 0:
                     bn["rotation"] = euler_file(Rm)
                 elif th:
                     bn["rotation"] = euler_file(RyF(th))
-                tail_bones += [bn, {"name": nm_ + "_skin", "parent": nm_, "pivot": list(pv_), "cubes": skin(to_file(spcs))}]
+                tail_bones += [bn, {"name": nm_ + "_skin", "parent": nm_, "pivot": list(pv_), "cubes": [], "poly_mesh": mesh_of(qf(cq), SKIN_PX)}]
             b.setdefault("_rud", {})[side_] = Ls / (C * (ws[1] + 2 * ws[2]))
             b["_rud_top"] = Rt[1]
             b.setdefault("_rud_FR", {})[side_] = (F, Rt)
