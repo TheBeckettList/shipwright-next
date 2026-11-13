@@ -1781,30 +1781,74 @@ def glider_parts(b):
     gold = lambda cubes: [dict(c, uv=spar) for c in cubes]
     skin = lambda cubes: [dict(c, uv=skin_uv) for c in cubes]
     wl = b.get("wl", 0.4 * side)
-    W, H, ymid = F, 0.8 * side, 0.7 * side               # half-breadth, half-depth and centre at her fullest: a body, not a needle
+    W, H = F, 0.8 * side                                  # her envelope: half-breadth and half-depth at her fullest
     TMAX = 1 / PHI ** 2                                   # vision: full at 0.38 of her length, a fast hull's
-    def fat(t):                                           # her breadth along her length, 0 at the nose to 1 at TMAX
-        if t <= TMAX:
-            return math.sin(math.pi / 2 * t / TMAX) ** 0.6     # the ogive: aero above, a cutting entry below
-        u = (t - TMAX) / (1 - TMAX)
-        return (1 - u / 3) * (1 - 0.62 * u ** 1.6)             # the run: a third slimmer than a plain taper
-    def cy(t):                                            # the nose comes down to cut the water at her waterline
-        return wl + 1 + (ymid - wl - 1) * min(1, t / TMAX) ** 0.5
     N = 12                                                # vision: twelve stations
     zs = [-half + 2 * half * i / N for i in range(N + 1)]
-    # her section, by b["hull"] (Richard: "not as round"): round (sixteen-sided, the first); faceted (six hard facets,
-    # a cut gem, an asterion crystal); wedge (a racing powerboat's: flat deck, hard chines, a V bottom); blade (a tall
-    # narrow diamond, deep V below and a ridge above: a knife on edge)
+    # her whole hull, nose to the booms' roots, by b["hull"] (Richard: "the whole hull from tip to end of main fuselage
+    # ... get the area for the main fuselage and play with it"). Each is a plan (her breadth, wid), a profile (her deck
+    # line, top, and keel line, bot) and a section, all inside the envelope above, the waterline wl:
+    #   round    the first: an ogive, sixteen-sided, the run a third slimmer
+    #   boat     a flying boat's float: a deep-V forefoot under a raised spoon bow, a straight keel to a planing step
+    #            at her middle, the afterbody rising clear to the booms; flared chines throwing spray; a canopy hump
+    #   manta    a lifting body: a delta plan widest past her middle, flat bottomed, knife edged, low arched roof; she
+    #            planes on her belly and flies on it, her body a wing
+    #   dart     a cut crystal (her asterion core's own form): a diamond plan and profile of straight facets, a
+    #            hexagonal section, fullest under her cockpit
     hull = b.get("hull", "round")
-    SECTION = {"round": [(math.cos(2 * math.pi * (k + 0.5) / 16), math.sin(2 * math.pi * (k + 0.5) / 16) * (0.85 if math.sin(2 * math.pi * (k + 0.5) / 16) > 0 else 1.0)) for k in range(16)],
-               "faceted": [(math.cos(math.pi / 3 * k), 0.8 * math.sin(math.pi / 3 * k)) for k in range(6)],
-               "wedge": [(1, 0.55), (-1, 0.55), (-1, -0.05), (0, -1), (1, -0.05)],
-               "blade": [(0, 0.9), (-0.62, 0.05), (0, -1), (0.62, 0.05)]}[hull]
-    K = len(SECTION)
+    lerp = lambda a, c, u: a + (c - a) * max(0.0, min(1.0, u))
+    ease = lambda u: (lambda v: v * v * (3 - 2 * v))(max(0.0, min(1.0, u)))
+    if hull == "boat":
+        STEP = 0.5                                        # the planing step, at her middle
+        def wid(t): return 1.1 * W * (math.sin(math.pi / 2 * min(1, t / 0.3)) ** 0.5 if t < 0.55 else lerp(1, 0.45, (t - 0.55) / 0.45))
+        def bot(t):
+            if t < 0.2: return lerp(wl + 0.35 * side, -0.3 * side, ease(t / 0.2))
+            if t < STEP: return -0.3 * side
+            return lerp(-0.12 * side, wl + 0.15 * side, (t - STEP) / (1 - STEP))
+        def top(t):
+            if t < 0.4: return lerp(wl + 0.55 * side, 1.7 * side, math.sin(math.pi / 2 * t / 0.4))
+            return lerp(1.7 * side, 0.9 * side, ease((t - 0.4) / 0.6))
+        def section(t):
+            d = lerp(0.6, 0.25, t)                        # deadrise: deep forward, flatter aft
+            return [(0, -1), (0.7, -1 + d), (1.08, -1 + d + 0.05), (0.95, 0.25), (0.62, 0.82), (0, 1),
+                    (-0.62, 0.82), (-0.95, 0.25), (-1.08, -1 + d + 0.05), (-0.7, -1 + d)]
+    elif hull == "manta":
+        def wid(t): return PHI * W * (min(1, t / 0.6) ** 0.8 if t < 0.6 else lerp(1, 0.6, ease((t - 0.6) / 0.4)))   # as wide as her booms
+        def bot(t): return lerp(wl + 0.25 * side, wl - 0.25 * side, ease(t / 0.2))
+        def top(t):
+            if t < 0.42: return lerp(wl + 0.2 * side, 1.1 * side, math.sin(math.pi / 2 * t / 0.42) ** 0.8)
+            return lerp(1.1 * side, wl + 0.3 * side, ease((t - 0.42) / 0.58))
+        def section(t):
+            return [(0, -1), (0.72, -1), (1, -0.55), (0.72, 0.2), (0.32, 0.8), (0, 1),
+                    (-0.32, 0.8), (-0.72, 0.2), (-1, -0.55), (-0.72, -1)]
+    elif hull == "dart":
+        def wid(t): return 0.85 * W * (lerp(0.04, 1, t / TMAX) if t < TMAX else lerp(1, 0.4, (t - TMAX) / (1 - TMAX)))
+        def bot(t): return lerp(wl + 0.15 * side, -0.35 * side, t / TMAX) if t < TMAX else lerp(-0.35 * side, wl, (t - TMAX) / (1 - TMAX))
+        def top(t): return lerp(wl + 0.3 * side, 1.85 * side, t / TMAX) if t < TMAX else lerp(1.85 * side, 0.8 * side, (t - TMAX) / (1 - TMAX))
+        def section(t):
+            return [(0, -1), (0.62, -0.45), (1, 0.1), (0.5, 0.78), (0, 1), (-0.5, 0.78), (-1, 0.1), (-0.62, -0.45)]
+    else:
+        ymid0 = 0.7 * side
+        def fat0(t):
+            if t <= TMAX:
+                return math.sin(math.pi / 2 * t / TMAX) ** 0.6
+            u = (t - TMAX) / (1 - TMAX)
+            return (1 - u / 3) * (1 - 0.62 * u ** 1.6)
+        cy0 = lambda t: wl + 1 + (ymid0 - wl - 1) * min(1, t / TMAX) ** 0.5
+        def wid(t): return W * fat0(t)
+        def bot(t): return cy0(t) - H * fat0(t)
+        def top(t): return cy0(t) + H * fat0(t)
+        R16 = [(math.cos(2 * math.pi * (k + 0.5) / 16), math.sin(2 * math.pi * (k + 0.5) / 16) * (0.85 if math.sin(2 * math.pi * (k + 0.5) / 16) > 0 else 1.0)) for k in range(16)]
+        def section(t): return R16
+    fat = lambda t: max(0.02, wid(t) / W)                  # the rest of her hangs off these
+    cy = lambda t: (top(t) + bot(t)) / 2
+    hd = lambda t: max(0.15, (top(t) - bot(t)) / 2)
+    ymid = cy(0.42)
+    K = len(section(0))
     def ring(i):
         t = i / N
-        w, h, c = max(0.15, W * fat(t)), max(0.15, H * fat(t)), cy(t)
-        return [(w * u, c + h * v, zs[i]) for u, v in SECTION]
+        w, lo, hi = max(0.15, wid(t)), bot(t), max(top(t), bot(t) + 0.3)
+        return [(w * u, lo + (hi - lo) * (v + 1) / 2, zs[i]) for u, v in section(t)]
     R = [ring(i) for i in range(N + 1)]
     frame, cloth = [], []
     for i in range(N):
@@ -1824,15 +1868,15 @@ def glider_parts(b):
     # the cutwater: a gold V under her forefoot, from the nose's tip back to her keel line
     tip = (0, cy(0), zs[0])
     t1 = 0.25
-    foot = (0, cy(t1) - H * fat(t1), -half + 2 * half * t1)
+    foot = (0, cy(t1) - hd(t1), -half + 2 * half * t1)
     for sx in (-1, 1):
-        flank = (sx * 0.62 * W * fat(t1), cy(t1) - 0.55 * H * fat(t1), foot[2])
+        flank = (sx * 0.62 * W * fat(t1), cy(t1) - 0.55 * hd(t1), foot[2])
         frame += slab((0, tip[1] + 0.3, tip[2]), (sx * 0.4, tip[1], tip[2] + 0.2), foot, flank, 0.6, (0, cy(t1), foot[2] - 2))
     # the foiling keel (Richard: "a foiling keel that could be lift too"): a gold strut down from her keel line just
     # ahead of her fullest, as deep as her fins, carrying an inverted-V hydrofoil phi^2 of her breadth across: the foil
     # she rises onto before she flies, her tail riding on the tailplane's canted tips
     tk = TMAX - 0.06
-    zk, yk = -half + 2 * half * tk, cy(tk) - H * fat(tk)
+    zk, yk = -half + 2 * half * tk, cy(tk) - hd(tk)
     ck = Lt / PHI ** 5                                    # a fine chord, bow to stern (Richard: "less thick")
     frame += slab((0, yk + 0.5, zk - ck / 2), (0, 1 - side, zk - ck / 2), (0, yk + 0.5, zk + ck / 2), (0, 1 - side, zk + ck / 2), 0.7, (99, 0, zk))
     frame += lambda_foil(0, 1 - side, zk - ck, 2 * ck, PHI ** 2 * W, 0.6)
@@ -1940,7 +1984,7 @@ def glider_parts(b):
     sf, sc = [], []
     if sail == "dorsal":                  # a flying fish's dorsal fin: a raked spar from her back, gold rays fanned from its
         ts = 0.3                          # foot, cloth between; it lies flat along her spine to fly
-        z0, y0 = -half + 2 * half * ts, cy(ts) + H * fat(ts)
+        z0, y0 = -half + 2 * half * ts, cy(ts) + hd(ts)
         hgt, rake = Lt / PHI, 1 / PHI
         foot_aft = Lt / PHI ** 1.5
         rays = 6
@@ -1963,7 +2007,7 @@ def glider_parts(b):
             sf += slab((bow[0] - 0.15, bow[1], bow[2]), (bow[0] + 0.15, bow[1], bow[2]), (xa - 0.15, ya, kz), (xa + 0.15, ya, kz), 0.3, (0, 0, -999))
     elif sail == "claw":                  # the Pacific crab-claw redrawn: two gold spars from a tack on her foredeck opening
         ts = 0.18                         # into a V, the cloth a crescent between them
-        tack = (0, cy(ts) + H * fat(ts), -half + 2 * half * ts)
+        tack = (0, cy(ts) + hd(ts), -half + 2 * half * ts)
         L1, L2 = Lt / PHI * 1.3, Lt / PHI * 1.15
         up = (0, tack[1] + L1 * math.cos(math.atan(1 / PHI ** 2)), tack[2] + L1 * math.sin(math.atan(1 / PHI ** 2)))
         aft = (0, tack[1] + L2 * math.cos(math.atan(PHI)), tack[2] + L2 * math.sin(math.atan(PHI)))
