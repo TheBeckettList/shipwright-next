@@ -2303,6 +2303,7 @@ def glider_parts(b):
             # raking down and aft to the trailing edge at the foot; all below it gold, her cloth above
             zA, zB = Fl[2] + C / 4, Rl[2]                                       # given: a quarter of the chord
             yB = lambda z_: 0.0 if z_ <= zA else yfoot(zB) * (z_ - zA) / (zB - zA)
+            ywl = lambda z_: (wl - 16 / PHI ** 3 - H1[1] - z_ * zl[1]) / yl[1]   # her waterline less a bit, in the hinge's frame
             def cols(z0, z1, n):                                                 # a strip's piece from z0 to z1, in n columns
                 g_, c_ = [], []
                 for j in range(n):
@@ -2312,8 +2313,14 @@ def glider_parts(b):
                     q_ = lambda y0a, y1a, y0b, y1b, t_: slab((out - sx * (0.9 - t_) / 2, y0a, za_), (out - sx * (0.9 - t_) / 2, y1a, za_),
                                                              (out - sx * (0.9 - t_) / 2, y0b, zb_), (out - sx * (0.9 - t_) / 2, y1b, zb_), t_, (-sx * 99, -L / 2, (za_ + zb_) / 2))
                     ba, bb = max(yB(za_), yfoot(za_)), max(yB(zb_), yfoot(zb_))
-                    if ba < -0.05 or bb < -0.05:
-                        c_ += q_(0.0, ba, 0.0, bb, 0.3)
+                    # (Richard: "make the rudder gold cover the above-waterline portion, and a bit below, to make it
+                    # look more sturdy"): gold from its head down to 1/phi^3 of a block under her waterline, the cloth
+                    # only between that and the leading-edge gold below
+                    wa, wb = min(0.0, max(ywl(za_), ba)), min(0.0, max(ywl(zb_), bb))
+                    if wa < -0.05 or wb < -0.05:
+                        g_ += q_(0.0, wa, 0.0, wb, 0.6)
+                    if wa - ba > 0.05 or wb - bb > 0.05:
+                        c_ += q_(wa, ba, wb, bb, 0.3)
                     g_ += q_(ba, yfoot(za_), bb, yfoot(zb_), 0.6)
                 return g_, c_
             to_file = lambda pcs: [dict(c, origin=[round(c["origin"][0] + H1[0], 3), round(c["origin"][1] + H1[1], 3), round(c["origin"][2] + H1[2], 3)],
