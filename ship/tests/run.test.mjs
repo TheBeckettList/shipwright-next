@@ -1973,7 +1973,7 @@ test("a 6-block faering's sail is about twice its beam, on a mast a bit over fou
   // rig.mast stands over the rail; D-004 draws her to the Norse law's depth (B / phi^2, 0.56: she was drawn 0.89), so
   // her rail is lower and the mast over it shorter, though from its step on the keel it is still a bit over four
   assert.ok(rig.mast > 3.2 && rig.mast < 5.6, `mast ${rig.mast.toFixed(2)}`);
-  assert.ok(rig.mast + p.baseDepth > 4 && rig.mast + p.baseDepth < 6, `mast from the keel ${(rig.mast + p.baseDepth).toFixed(2)}`);
+  assert.ok(rig.mast + p.baseDepth > 3.8 && rig.mast + p.baseDepth < 6, `mast from the keel ${(rig.mast + p.baseDepth).toFixed(2)}`);   // on the law's beam (1.44, drawn 1.75 before), a little less sail
 });
 
 test("each rig's mast reaches just above its own sail, not one height for all", async () => {
@@ -2487,7 +2487,7 @@ test("every tradition has a medium ship, built only at a dock, drawn at twice th
 test("medium half-beams come from each tradition's length-to-beam ratio", () => {
   for (const k of MEDIUM.filter((x) => x !== "longship")) {
     const p = PLANS[k];
-    const L = 17;
+    const L = Math.round(Math.sqrt(p.lengthRange[0] * p.lengthRange[1]));   // D-004: the beam is the law's, at the fleet's typical length (it was the model's 17)
     const ratio = L / p.baseBeam;
     assert.ok(Math.abs(ratio - p.typicalLB) / p.typicalLB < 0.08, `${k}: ${ratio.toFixed(2)} vs ${p.typicalLB}`);
   }

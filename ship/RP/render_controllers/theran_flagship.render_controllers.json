@@ -322,9 +322,6 @@
           "rudder_post": "q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 2), 2)) == 1"
         },
         {
-          "ama": "q.property('shipwright:stage') >= 3 && (math.mod(math.floor(q.property('shipwright:flags') / 8), 2))"
-        },
-        {
           "staff": "q.property('shipwright:stage') >= 5 && !(math.mod(math.floor(q.property('shipwright:flags') / 1), 2))"
         },
         {

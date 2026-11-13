@@ -122,7 +122,9 @@ export async function lawdump(models = null) {
     const D = ex.depth ?? ex.D ?? B / (type.flat ? PHI * PHI : PHI);
     const T = ex.draft ?? ex.draught ?? ex.T ?? D / PHI;
     const fb = ex.freeboard ?? ex.fb ?? D - T;
-    const nd = need(type.reach);
+    // the need the law holds this hull to: sizeOf's when it gives one (a Pacific twin's closed hulls are held to the
+    // working sea); a hull it exempts (the decked kayak sheds the sea: no washstrake drawn) to the freeboard it draws
+    const nd = ex.need == null ? need(type.reach) : ex.wash === 0 && ex.freeboard < ex.need ? ex.freeboard : ex.need;
     const [built, floor] = BUILT[id] ?? ["light", 1];   // vision: a plan not in the table reads as a light hull with the texel floor
     const K = K_OF[built];
     const raw = K ? (16 * L) / K : 0;   // given: 16 px a block
