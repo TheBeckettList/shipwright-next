@@ -2724,10 +2724,11 @@ def glider_parts(b):
             (F_, Rt_), (Ff_, Rf_) = b["_rud_FR"][sd], b["_rud_feet"][sd]
             mini += slab(T(F_), T(Ff_), T(Rt_), T(Rf_), 0.5, (0, T((0, ymid, 0))[1] - 99, T(F_)[2]))
         mini += slab(T(FRr[0]), T(FRl[0]), T(FRr[1]), T(FRl[1]), 0.5, (0, T((0, ymid, 0))[1] + 99, T(FRl[0])[2]))
-    # dropped (Richard: "drop the keel and foil and resize in turn with the rudders as they are"): its lowest point
-    # (spindle, knees, tips) down to the rudders' feet, the mast running down with it
+    # dropped (Richard: "drop the keel and foil and resize in turn with the rudders as they are"): its midline down to
+    # the rudders' feet, the mast running down with it
     if b.get("tail") == "stealth":
-        low = min(yr_, tail_y) - 0.85                                      # (its wings lie flat at the spindle's line)
+        low = yr_                                                          # (Richard: "make the midline of the keel foil align with
+                                                                           # the bottom of the rudders": its spindle's line, its wings' plane)
         outlet = (0, tail_y, tail_z)                                       # (its power outlet, below, moves with it)
         dy = (1 - side - 16 / PHI ** 4) - low
         mini = [dict(c, origin=[c["origin"][0], round(c["origin"][1] + dy, 3), c["origin"][2]],
@@ -2751,6 +2752,8 @@ def glider_parts(b):
         cb = next(x_ for x_ in bones if x_["name"] == "rig_glide_core")
         cb["cubes"] = cb["cubes"] + [{"origin": [-glow / 2, oy - glow / 2, oz + 1.0], "size": [glow, glow, 0.6], "uv": core_uv},
                                      {"origin": [-0.5, oy - 0.5, oz + 1.6], "size": [1.0, 1.0, 0.5], "pivot": [0, oy, oz + 1.85], "rotation": [0, 0, 45], "uv": core_uv}]
+    if os.environ.get("KEEL_DUMP"):                                         # (the foil alone, for a look at it)
+        json.dump({"cubes": mini, "feet": 1 - side - 16 / PHI ** 4, "mid": yr_}, open(os.environ["KEEL_DUMP"], "w"))
     bones[0]["cubes"] = bones[0]["cubes"] + gold(mini)
     return bones
 
@@ -2789,6 +2792,8 @@ def strut(A, B, r):
     nrm = [w[1] * d[2] - w[2] * d[1], w[2] * d[0] - w[0] * d[2], w[0] * d[1] - w[1] * d[0]]
     nn = math.sqrt(sum(v * v for v in nrm)) or 1
     mid = [(A[i] + B[i]) / 2 + 99 * nrm[i] / nn for i in range(3)]
+    c_ = [-r * nrm[i] / nn for i in range(3)]                    # centred on its line (slab lays its thickness to one side)
+    A, B = [A[i] + c_[i] for i in range(3)], [B[i] + c_[i] for i in range(3)]
     return slab(tuple(A[i] - w[i] for i in range(3)), tuple(A[i] + w[i] for i in range(3)),
                 tuple(B[i] - w[i] for i in range(3)), tuple(B[i] + w[i] for i in range(3)), 2 * r, mid)
 
