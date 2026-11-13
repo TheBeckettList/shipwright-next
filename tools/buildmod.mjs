@@ -132,6 +132,7 @@ const toWorld = (bx, bz, sh) => [Math.round(SX + D0.x * K + bx + sh[0]), Math.ro
 
 const placements = [], taken = new Set(), why = {};
 const STILT_DEEP = FIB[3];   // derived: the grown towns' own bound (growth.js planeOf, district.js: the stilt peoples build over water three deep at most), so one people builds by one rule wherever it stands
+const CREPIDOMA = FIB[3];   // given: a crepidoma is three steps, the most a footing stands (thera.md §2 rule 1)
 const LIFT = FIB[2];   // vision: on land the stilt peoples still raise the floor on posts, two blocks over the highest ground under it (terraform.md: a pad raised LIFT)
 const POST_MAX = FIB[4] + 1;   // derived: a post at most six (terraform.md: the pad law's five, and the floor's block)
 const no = (w) => { why[w] = (why[w] ?? 0) + 1; return false; };
@@ -142,7 +143,7 @@ const BAD = new Set(["round harbour", "merchant harbour", "fairway", "ring canal
  *  its footprint is water no deeper than STILT_DEEP and LIFT over the highest ground where it stands on land, refused
  *  over deeper water or where a post would pass POST_MAX (a floor at the sea's level on a hill was buried by the deep
  *  pass: design/s004-specs/terraform.md §1). */
-function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, water = false, stilts = false, wet = false, tag = "", pad = 0, kinds = null, slope = Infinity, anyWater = false, carve = false, trunk = false, over = false, foot = null, origin = false } = {}) {   // origin: the prototype's own 0,0 goes at X, Z (not its box's middle)   // foot: the columns it truly stands on (a round pad's), in place of its box   // over: stands on something already placed (a dockhouse on its pad)
+function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, water = false, stilts = false, wet = false, tag = "", pad = 0, kinds = null, slope = Infinity, anyWater = false, carve = false, trunk = false, over = false, foot = null, origin = false, dry = false } = {}) {   // dry: weigh the site (its earthwork) without taking it   // origin: the prototype's own 0,0 goes at X, Z (not its box's middle)   // foot: the columns it truly stands on (a round pad's), in place of its box   // over: stands on something already placed (a dockhouse on its pad)
   const [x0, x1, , , z0, z1] = trunk ? [0, 0, 0, 0, 0, 0] : P.b, ox = origin ? X : X - Math.round((x0 + x1) / 2), oz = origin ? Z : Z - Math.round((z0 + z1) / 2);   // trunk: the footprint is the trunk's column (a crown hangs free)
   if (!over) { if (foot) { for (const [x, z] of foot) if (taken.has(colKey(ox + x, oz + z))) return no("overlap"); } else for (let x = x0 - pad; x <= x1 + pad; x++) for (let z = z0 - pad; z <= z1 + pad; z++) if (taken.has(colKey(ox + x, oz + z))) return no("overlap"); }
   let top = -Infinity, low = Infinity; const cols = [];
@@ -155,7 +156,9 @@ function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, 
   if (top - low > slope) return no("too steep");
   if (wet) { if (cols.some(([, , t]) => G.SEA - t > STILT_DEEP)) return no("water too deep for stilts");
     stilts = true; foundation = PEOPLE_PAL[wet]?.frame ?? foundation; floorAt = Math.max(G.SEA + 1, top + LIFT); if (floorAt - low > POST_MAX) return no("posts too tall"); }   // always on posts: a block over the shallows, LIFT over the land (the sea's own columns lie under it: lay.js lays water over a top under SEA)
-  const y0 = trunk ? top + 1 : floorAt ?? (carve ? Math.max(low, G.SEA + 1) : Math.max(top, G.SEA + 1));   // a carved house sits at its downhill foot, cut into the slope
+  let y0 = trunk ? top + 1 : floorAt ?? (carve ? Math.max(low, G.SEA + 1) : Math.max(top, G.SEA + 1));   // a carved house sits at its downhill foot, cut into the slope
+  if (!trunk && floorAt == null && !carve && !over && y0 - 1 - low > CREPIDOMA) { y0 = Math.max(low + CREPIDOMA + 1, G.SEA + 1); carve = true; }   // a footing of three steps at most: past that the floor drops and the slope above is cut back (thera.md §2)
+  if (dry) { let cut = 0, fill = 0; for (const [, , t] of cols) { cut += Math.max(0, t - y0); fill += Math.max(0, y0 - 1 - t); } return { cut, fill, score: cut + PHI * fill }; }   // derived: fill weighs phi to cut's one (a footing is built, a cut only dug)
   for (const [wx, wz] of cols) taken.add(colKey(wx, wz));
   placements.push({ p: P.i, x: ox, y: y0, z: oz, f: pal(foundation), stilts, carve, tag, b: [ox + x0, oz + z0, ox + x1, oz + z1] });
   return true;
@@ -201,7 +204,9 @@ let TP = null, templeOk = false, HORAIA_AT = null; const POOLDRESS = [], POOLFIS
   const site = (name, a, r0) => { const vox = CIVIC[name](), r = turnTo(a + Math.PI), P = proto(name, vox, r);   // its front toward the summit's outside (away from the middle)
     const tries = []; for (let r1 = r0; r1 < r0 + FIB[10]; r1 += 3) tries.push([r1, a]); for (let k = 1; k < (FIB[10] + FIB[9]); k++) tries.push([r0 + FIB[8] * Math.sqrt(k / (FIB[10] + FIB[9])), a + k * Math.PI * (3 - Math.sqrt(5))]);   // straight out, then a golden spiral round the spot (given: the golden angle)
     const w0 = { ...why };
-    for (const [r1, a1] of tries) { const X = Math.round(cx + r1 * Math.cos(a1)), Z = Math.round(cz + r1 * Math.sin(a1)); if (place(P, X, Z, { foundation: "minecraft:calcite", pad: 3, tag: name === "great temple" ? "temple" : name })) { if (name === "great temple") { TP = P; templeOk = true; } done.push(`${name} ${r1} out`); return; } }
+    const opts = { foundation: "minecraft:calcite", pad: 3, tag: name === "great temple" ? "temple" : name }; let best = null;
+    for (const [r1, a1] of tries) { const X = Math.round(cx + r1 * Math.cos(a1)), Z = Math.round(cz + r1 * Math.sin(a1)), w = place(P, X, Z, { ...opts, dry: true }); if (w && (!best || w.score < best.w.score)) best = { X, Z, r1, w }; }   // every try weighed: the least earthwork, cut plus phi times fill (thera.md §2 rule 2)
+    if (best && place(P, best.X, best.Z, opts)) { if (name === "great temple") { TP = P; templeOk = true; } done.push(`${name} ${best.r1.toFixed(0)} out (cut ${best.w.cut}, fill ${best.w.fill})`); return; }
     done.push(`${name} NOT placed (${Object.entries(why).filter(([k, v]) => v > (w0[k] ?? 0)).map(([k, v]) => `${v - (w0[k] ?? 0)} ${k}`).join(", ")})`); };
   // the cascading pools (world/theraplan.js): the Horaia on the first one's island; each pool dressed as its water,
   // and its fish (spawned with the chunk's folk: lay.js POOLFISH)
