@@ -6,6 +6,8 @@
 **Baton:** R (Richard) — after **S001** (0.9.13), filed 2026-11-12
 **Next holder:** _(fill in)_
 
+> **In progress: S002-R** on `stage/S002-R` — 0.9.13 in game + `ship:test` (`stages/S002-2026-11-12-R.md`).
+
 ## The build (all at the top of this folder)
 
 | | File | SHA-256 |
