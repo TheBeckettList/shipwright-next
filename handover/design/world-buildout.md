@@ -136,6 +136,44 @@ grown town. So **every closure change is batched into one grow** (phase 4).
 | Grow order? | **nearest Thera first** | claims split the ground before growth, so order can't change the result |
 | How much may a pad move ground? | **5 (8 carved)** | the outer slope's `FIB[4]`; the median minimises Σ\|h − L\| |
 
+## Phase 2, first measurement (2026-11-13)
+
+`tools/planprobe.mjs` grows chosen settlements as `bakegrown` does, writes nothing, and counts.
+
+Two Indian Ocean towns, 248 and 209 folk:
+
+| | 50:21,7 | 23:21,7 |
+|---|---|---|
+| placements | 95 | 84 |
+| distinct prototypes | 95 | 84 |
+| canted (not a right-angle turn) | 0 | 0 |
+| building voxels | 108,690 | 90,499 |
+| building share of what the town stores (blocks unlike the skin) | — | 69% |
+| grow time | 113 s | 89–118 s |
+
+Across the world:
+- **kinds:** 311 building kinds over the ten peoples (about 31 a people);
+- **`buildOf` (measured):** 3.8 ms and 857 voxels a building on average, in Node;
+- **today's add-on:** already carries 1,889 prototypes (14.5 MB of base64) behind 33,360 placements, the boxed towns' way.
+
+**What it means:**
+- **Every grown building is its own prototype today.** Each takes its own seed, so storing a plan instead of blocks
+  saves nothing until the seeds are shared.
+- **Buildings are most of a town** (69% of its stored blocks). Trees, farms and streets are the rest, and they come from
+  `layPlace`, which is a pure function of the plan.
+- **Shared seeds put the world in today's budget.** With a fixed set of seeds a kind, the whole world's prototypes are
+  bounded by kinds × seeds, whatever the number of towns:
+  - 311 × 5 = 1,555 prototypes, about 11 MB raw;
+  - 311 × 8 = 2,488 prototypes, about 17 MB raw;
+  - today's library is 1,889 prototypes.
+  The boxed towns' prototypes retire in phase 4 and free their share.
+- **Terracing buildings** add the slope to their key, so their slope must be quantised too (four directions, a few
+  steepnesses).
+- **Both changes are in the closure** (`growth.js`, `census.js`), so they ride phase 4's one grow.
+
+The plan stands, with fallback 1 (shared seeds) as the rule rather than the fallback. Shipping `buildOf` to the game
+(3.8 ms a building in Node, likely several times that in the game) stays the second choice.
+
 ## For Richard
 
 1. **The phase 4 window.** If S003's ship work touches the closure, it should land before the grow or wait for it.
