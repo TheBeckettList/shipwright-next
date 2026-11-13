@@ -1790,12 +1790,21 @@ def glider_parts(b):
         return (1 - u / 3) * (1 - 0.62 * u ** 1.6)             # the run: a third slimmer than a plain taper
     def cy(t):                                            # the nose comes down to cut the water at her waterline
         return wl + 1 + (ymid - wl - 1) * min(1, t / TMAX) ** 0.5
-    N, K = 12, 16                                         # vision: twelve stations, sixteen-sided sections
+    N = 12                                                # vision: twelve stations
     zs = [-half + 2 * half * i / N for i in range(N + 1)]
+    # her section, by b["hull"] (Richard: "not as round"): round (sixteen-sided, the first); faceted (six hard facets,
+    # a cut gem, an asterion crystal); wedge (a racing powerboat's: flat deck, hard chines, a V bottom); blade (a tall
+    # narrow diamond, deep V below and a ridge above: a knife on edge)
+    hull = b.get("hull", "round")
+    SECTION = {"round": [(math.cos(2 * math.pi * (k + 0.5) / 16), math.sin(2 * math.pi * (k + 0.5) / 16) * (0.85 if math.sin(2 * math.pi * (k + 0.5) / 16) > 0 else 1.0)) for k in range(16)],
+               "faceted": [(math.cos(math.pi / 3 * k), 0.8 * math.sin(math.pi / 3 * k)) for k in range(6)],
+               "wedge": [(1, 0.55), (-1, 0.55), (-1, -0.05), (0, -1), (1, -0.05)],
+               "blade": [(0, 0.9), (-0.62, 0.05), (0, -1), (0.62, 0.05)]}[hull]
+    K = len(SECTION)
     def ring(i):
         t = i / N
         w, h, c = max(0.15, W * fat(t)), max(0.15, H * fat(t)), cy(t)
-        return [(w * math.cos(2 * math.pi * (k + 0.5) / K), c + h * math.sin(2 * math.pi * (k + 0.5) / K) * (0.85 if math.sin(2 * math.pi * (k + 0.5) / K) > 0 else 1.0), zs[i]) for k in range(K)]
+        return [(w * u, c + h * v, zs[i]) for u, v in SECTION]
     R = [ring(i) for i in range(N + 1)]
     frame, cloth = [], []
     for i in range(N):
@@ -1805,7 +1814,7 @@ def glider_parts(b):
             a, c = R[i][k], R[i][(k + 1) % K]
             a2, c2 = R[i + 1][k], R[i + 1][(k + 1) % K]
             cloth += slab(a, c, a2, c2, 0.2, inside)                                   # the skin
-            if k % 4 == 0:                                                             # four stringers, gold
+            if k % max(1, K // 4) == 0:                                                # stringers, gold
                 f = lambda P, Q: tuple(P[j] + (Q[j] - P[j]) * 0.18 for j in range(3))
                 frame += slab(a, f(a, c), a2, f(a2, c2), 0.5, inside)
         if i % 2 == 0 and i > 0:                                                       # a gold ring at every other station
