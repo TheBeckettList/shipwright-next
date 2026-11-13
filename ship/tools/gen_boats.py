@@ -2040,6 +2040,27 @@ def glider_parts(b):
     T_CUT = 1 - 1 / PHI ** 4 if b.get("tail") == "stealth" else 2           # vision: the last 0.15 of her
     i_cut = min(N, math.ceil(T_CUT * N))
     tipF, tipG, tipC = [], [], []
+    # her skin as polygon meshes (Richard: "do it", the keel's way for her hull): each facet of her gold bottom and of
+    # her cloth one quad of a mesh on its bone, in place of a thin plate; HULL_MESH=0 lays the plates (the viewer)
+    HULL_MESH = os.environ.get("HULL_MESH", "1") != "0"
+    meshq = {}
+    def face(lst, P0, P1, Q0, Q1, t, ins):
+        if HULL_MESH:
+            meshq.setdefault(id(lst), []).append((P0, P1, Q1, Q0))
+        else:
+            lst.extend(slab(P0, P1, Q0, Q1, t, ins))
+    def mesh_of(quads, uv_px):
+        pos, nor, polys = [], [], []
+        for ring_ in quads:
+            ring_ = [[round(P_[0], 4), round(P_[1], 4), round(P_[2], 4)] for P_ in ring_]
+            u_ = [ring_[1][k] - ring_[0][k] for k in range(3)]; v_ = [ring_[3][k] - ring_[0][k] for k in range(3)]
+            nv = [u_[1] * v_[2] - u_[2] * v_[1], u_[2] * v_[0] - u_[0] * v_[2], u_[0] * v_[1] - u_[1] * v_[0]]
+            nn = math.sqrt(sum(c * c for c in nv)) or 1
+            nv = [round(c / nn, 4) for c in nv]
+            base = len(pos); pos += ring_; nor += [nv, [-c for c in nv]]; ni = len(nor) - 2
+            polys.append([[base + k, ni, 0] for k in range(4)])
+            polys.append([[base + k, ni + 1, 0] for k in (3, 2, 1, 0)])
+        return {"normalized_uvs": False, "positions": pos, "normals": nor, "uvs": [list(uv_px)], "polys": polys}
     for i in range(N):
         mid = (zs[i] + zs[i + 1]) / 2
         inside = (0, cy((i + 0.5) / N), mid)
@@ -2054,9 +2075,9 @@ def glider_parts(b):
             lo = a[1] <= c[1]                                                          # which end of the facet is low
             A, C, A2, C2 = (a, c, a2, c2) if lo else (c, a, c2, a2)
             if sa > 0 or sb > 0:
-                gskin += slab(A, at(A, C, sa), A2, at(A2, C2, sb), 0.25, inside)
+                face(gskin, A, at(A, C, sa), A2, at(A2, C2, sb), 0.25, inside)
             if sa < 1 or sb < 1:
-                cloth += slab(at(A, C, sa), C, at(A2, C2, sb), C2, 0.2, inside)
+                face(cloth, at(A, C, sa), C, at(A2, C2, sb), C2, 0.2, inside)
             if k % max(1, K // 4) == 0:                                                # stringers, gold
                 f = lambda P, Q: tuple(P[j] + (Q[j] - P[j]) * 0.18 for j in range(3))
                 frame += slab(a, f(a, c), a2, f(a2, c2), 0.5, inside)
@@ -2153,6 +2174,13 @@ def glider_parts(b):
     ck = Lt / PHI ** 5                                    # a fine chord, bow to stern (Richard: "less thick")
     bones = [{"name": "rig_glide_body", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(frame + gskin)},
              {"name": "rig_glide_body_skin", "parent": "rig_glide_body", "pivot": [0, 0, 0], "cubes": skin(cloth)}]
+    GOLD_PX = (SC.SPAR[0] + 4 + (SC.SPAR[2] - 12) / 2, 128 - (SC.SPAR[1] + (SC.SPAR[3] - 1) / 2))   # (v counted up from the sheet's foot)
+    SKIN_PX = (SC.SKIN[0] + SC.SKIN[2] / 2, 128 - (SC.SKIN[1] + SC.SKIN[3] / 2))
+    if HULL_MESH:
+        if meshq.get(id(gskin_)):
+            bones[0]["poly_mesh"] = mesh_of(meshq[id(gskin_)], GOLD_PX)
+        if meshq.get(id(cloth_)):
+            bones[1]["poly_mesh"] = mesh_of(meshq[id(cloth_)], SKIN_PX)
     # the core: an asterion crystal turned on its corners (three cubes, an icosahedron's look), at her heart
     zc, rc = -half + LB * 0.42, 0.7 * W
     core = [{"origin": [-rc / 2, ymid - rc / 2, zc - rc / 2], "size": [rc, rc, rc], "pivot": [0, ymid, zc], "rotation": rot, "uv": core_uv}
@@ -2231,6 +2259,11 @@ def glider_parts(b):
         Ls = zS - Ps[2]
         tail_bones = [{"name": "rig_glide_tailtip", "parent": "root", "pivot": [0, round(cyc, 3), round(zs[i_cut], 3)], "cubes": gold(tipF + tipG + sleeve)},
                       {"name": "rig_glide_tailtip_skin", "parent": "rig_glide_tailtip", "pivot": [0, round(cyc, 3), round(zs[i_cut], 3)], "cubes": skin(tipC)}]
+        if HULL_MESH:
+            if meshq.get(id(tipG)):
+                tail_bones[0]["poly_mesh"] = mesh_of(meshq[id(tipG)], GOLD_PX)
+            if meshq.get(id(tipC)):
+                tail_bones[1]["poly_mesh"] = mesh_of(meshq[id(tipC)], SKIN_PX)
         for side_, sx in (("l", 1), ("r", -1)):
             F = (sx * half_at(i_f, yS), yS, zs[i_f])                             # top fore corner, on her hull
             hgt = yS - yfoil
