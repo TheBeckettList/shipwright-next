@@ -1,0 +1,13 @@
+{
+  "name": "shipwright-next",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "lab": "node tools/lab.mjs",
+    "render": "node tools/lab.mjs render world.png",
+    "build": "node tools/buildmod.mjs",
+    "modtest": "node tools/modtest/run.mjs",
+    "ship:test": "cd ship && node --import ./tests/mocks/register.mjs --test tests/*.test.mjs"
+  }
+}

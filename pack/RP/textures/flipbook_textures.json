@@ -1,0 +1,14 @@
+[
+ {
+  "flipbook_texture": "textures/blocks/prismarine_rough",
+  "atlas_tile": "prismarine_rough",
+  "ticks_per_frame": 1,
+  "blend_frames": true
+ },
+ {
+  "flipbook_texture": "textures/blocks/water_still_grey",
+  "atlas_tile": "water_still_grey",
+  "ticks_per_frame": 2,
+  "blend_frames": true
+ }
+]

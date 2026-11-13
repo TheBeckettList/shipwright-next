@@ -1,0 +1,6 @@
+{
+ "thera flight": {"surface": 8.02, "life": 1.2, "deep": 13.86, "byPass": {"surface":{"fills":239,"sets":1,"volume":36688},"life":{"fills":27,"sets":685,"volume":60},"deep":{"fills":940,"sets":41,"volume":23096}}},
+ "land flight": {"surface": 2.56, "life": 0.05, "deep": 2.75, "byPass": {"surface":{"fills":70,"sets":1,"volume":32512},"life":{"fills":0,"sets":1,"volume":0},"deep":{"fills":293,"sets":10,"volume":12014}}},
+ "sea sail": {"surface": 1.71, "life": 0.03, "deep": 3.43, "byPass": {"surface":{"fills":76,"sets":1,"volume":32512},"life":{"fills":0,"sets":1,"volume":0},"deep":{"fills":610,"sets":39,"volume":22528}}},
+ "river": {"surface": 5.72, "life": 0.31, "deep": 5.48, "byPass": {"surface":{"fills":55,"sets":1,"volume":33025},"life":{"fills":0,"sets":318,"volume":0},"deep":{"fills":816,"sets":71,"volume":31979}}}
+}

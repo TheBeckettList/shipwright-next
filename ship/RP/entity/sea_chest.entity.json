@@ -1,0 +1,20 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "shipwright:sea_chest",
+      "materials": {
+        "default": "entity_alphatest"
+      },
+      "textures": {
+        "default": "textures/entity/shipwright/sea_chest"
+      },
+      "geometry": {
+        "default": "geometry.shipwright.sea_chest"
+      },
+      "render_controllers": [
+        "controller.render.default"
+      ]
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "resource_pack_name": "shipwright",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "shipwright_chart_book": {
+      "textures": "textures/items/chart_book"
+    },
+    "shipwright_sea_chart": {
+      "textures": "textures/items/sea_chart"
+    },
+    "shipwright_captains_key": {
+      "textures": "textures/items/captains_key"
+    }
+  }
+}

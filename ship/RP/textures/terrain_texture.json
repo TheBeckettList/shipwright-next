@@ -1,0 +1,23 @@
+{
+  "resource_pack_name": "shipwright",
+  "texture_name": "atlas.terrain",
+  "padding": 8,
+  "num_mip_levels": 4,
+  "texture_data": {
+    "shipwright_table_top": {
+      "textures": "textures/blocks/shipwright_table_top"
+    },
+    "shipwright_table_side": {
+      "textures": "textures/blocks/shipwright_table_side"
+    },
+    "shipwright_table_front": {
+      "textures": "textures/blocks/shipwright_table_front"
+    },
+    "shipwright_gate_post": {
+      "textures": "textures/blocks/shipwright_gate_post"
+    },
+    "shipwright_gate_post_top": {
+      "textures": "textures/blocks/shipwright_gate_post_top"
+    }
+  }
+}

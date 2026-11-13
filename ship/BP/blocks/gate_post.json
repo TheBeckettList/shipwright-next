@@ -1,0 +1,60 @@
+{
+  "format_version": "1.21.90",
+  "minecraft:block": {
+    "description": {
+      "identifier": "shipwright:gate_post",
+      "menu_category": {
+        "category": "items"
+      }
+    },
+    "components": {
+      "minecraft:destructible_by_mining": {
+        "seconds_to_destroy": 1.5
+      },
+      "minecraft:destructible_by_explosion": {
+        "explosion_resistance": 3
+      },
+      "minecraft:map_color": "#6e5232",
+      "minecraft:geometry": "geometry.shipwright.gate_post",
+      "minecraft:collision_box": {
+        "origin": [
+          -3,
+          0,
+          -3
+        ],
+        "size": [
+          6,
+          16,
+          6
+        ]
+      },
+      "minecraft:selection_box": {
+        "origin": [
+          -3,
+          0,
+          -3
+        ],
+        "size": [
+          6,
+          16,
+          6
+        ]
+      },
+      "minecraft:light_dampening": 0,
+      "minecraft:material_instances": {
+        "*": {
+          "texture": "shipwright_gate_post",
+          "render_method": "opaque"
+        },
+        "up": {
+          "texture": "shipwright_gate_post_top",
+          "render_method": "opaque"
+        },
+        "down": {
+          "texture": "shipwright_gate_post_top",
+          "render_method": "opaque"
+        }
+      }
+    }
+  }
+}

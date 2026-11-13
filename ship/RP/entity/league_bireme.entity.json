@@ -1,0 +1,125 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "shipwright:league_bireme",
+      "materials": {
+        "default": "entity_alphatest"
+      },
+      "textures": {
+        "hull_oak": "textures/entity/shipwright/hull_oak",
+        "hull_spruce": "textures/entity/shipwright/hull_spruce",
+        "hull_birch": "textures/entity/shipwright/hull_birch",
+        "hull_jungle": "textures/entity/shipwright/hull_jungle",
+        "hull_acacia": "textures/entity/shipwright/hull_acacia",
+        "hull_dark_oak": "textures/entity/shipwright/hull_dark_oak",
+        "hull_mangrove": "textures/entity/shipwright/hull_mangrove",
+        "hull_cherry": "textures/entity/shipwright/hull_cherry",
+        "hull_bamboo": "textures/entity/shipwright/hull_bamboo",
+        "hull_hide": "textures/entity/shipwright/hull_hide",
+        "hull_rabbit": "textures/entity/shipwright/hull_rabbit",
+        "hull_birch_bark": "textures/entity/shipwright/hull_birch_bark",
+        "sail_white": "textures/entity/shipwright/sail_white",
+        "sail_orange": "textures/entity/shipwright/sail_orange",
+        "sail_magenta": "textures/entity/shipwright/sail_magenta",
+        "sail_light_blue": "textures/entity/shipwright/sail_light_blue",
+        "sail_yellow": "textures/entity/shipwright/sail_yellow",
+        "sail_lime": "textures/entity/shipwright/sail_lime",
+        "sail_pink": "textures/entity/shipwright/sail_pink",
+        "sail_gray": "textures/entity/shipwright/sail_gray",
+        "sail_light_gray": "textures/entity/shipwright/sail_light_gray",
+        "sail_cyan": "textures/entity/shipwright/sail_cyan",
+        "sail_purple": "textures/entity/shipwright/sail_purple",
+        "sail_blue": "textures/entity/shipwright/sail_blue",
+        "sail_brown": "textures/entity/shipwright/sail_brown",
+        "sail_green": "textures/entity/shipwright/sail_green",
+        "sail_red": "textures/entity/shipwright/sail_red",
+        "sail_black": "textures/entity/shipwright/sail_black",
+        "sea_chest": "textures/entity/shipwright/sea_chest_ender",
+        "canopy": "textures/blocks/wool_colored_white",
+        "shields": "textures/entity/shipwright/shields",
+        "copper": "textures/blocks/copper_block",
+        "barrel": "textures/blocks/barrel_side",
+        "bone": "textures/blocks/bone_block_side",
+        "furnace_off": "textures/blocks/furnace_front_off",
+        "furnace_on": "textures/blocks/furnace_front_on",
+        "smoker_off": "textures/blocks/smoker_front_off",
+        "smoker_on": "textures/blocks/smoker_front_on",
+        "blast_off": "textures/blocks/blast_furnace_front_off",
+        "blast_on": "textures/blocks/blast_furnace_front_on"
+      },
+      "geometry": {
+        "default": "geometry.shipwright.league_bireme",
+        "fittings": "geometry.shipwright.league_bireme.fittings",
+        "rig": "geometry.shipwright.league_bireme.rig",
+        "outfit": "geometry.shipwright.league_bireme.outfit",
+        "deck_hold": "geometry.shipwright.league_bireme.deck_hold",
+        "deck_wood": "geometry.shipwright.league_bireme.deck_wood",
+        "deck_cloth": "geometry.shipwright.league_bireme.deck_cloth",
+        "deck_copper": "geometry.shipwright.league_bireme.deck_copper",
+        "chest": "geometry.shipwright.league_bireme.chest",
+        "furnace": "geometry.shipwright.league_bireme.furnace",
+        "launched": "geometry.shipwright.league_bireme.launched"
+      },
+      "animations": {
+        "hull": "animation.shipwright.league_bireme.hull",
+        "rig": "animation.shipwright.league_bireme.rig",
+        "oars": "animation.shipwright.league_bireme.oars",
+        "paddles": "animation.shipwright.league_bireme.paddles",
+        "cranks": "animation.shipwright.league_bireme.cranks"
+      },
+      "scripts": {
+        "pre_animation": [
+          "v.furl = math.lerp(v.furl ?? 1.0, (math.mod(math.floor(q.property('shipwright:flags') / 2), 2)) ? 1.0 : 0.12, 0.08);",
+          "v.fill = math.lerp(v.fill ?? 0.0, q.property('shipwright:sail_fill'), 0.1);",
+          "v.trim = math.lerp(v.trim ?? 0.0, math.clamp(q.property('shipwright:wind_rel') * 0.5, -55, 55), 0.08);",
+          "v.ftrim = math.lerp(v.ftrim ?? 0.0, (q.property('shipwright:wind_rel') >= 0 ? -1 : 1) * math.clamp((180 - math.abs(q.property('shipwright:wind_rel'))) * 0.45, 8, 80), 0.08);",
+          "v.tt = math.lerp(v.tt ?? 0.0, q.property('shipwright:telltale'), 0.1);",
+          "v.heel = math.lerp(v.heel ?? 0.0, q.property('shipwright:heel'), 0.1);",
+          "v.row = math.lerp(v.row ?? 0.0, q.property('shipwright:rowing'), 0.15);",
+          "v.l = math.lerp(v.l ?? 0.0, q.property('shipwright:stroke_l'), 0.12);",
+          "v.r = math.lerp(v.r ?? 0.0, q.property('shipwright:stroke_r'), 0.12);",
+          "v.turn = math.lerp(v.turn ?? 0.0, q.property('shipwright:turn'), 0.12);",
+          "v.a = math.max(math.abs(v.l), math.abs(v.r));",
+          "v.p_oar = math.mod((v.p_oar ?? 0) + q.delta_time * (249 + 240 * v.row), 360);",
+          "v.p_pad = math.mod((v.p_pad ?? 0) + q.delta_time * (300 + 240 * v.row), 360);",
+          "v.p_dp = math.mod((v.p_dp ?? 0) + q.delta_time * (260 + 240 * v.row), 360);",
+          "v.p_scull = math.mod((v.p_scull ?? 0) + q.delta_time * (200 + 200 * v.row), 360);",
+          "v.p_pole = math.mod((v.p_pole ?? 0) + q.delta_time * (120 + 120 * v.row), 360);",
+          "v.p_crank = math.mod((v.p_crank ?? 0) + q.delta_time * 320 * v.row, 360);",
+          "v.pw = (math.mod(math.floor(q.property('shipwright:flags') / 4), 2)) ? 1 : 0;",
+          "v.po = v.pw > 0 ? v.p_crank : v.p_oar;"
+        ],
+        "animate": [
+          "hull",
+          {
+            "rig": "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2))"
+          },
+          {
+            "oars": "(math.mod(math.floor(q.property('shipwright:kinds') / 32), 8)) == 0"
+          },
+          {
+            "paddles": "(math.mod(math.floor(q.property('shipwright:kinds') / 32), 8)) > 0"
+          },
+          {
+            "cranks": "((math.mod(math.floor(q.property('shipwright:kinds') / 256), 4)) > 0)"
+          }
+        ]
+      },
+      "render_controllers": [
+        "controller.render.shipwright.league_bireme.bow",
+        "controller.render.shipwright.league_bireme.mid",
+        "controller.render.shipwright.league_bireme.stern",
+        "controller.render.shipwright.league_bireme.fittings",
+        "controller.render.shipwright.league_bireme.sail",
+        "controller.render.shipwright.league_bireme.ram",
+        "controller.render.shipwright.league_bireme.deck_hold",
+        "controller.render.shipwright.league_bireme.deck_bench",
+        "controller.render.shipwright.league_bireme.deck_canopy",
+        "controller.render.shipwright.league_bireme.deck_nav",
+        "controller.render.shipwright.league_bireme.chest",
+        "controller.render.shipwright.league_bireme.furnace"
+      ]
+    }
+  }
+}

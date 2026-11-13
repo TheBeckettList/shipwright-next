@@ -1,0 +1,34 @@
+{
+  "format_version": "1.20.10",
+  "minecraft:recipe_shaped": {
+    "description": {
+      "identifier": "shipwright:shipwright_table"
+    },
+    "tags": [
+      "crafting_table"
+    ],
+    "pattern": [
+      "PPP",
+      "STS"
+    ],
+    "key": {
+      "P": {
+        "tag": "minecraft:planks"
+      },
+      "S": {
+        "item": "minecraft:stick"
+      },
+      "T": {
+        "item": "minecraft:crafting_table"
+      }
+    },
+    "unlock": [
+      {
+        "item": "minecraft:crafting_table"
+      }
+    ],
+    "result": {
+      "item": "shipwright:shipwright_table"
+    }
+  }
+}

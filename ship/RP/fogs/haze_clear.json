@@ -1,0 +1,28 @@
+{
+  "format_version": "1.16.100",
+  "minecraft:fog_settings": {
+    "description": {
+      "identifier": "shipwright:haze_clear"
+    },
+    "distance": {
+      "air": {
+        "fog_start": 0.55,
+        "fog_end": 1.0,
+        "fog_color": "#cddde5",
+        "render_distance_type": "render"
+      },
+      "weather": {
+        "fog_start": 0.3,
+        "fog_end": 0.75,
+        "fog_color": "#8e9ea6",
+        "render_distance_type": "render"
+      },
+      "water": {
+        "fog_start": 0,
+        "fog_end": 48,
+        "fog_color": "#2f6e9c",
+        "render_distance_type": "fixed"
+      }
+    }
+  }
+}

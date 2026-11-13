@@ -1,0 +1,172 @@
+{
+  "format_version": "1.12.0",
+  "minecraft:geometry": [
+    {
+      "description": {
+        "identifier": "geometry.shipwright.gate_post",
+        "texture_width": 16,
+        "texture_height": 16
+      },
+      "bones": [
+        {
+          "name": "post",
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "cubes": [
+            {
+              "origin": [
+                -3,
+                0,
+                -3
+              ],
+              "size": [
+                6,
+                15,
+                6
+              ],
+              "uv": {
+                "north": {
+                  "uv": [
+                    5,
+                    0
+                  ],
+                  "uv_size": [
+                    6,
+                    15
+                  ]
+                },
+                "south": {
+                  "uv": [
+                    5,
+                    0
+                  ],
+                  "uv_size": [
+                    6,
+                    15
+                  ]
+                },
+                "east": {
+                  "uv": [
+                    5,
+                    0
+                  ],
+                  "uv_size": [
+                    6,
+                    15
+                  ]
+                },
+                "west": {
+                  "uv": [
+                    5,
+                    0
+                  ],
+                  "uv_size": [
+                    6,
+                    15
+                  ]
+                },
+                "up": {
+                  "uv": [
+                    5,
+                    5
+                  ],
+                  "uv_size": [
+                    6,
+                    6
+                  ]
+                },
+                "down": {
+                  "uv": [
+                    5,
+                    5
+                  ],
+                  "uv_size": [
+                    6,
+                    6
+                  ]
+                }
+              }
+            },
+            {
+              "origin": [
+                -3.5,
+                15,
+                -3.5
+              ],
+              "size": [
+                7,
+                1,
+                7
+              ],
+              "uv": {
+                "north": {
+                  "uv": [
+                    4,
+                    0
+                  ],
+                  "uv_size": [
+                    7,
+                    1
+                  ]
+                },
+                "south": {
+                  "uv": [
+                    4,
+                    0
+                  ],
+                  "uv_size": [
+                    7,
+                    1
+                  ]
+                },
+                "east": {
+                  "uv": [
+                    4,
+                    0
+                  ],
+                  "uv_size": [
+                    7,
+                    1
+                  ]
+                },
+                "west": {
+                  "uv": [
+                    4,
+                    0
+                  ],
+                  "uv_size": [
+                    7,
+                    1
+                  ]
+                },
+                "up": {
+                  "uv": [
+                    4,
+                    4
+                  ],
+                  "uv_size": [
+                    7,
+                    7
+                  ]
+                },
+                "down": {
+                  "uv": [
+                    4,
+                    4
+                  ],
+                  "uv_size": [
+                    7,
+                    7
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

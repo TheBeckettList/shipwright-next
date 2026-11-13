@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# ww: the Waterworld test server, one command for everything.
+#
+#   ww setup         first time only: puts `ww` on your PATH, then does `ww new`
+#   ww new           carte blanche: stops and deletes the old servers (Shipwright's and Waterworld's) and their
+#                    worlds, then starts a clean Waterworld server set up for the Switch
+#   ww update        installs the newest waterworld-update*.zip from Downloads, restarts, checks it loaded
+#   ww update --new  the same, on a brand-new world
+#   ww start | stop  start or stop the server (the world is kept)
+#   ww status        is it up, can the Switch reach it, which version is running
+#   ww watch         live: Waterworld's messages and every error, as they happen (Ctrl-C to stop)
+#   ww errors        the errors and warnings since the server started
+#   ww stats         chunks laid and how fast
+#   ww soak [n]      the server tours its own test sites (no Switch needed), lays and checks them; then ww probes
+#   ww fly [b/s] [s] [deg]  the flight test: the server flies a centre of its own and counts holes in view; then ww probes
+#   ww probes        the server's measurements, saved to your Desktop and copied: drop the file in the chat
+#   ww report        everything I need to debug, saved to your Desktop and copied: paste it into the chat
+#   ww cmd <text>    run a server console command (e.g. ww cmd time set day)
+#   ww pregen [on|off|status|reset|sea on|sea off]   the background tour that lays the world outward from Thera
+set -uo pipefail
+HERE="$(cd "$(dirname "$(readlink -f "$0" 2>/dev/null || python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$0")")" && pwd)"
+DEV="$HERE/dev"
+C=waterworld-dev
+b() { printf "\n\033[1m%s\033[0m\n" "$*"; }
+need_docker() { docker info >/dev/null 2>&1 || { echo "Docker isn't running: open Docker Desktop, wait for 'Engine running', and try again."; exit 1; }; }
+logs() { docker logs "$C" 2>&1; }
+
+case "${1:-help}" in
+  setup)
+    b "Putting ww on your PATH"
+    mkdir -p "$HOME/.local/bin"; ln -sf "$HERE/ww" "$HOME/.local/bin/ww"; chmod +x "$HERE/ww"
+    for rc in "$HOME/.zshrc" "$HOME/.bash_profile"; do
+      grep -q '.local/bin' "$rc" 2>/dev/null || echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$rc"
+    done
+    echo "Done. New Terminal windows know 'ww'. (In this one, use: bash $HERE/ww ...)"
+    exec bash "$HERE/ww" new
+    ;;
+
+  new)
+    need_docker
+    b "Carte blanche: this deletes the old servers and their worlds"
+    echo "  - Shipwright's test server (container shipwright-dev) and its world, if it's there"
+    echo "  - Waterworld's test server (container waterworld-dev) and its world"
+    echo "  The Bedrock server download is kept, so this doesn't download it again."
+    read -r -p "Delete them and start clean? [y/N] " yes; [ "${yes:-n}" = "y" ] || [ "${yes:-n}" = "Y" ] || { echo "Nothing deleted."; exit 0; }
+    for c in shipwright-dev waterworld-dev; do docker rm -f "$c" >/dev/null 2>&1 && echo "  removed container $c"; done
+    # keep the server program: reuse a downloaded zip, from either folder
+    old=$(find "$HOME" -maxdepth 4 -type d -path "*/shipwright*/dev" 2>/dev/null | grep -v "$HERE" | head -3)
+    # keep a server program if there's one: only a zip that is the Linux server (it holds bedrock_server)
+    for o in $old; do for z in "$o"/bedrock-server-*.zip; do [ -f "$z" ] && unzip -l "$z" 2>/dev/null | grep -q " bedrock_server$" && cp -n "$z" "$DEV/" && echo "  kept the server download $(basename "$z")"; done; done
+    for o in $old; do [ -d "$o/data" ] && rm -rf "$o/data" && echo "  deleted Shipwright's server and world ($o/data)"; done
+    # Waterworld's own: the worlds and settings go, the server program stays (no download)
+    if [ -d "$DEV/data" ]; then
+      rm -rf "$DEV/data/worlds" "$DEV/data/server.properties" "$DEV/data/allowlist.json" "$DEV/data/permissions.json" "$DEV/data/valid_known_packs.json"
+      echo "  deleted Waterworld's world and settings (the server program is kept)"
+    fi
+    rm -f "$DEV/.netmode"
+    b "Starting a clean Waterworld server for the Switch"
+    exec bash "$DEV/connect.sh"
+    ;;
+
+  update)
+    need_docker
+    shift; z=""; wipe=""
+    for a in "$@"; do case "$a" in --new|--wipe) wipe="--wipe" ;; *) z="$a" ;; esac; done
+    [ -n "$z" ] || z=$(ls -t "$HOME"/Downloads/waterworld-update*.zip 2>/dev/null | head -1)
+    [ -n "$z" ] && [ -f "$z" ] || { echo "No waterworld-update zip in Downloads: download it from the chat first."; exit 1; }
+    unzip -oq "$z" ww 'dev/*' -d "$HERE" 2>/dev/null && chmod +x "$HERE/ww"   # the tools update themselves too
+    exec bash "$DEV/refresh.sh" $wipe "$z"
+    ;;
+
+  start) need_docker; exec bash "$DEV/dev.sh" up ;;
+  stop) need_docker; exec bash "$DEV/dev.sh" down ;;
+  status) need_docker; bash "$DEV/dev.sh" status; logs | grep -oE "\[Waterworld\] Scripts [0-9.]+ loaded.*" | tail -1 ;;
+  watch) need_docker; echo "Watching (Ctrl-C to stop)..."; docker logs -f --since 1s "$C" 2>&1 | grep --line-buffered -E "Waterworld|ERROR|Error|error|WARN|Player (connected|disconnected)" ;;
+  errors) need_docker; logs | grep -E "ERROR|Error|error|WARN|\[Scripting\]" | grep -v "server.properties" | tail -80 ;;
+  stats) need_docker; exec bash "$DEV/dev.sh" stats ;;
+  cmd) need_docker; shift; exec bash "$DEV/dev.sh" cmd "$@" ;;
+  pregen)
+    need_docker; shift
+    bash "$DEV/dev.sh" cmd scriptevent waterworld:pregen "${*:-status}" >/dev/null; sleep 2
+    docker logs --since 5s "$C" 2>&1 | grep -E "\[Waterworld\] pregen" | tail -1 | sed 's/.*\[Waterworld\] //'
+    ;;
+
+  soak)
+    need_docker; shift
+    since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    bash "$DEV/dev.sh" cmd scriptevent waterworld:soak "${1:-}" >/dev/null
+    echo "Soak running: the server tours its sites (about a minute each at most). Ctrl-C stops watching, not the soak."
+    timeout_s=$((60 * 60)); t=0
+    while [ $t -lt $timeout_s ]; do
+      line=$(docker logs --since "$since" "$C" 2>&1 | grep -E "\[Waterworld\] soak" | tail -1)
+      [ -n "$line" ] && printf "\r%s          " "$(echo "$line" | sed 's/.*\[Waterworld\] //' | cut -c1-110)"
+      echo "$line" | grep -q "soak done" && { echo; exec bash "$HERE/ww" probes; }
+      sleep 5; t=$((t + 5))
+    done
+    ;;
+
+  fly)
+    need_docker; shift
+    since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+    bash "$DEV/dev.sh" cmd scriptevent waterworld:fly "${*:-10.89 90 0}" >/dev/null
+    echo "Flight test: the server flies its own centre (blocks a second, seconds, degrees) and counts the holes. Ctrl-C stops watching."
+    t=0
+    while [ $t -lt 900 ]; do
+      line=$(docker logs --since "$since" "$C" 2>&1 | grep -E "\[Waterworld\] fly" | tail -1)
+      [ -n "$line" ] && printf "\r%s          " "$(echo "$line" | sed 's/.*\[Waterworld\] //' | cut -c1-110)"
+      echo "$line" | grep -q "fly done" && { echo; exec bash "$HERE/ww" probes; }
+      sleep 5; t=$((t + 5))
+    done
+    ;;
+
+  probes)
+    need_docker
+    out="$HOME/Desktop/waterworld-probes.jsonl"
+    logs | grep -oE "\[WWPROBE\] .*" | sed 's/^\[WWPROBE\] //' > "$out"
+    n=$(wc -l < "$out" | tr -d ' ')
+    echo "Saved $n measurements: $out"
+    echo "Drop that file into the chat; I run tools/calibrate.mjs on it and send the next build."
+    command -v open >/dev/null && open -R "$out" 2>/dev/null
+    ;;
+
+  report)
+    need_docker
+    out="$HOME/Desktop/waterworld-report.txt"
+    bash "$DEV/dev.sh" cmd scriptevent waterworld:version >/dev/null 2>&1; sleep 2
+    {
+      echo "== Waterworld report $(date)"
+      echo "== Kit: $(cat "$HERE/VERSION" 2>/dev/null)   Pack: $(python3 -c "import json;print(json.load(open('$HERE/BP/manifest.json'))['header']['version'])" 2>/dev/null)"
+      echo "== $(docker ps -a --filter "name=$C" --format '{{.Status}}  {{.Image}}')"
+      echo "== Server: $(logs | grep -oE 'Version:? *[0-9.]+' | tail -1)"
+      echo; echo "== Waterworld"; logs | grep -E "\[Waterworld\]" | tail -30
+      echo; echo "== Errors and warnings"; logs | grep -E "ERROR|Error|error|WARN" | grep -v "server.properties" | tail -60
+      echo; echo "== Players"; logs | grep -E "Player (connected|disconnected|Spawned)" | tail -10
+      echo; echo "== Last 120 lines"; logs | tail -120
+    } > "$out"
+    command -v pbcopy >/dev/null && pbcopy < "$out" && echo "Copied to the clipboard: paste it into the chat."
+    echo "Saved: $out"
+    ;;
+
+  *) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

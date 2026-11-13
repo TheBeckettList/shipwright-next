@@ -1,0 +1,207 @@
+[
+ {
+  "name": "steering.tick",
+  "file": "steering.js:1171",
+  "period": 1,
+  "cost": 3,
+  "group": "motion"
+ },
+ {
+  "name": "crew.shots",
+  "file": "crew.js:473",
+  "period": 1,
+  "cost": 1,
+  "group": "motion"
+ },
+ {
+  "name": "crew.gunners",
+  "file": "crew.js:450",
+  "period": 2,
+  "cost": 1,
+  "group": "motion"
+ },
+ {
+  "name": "buoyancy",
+  "file": "buoyancy.js:167",
+  "period": 2,
+  "cost": 3,
+  "group": "motion"
+ },
+ {
+  "name": "seaworld.arrivals",
+  "file": "seaworld.js:538",
+  "period": 2,
+  "cost": 1,
+  "group": "world"
+ },
+ {
+  "name": "steering.deck",
+  "file": "steering.js:1098",
+  "period": 5,
+  "cost": 3,
+  "group": "motion",
+  "inside": "steering.tick"
+ },
+ {
+  "name": "steering.wind",
+  "file": "steering.js:1099",
+  "period": 5,
+  "cost": 1,
+  "group": "motion",
+  "inside": "steering.tick"
+ },
+ {
+  "name": "edit.ghost",
+  "file": "edit.js:231",
+  "period": 5,
+  "cost": 1,
+  "group": "ui",
+  "transient": true
+ },
+ {
+  "name": "steering.smoke",
+  "file": "steering.js:768",
+  "period": 8,
+  "cost": 1,
+  "group": "motion",
+  "inside": "steering.tick"
+ },
+ {
+  "name": "steering.stats",
+  "file": "steering.js:1144",
+  "period": 10,
+  "cost": 1,
+  "group": "ui",
+  "inside": "steering.tick"
+ },
+ {
+  "name": "dock.outline",
+  "file": "dock.js:264",
+  "period": 10,
+  "cost": 3,
+  "group": "ui",
+  "transient": true
+ },
+ {
+  "name": "seaworld.chunks",
+  "file": "seaworld.js:561",
+  "period": 10,
+  "cost": 8,
+  "group": "world"
+ },
+ {
+  "name": "seaworld.portals",
+  "file": "seaworld.js:589",
+  "period": 10,
+  "cost": 3,
+  "group": "world"
+ },
+ {
+  "name": "steering.chests",
+  "file": "steering.js:1154",
+  "period": 20,
+  "cost": 3,
+  "group": "world"
+ },
+ {
+  "name": "seaworld.haze",
+  "file": "seaworld.js:541",
+  "period": 20,
+  "cost": 3,
+  "group": "world"
+ },
+ {
+  "name": "boatblock.drift",
+  "file": "boatblock.js:263",
+  "period": 20,
+  "cost": 3,
+  "group": "world"
+ },
+ {
+  "name": "crew.bells",
+  "file": "crew.js:484",
+  "period": 20,
+  "cost": 1,
+  "group": "motion",
+  "inside": "crew.shots"
+ },
+ {
+  "name": "steering.exposure",
+  "file": "steering.js:1110",
+  "period": 20,
+  "cost": 8,
+  "group": "motion",
+  "inside": "steering.tick"
+ },
+ {
+  "name": "charts.treasure",
+  "file": "charts.js:391",
+  "period": 40,
+  "cost": 1,
+  "group": "world"
+ },
+ {
+  "name": "seaworld.peoples",
+  "file": "seaworld.js:547",
+  "period": 40,
+  "cost": 8,
+  "group": "world"
+ },
+ {
+  "name": "steering.pegs",
+  "file": "steering.js:1173",
+  "period": 100,
+  "cost": 3,
+  "group": "world"
+ },
+ {
+  "name": "steering.wear",
+  "file": "steering.js:1142",
+  "period": 100,
+  "cost": 3,
+  "group": "motion",
+  "inside": "steering.tick"
+ },
+ {
+  "name": "logbook",
+  "file": "logbook.js:60",
+  "period": 100,
+  "cost": 3,
+  "group": "world"
+ },
+ {
+  "name": "pregen.watch",
+  "file": "pregen.js:136",
+  "period": 100,
+  "cost": 3,
+  "group": "world"
+ },
+ {
+  "name": "boatblock.tides",
+  "file": "boatblock.js:251",
+  "period": 100,
+  "cost": 8,
+  "group": "world"
+ },
+ {
+  "name": "seaworld.life",
+  "file": "seaworld.js:575",
+  "period": 100,
+  "cost": 8,
+  "group": "world"
+ },
+ {
+  "name": "theran.welcome",
+  "file": "theran.js:47",
+  "period": 200,
+  "cost": 1,
+  "group": "ui"
+ },
+ {
+  "name": "boatblock.wash",
+  "file": "boatblock.js:259",
+  "period": 200,
+  "cost": 8,
+  "group": "world"
+ }
+]

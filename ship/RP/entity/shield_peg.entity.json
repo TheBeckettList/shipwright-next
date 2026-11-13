@@ -1,0 +1,28 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "shipwright:shield_peg",
+      "materials": {
+        "default": "entity_alphatest"
+      },
+      "textures": {
+        "default": "textures/entity/shipwright/shields"
+      },
+      "geometry": {
+        "default": "geometry.shipwright.shield_peg"
+      },
+      "animations": {
+        "pose": "animation.shipwright.shield_peg.pose"
+      },
+      "scripts": {
+        "animate": [
+          "pose"
+        ]
+      },
+      "render_controllers": [
+        "controller.render.shipwright.shield_peg"
+      ]
+    }
+  }
+}

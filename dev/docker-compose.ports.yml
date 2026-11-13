@@ -1,0 +1,31 @@
+# Fallback: published-port networking (no LAN discovery on Mac). Use with: DEV_NET=ports ./dev.sh up
+# Edit BP/scripts, then `./dev.sh reload`. No repackaging needed.
+services:
+  bds:
+    image: itzg/minecraft-bedrock-server
+    platform: linux/amd64
+    container_name: waterworld-dev
+    environment:
+      EULA: "TRUE"
+      VERSION: "${BDS_VERSION:-LATEST}"   # BDS_VERSION=1.26.62.1 bash dev/fresh.sh pins a version
+      SERVER_NAME: "Waterworld Dev"
+      LEVEL_NAME: "Waterworld Dev"
+      LEVEL_TYPE: "FLAT"     # the overworld is only the door: everyone is taken to the sea world
+      LEVEL_SEED: ""          # leave empty for random, or paste a seed you like
+      GAMEMODE: "creative"
+      ALLOW_CHEATS: "true"
+      DEFAULT_PLAYER_PERMISSION_LEVEL: "operator"
+      TEXTUREPACK_REQUIRED: "true"
+      ONLINE_MODE: "true"
+      ALLOW_LIST: "false"
+      TRANSPORT: "nethernet"
+      CONTENT_LOG_CONSOLE_OUTPUT_ENABLED: "true"
+    ports:
+      - "19132:19132/tcp"   # NetherNet handshake (HTTP over TCP)
+      - "19132:19132/udp"   # gameplay traffic
+    volumes:
+      - ./data:/data
+      - ../BP:/data/behavior_packs/Waterworld_BP
+      - ../RP:/data/resource_packs/Waterworld_RP
+    stdin_open: true
+    tty: true

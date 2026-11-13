@@ -1,0 +1,22 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.shipwright.shield_peg.pose": {
+      "loop": true,
+      "bones": {
+        "shield": {
+          "rotation": [
+            "math.mod(math.floor(q.property('shipwright:pose') / 1), 4) * 90",
+            "math.mod(math.floor(q.property('shipwright:pose') / 4), 4) * 90",
+            "math.mod(math.floor(q.property('shipwright:pose') / 16), 4) * 90"
+          ],
+          "position": [
+            0,
+            "q.property('shipwright:lift') * 16",
+            "q.property('shipwright:out') * 16"
+          ]
+        }
+      }
+    }
+  }
+}

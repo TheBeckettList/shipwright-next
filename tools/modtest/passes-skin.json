@@ -1,0 +1,110 @@
+{
+ "thera flight": {
+  "n": 40,
+  "seaShare": 0,
+  "surface": 6.73,
+  "life": 0.53,
+  "deep": 10.78,
+  "p95": 60.5,
+  "fills": 1374,
+  "sets": 727,
+  "byPass": {
+   "surface": {
+    "fills": 246,
+    "sets": 1,
+    "volume": 2479
+   },
+   "life": {
+    "fills": 27,
+    "sets": 685,
+    "volume": 60
+   },
+   "deep": {
+    "fills": 1102,
+    "sets": 42,
+    "volume": 35118
+   }
+  }
+ },
+ "land flight": {
+  "n": 60,
+  "seaShare": 1,
+  "surface": 3.19,
+  "life": 0.15,
+  "deep": 3.18,
+  "p95": 13.1,
+  "fills": 375,
+  "sets": 13,
+  "byPass": {
+   "surface": {
+    "fills": 82,
+    "sets": 1,
+    "volume": 20575
+   },
+   "life": {
+    "fills": 0,
+    "sets": 1,
+    "volume": 0
+   },
+   "deep": {
+    "fills": 294,
+    "sets": 11,
+    "volume": 12270
+   }
+  }
+ },
+ "sea sail": {
+  "n": 40,
+  "seaShare": 1,
+  "surface": 1.83,
+  "life": 0.06,
+  "deep": 3.68,
+  "p95": 7.9,
+  "fills": 699,
+  "sets": 42,
+  "byPass": {
+   "surface": {
+    "fills": 88,
+    "sets": 1,
+    "volume": 10088
+   },
+   "life": {
+    "fills": 0,
+    "sets": 1,
+    "volume": 0
+   },
+   "deep": {
+    "fills": 611,
+    "sets": 40,
+    "volume": 22784
+   }
+  }
+ },
+ "river": {
+  "n": 40,
+  "seaShare": 0,
+  "surface": 6.98,
+  "life": 0.49,
+  "deep": 6.22,
+  "p95": 29.1,
+  "fills": 884,
+  "sets": 391,
+  "byPass": {
+   "surface": {
+    "fills": 67,
+    "sets": 1,
+    "volume": 1056
+   },
+   "life": {
+    "fills": 0,
+    "sets": 318,
+    "volume": 0
+   },
+   "deep": {
+    "fills": 817,
+    "sets": 72,
+    "volume": 32235
+   }
+  }
+ }
+}

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Waterworld — world viewer</title>
+<style>
+  :root { --ink: #e9eef6; --dim: #93a1b8; --line: #23324d; --panel: #0f1828ee; --gold: #e8c45a; --blue: #4d8fe0; --bg: #08101d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, Segoe UI, sans-serif; overflow: hidden; }
+  #map { position: fixed; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+  #map.drag { cursor: grabbing; }
+  .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; backdrop-filter: blur(6px); }
+  #top { top: 10px; left: 10px; right: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px 10px; }
+  #top h1 { margin: 0 6px 0 0; font-size: 15px; letter-spacing: .02em; white-space: nowrap; }
+  #top h1 b { color: var(--gold); font-weight: 600; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
+  .seg button, .btn { background: transparent; color: var(--dim); border: 0; padding: 5px 9px; font: inherit; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button.on { background: #1d3157; color: var(--ink); }
+  .btn { border: 1px solid var(--line); border-radius: 7px; }
+  .btn.on { color: var(--ink); border-color: var(--blue); }
+  select, input[type=search], textarea, input[type=text] { background: #0b1322; color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; font: inherit; }
+  input[type=search] { width: 170px; }
+  #side { top: 64px; right: 10px; width: 320px; max-height: calc(100% - 120px); overflow: auto; padding: 12px 14px; display: none; }
+  #side h2 { margin: 0 0 2px; font-size: 17px; }
+  #side .sub { color: var(--dim); margin-bottom: 10px; }
+  #side dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0 0 10px; }
+  #side dt { color: var(--dim); }
+  #side dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 10px; }
+  .tag { border: 1px solid var(--line); border-radius: 99px; padding: 2px 9px; cursor: pointer; color: var(--dim); background: transparent; font: inherit; font-size: 12px; }
+  .tag.on[data-t="new"] { background: #1e5c3a; color: #d9f7e4; border-color: #2d8a57; }
+  .tag.on[data-t="needs review"] { background: #6a4b12; color: #fdeccb; border-color: #a77a22; }
+  .tag.on { background: #1d3157; color: var(--ink); border-color: var(--blue); }
+  textarea { width: 100%; min-height: 110px; resize: vertical; }
+  .x { position: absolute; top: 8px; right: 10px; }
+  #legend { left: 10px; bottom: 10px; padding: 8px 10px; max-width: 300px; max-height: 40%; overflow: auto; font-size: 12px; }
+  #legend .row { display: flex; align-items: center; gap: 7px; margin: 2px 0; }
+  #legend .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  #legend .bar { height: 10px; border-radius: 4px; margin: 4px 0 2px; }
+  #legend .ends { display: flex; justify-content: space-between; color: var(--dim); }
+  #hud { right: 10px; bottom: 10px; padding: 6px 10px; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  #list { left: 10px; top: 64px; width: 280px; max-height: calc(100% - 200px); overflow: auto; padding: 10px 12px; display: none; }
+  #list h3 { margin: 0 0 6px; font-size: 14px; }
+  #list .item { padding: 5px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  #list .item small { color: var(--dim); }
+  .muted { color: var(--dim); }
+  @media (max-width: 640px) { #side { left: 10px; right: 10px; width: auto; top: auto; bottom: 10px; max-height: 55%; } #legend { display: none; } input[type=search] { width: 120px; } }
+</style>
+</head>
+<body>
+<canvas id="map"></canvas>
+<div id="top" class="panel">
+  <h1>Waterworld <b>world viewer</b></h1>
+  <select id="rel" title="Release"></select>
+  <div class="seg" id="layers"></div>
+  <button class="btn on" id="tRoutes">Trade</button>
+  <button class="btn on" id="tTowns">Towns</button>
+  <button class="btn" id="tPeoples">Centres</button>
+  <input type="search" id="q" placeholder="Find a town…">
+  <button class="btn" id="tList">Tagged</button>
+  <button class="btn" id="tBoats">Boats</button>
+  <button class="btn" id="exp" title="Copy your notes and tags">Copy notes</button>
+  <span id="sync" class="muted" style="font-size:12px"></span>
+</div>
+<div id="side" class="panel"><button class="btn x" id="close">✕</button><div id="sideBody"></div></div>
+<div id="list" class="panel"></div>
+<div id="legend" class="panel"></div>
+<div id="hud" class="panel">—</div>
+<div id="boats" class="panel" style="display:none;left:50%;top:60px;transform:translateX(-50%);padding:10px;width:min(860px,94vw)">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><b>Boats</b><select id="boatSel" style="flex:1"></select><span class="muted" style="font-size:12px">drag to turn, wheel to zoom</span><button class="btn" id="boatsX">✕</button></div>
+  <canvas id="boatCv" width="840" height="460" style="width:100%;border-radius:8px;background:#0f1b30;cursor:grab"></canvas>
+  <div id="boatInfo" class="muted" style="font-size:12px;margin-top:4px"></div>
+</div>
+<script>
+const RELEASES = ["0.9.12", "0.9.2", "0.9.1", "0.9.0", "0.8.9", "0.8.8", "0.8.7"];   // newest first; each release's folder holds data.json and its layers
+const LAYERS = [["terrain", "Terrain"], ["biomes", "Biomes"], ["heat", "Climate"], ["wet", "Rain"], ["civs", "Peoples"]];
+const TAGS = ["new", "needs review", "done", "favourite"];
+const cv = document.getElementById("map"), cx = cv.getContext("2d");
+let D = null, imgs = {}, theraImg = null, layer = "terrain", show = { routes: true, towns: true, peoples: false };
+let view = { x: 0, z: 0, s: 1 }, sel = null, rel = RELEASES[0], hover = null;
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} } };
+const notesKey = () => `ww-notes-${rel}`;
+let notes = {}, db = null, unsub = null;
+// notes and tags live in the page's own database (Claude reads them too), this browser's storage when that's away
+const docId = (id) => `${rel}~${String(id).replace(/[^A-Za-z0-9_.~:@+-]/g, "+")}`;
+function setSync(t) { document.getElementById("sync").textContent = t; }
+function watchNotes() {
+  if (unsub) { unsub(); unsub = null; }
+  if (!db) return;
+  setSync("syncing…"); const timer = setTimeout(() => setSync("notes saved here only for now"), 10000);
+  unsub = db.collection("notes").where("rel", "==", rel).onSnapshot((snap) => { if (!snap.metadata.fromCache) { clearTimeout(timer); setSync("notes synced"); }
+    const n = {}; for (const d of snap.docs) { const v = d.data(); n[v.id] = { tags: v.tags || [], text: v.text || "" }; } notes = n; store.set(notesKey(), notes); if (sel) refreshSide(); draw(); listTagged(); },
+    () => { clearTimeout(timer); setSync("notes saved here only"); });
+}
+const pending = new Map();
+function saveNote(s) { store.set(notesKey(), notes); if (!db) return; clearTimeout(pending.get(s.id));
+  pending.set(s.id, setTimeout(async () => { const n = notes[s.id] || { tags: [], text: "" };
+    try { await db.collection("notes").doc(docId(s.id)).set({ rel, id: s.id, name: s.name, tags: n.tags, text: n.text, x: s.bx ?? Math.round(s.x * D.PX), z: s.bz ?? Math.round(s.z * D.PX), at: new Date().toISOString() }); }
+    catch (e) { setSync(e && e.code === "invalid_argument" ? "view only: notes stay in this browser" : "couldn't save; kept in this browser"); } }, 700)); }
+let typing = false;
+function refreshSide() { if (typing || !sel) return; side(sel); }
+
+function rgb(a) { return `rgb(${a[0]},${a[1]},${a[2]})`; }
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+const load = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
+
+async function open(r) {
+  rel = r; notes = store.get(notesKey(), {}); sel = null; side(null); watchNotes();
+  D = await (await fetch(`${r}/data.json`)).json();
+  imgs = {}; for (const [k] of LAYERS) imgs[k] = load(`${r}/${k}.png`);
+  theraImg = null; load(`${r}/thera.png`).then((i) => { theraImg = i; draw(); }).catch(() => {});
+  imgs[layer] = await imgs[layer];
+  fit(); legend(); draw(); listTagged();
+  for (const [k] of LAYERS) Promise.resolve(imgs[k]).then((i) => { imgs[k] = i; });
+}
+function fit() { const s = Math.min(cv.width / D.W, cv.height / D.H) * 0.95; view = { s, x: D.W / 2, z: D.H / 2 }; }
+function resize() { const r = devicePixelRatio || 1; cv.width = innerWidth * r; cv.height = innerHeight * r; cv.style.width = innerWidth + "px"; cv.style.height = innerHeight + "px"; if (D) draw(); }
+const toScreen = (x, z) => [(x - view.x) * view.s + cv.width / 2, (z - view.z) * view.s + cv.height / 2];
+const toMap = (sx, sy) => [(sx - cv.width / 2) / view.s + view.x, (sy - cv.height / 2) / view.s + view.z];
+const pos = (key) => key === "thera" ? D.theraAt : D.peoples.find((p) => p.key === key);
+
+function draw() {
+  if (!D) return; const r = devicePixelRatio || 1;
+  cx.setTransform(1, 0, 0, 1, 0, 0); cx.fillStyle = "#08101d"; cx.fillRect(0, 0, cv.width, cv.height);
+  const im = imgs[layer]; cx.imageSmoothingEnabled = view.s < 2;
+  if (im instanceof Image) { for (const dx of [-D.W, 0, D.W]) { const [x0, y0] = toScreen(dx, 0); cx.drawImage(im, x0, y0, D.W * view.s, D.H * view.s); } }
+  // Thera close up: the game's own blocks once zoomed in
+  if (theraImg && view.s > 3) { const t = D.thera, [x0, y0] = toScreen(t.x0, t.z0); cx.imageSmoothingEnabled = view.s * t.size / theraImg.width < 1.5; cx.globalAlpha = Math.min(1, (view.s - 3) / 3); cx.drawImage(theraImg, x0, y0, t.size * view.s, t.size * view.s); cx.globalAlpha = 1; }
+  const lw = Math.max(1, r);
+  if (show.routes) {
+    for (const rt of D.routes) { const a = pos(rt.a), b = pos(rt.b); if (!a || !b) continue; let bx = b.x; if (Math.abs(bx - a.x) > D.W / 2) bx += bx > a.x ? -D.W : D.W;
+      const [x1, y1] = toScreen(a.x, a.z), [x2, y2] = toScreen(bx, b.z);
+      cx.strokeStyle = rt.kind === "thera" ? `rgba(232,196,90,${0.05 + Math.min(0.3, (rt.w || 0))})` : "rgba(120,190,255,.55)"; cx.lineWidth = lw * (rt.kind === "thera" ? 1 : 1.5);
+      cx.beginPath(); cx.moveTo(x1, y1); const mx = (x1 + x2) / 2, my = (y1 + y2) / 2 - Math.hypot(x2 - x1, y2 - y1) * 0.12; cx.quadraticCurveTo(mx, my, x2, y2); cx.stroke(); }
+  }
+  if (D.stones && view.s > 1.5) for (const [x0, z0, rr, route, kind] of D.stones) { const [x, y] = toScreen(x0, z0); if (x < -5 || y < -5 || x > cv.width + 5 || y > cv.height + 5) continue;
+    cx.fillStyle = kind === "ice floe" ? "#e8f2ff" : kind === "mangrove islet" ? "#3f7a3a" : kind === "sea stack" || kind === "skerry" ? "#8a8a84" : "#e9d9a8"; cx.beginPath(); cx.arc(x, y, Math.max(1.2 * r, rr * view.s), 0, 7); cx.fill(); }
+  if (show.peoples) for (const p of D.peoples) { const [x, y] = toScreen(p.x, p.z), c = D.traditions[p.t]?.rgb ?? [200, 200, 200]; cx.fillStyle = rgb(c); cx.strokeStyle = "#000"; cx.lineWidth = lw; cx.beginPath(); cx.rect(x - 3 * r, y - 3 * r, 6 * r, 6 * r); cx.fill(); cx.stroke(); }
+  if (show.towns) {
+    const big = view.s > 2.2;
+    for (const s of D.settlements) { const [x, y] = toScreen(s.x, s.z); if (x < -50 || y < -50 || x > cv.width + 50 || y > cv.height + 50) continue;
+      const rad = Math.max(2.2 * r, Math.min(14 * r, Math.sqrt(s.folk) / 18 * r * Math.sqrt(view.s))), n = notes[s.id], tags = [...(s.tags || []), ...((n && n.tags) || [])];
+      cx.fillStyle = rgb(D.traditions[s.t]?.rgb ?? [230, 230, 230]); cx.strokeStyle = tags.includes("needs review") ? "#e8a43a" : tags.includes("new") ? "#4fe08a" : "rgba(0,0,0,.8)"; cx.lineWidth = (tags.length ? 2.5 : 1.2) * r;
+      cx.beginPath(); cx.arc(x, y, rad, 0, 7); cx.fill(); cx.stroke();
+      if (sel && sel.id === s.id) { cx.strokeStyle = "#fff"; cx.lineWidth = 2 * r; cx.beginPath(); cx.arc(x, y, rad + 4 * r, 0, 7); cx.stroke(); }
+      if (big || (hover && hover.id === s.id)) { cx.font = `${12 * r}px system-ui`; cx.fillStyle = "#fff"; cx.strokeStyle = "rgba(0,0,0,.75)"; cx.lineWidth = 3 * r; cx.strokeText(s.name, x + rad + 3 * r, y + 4 * r); cx.fillText(s.name, x + rad + 3 * r, y + 4 * r); } }
+  }
+  // Thera's mark and its places
+  { const [x, y] = toScreen(D.theraAt.x, D.theraAt.z); cx.fillStyle = "#e8c45a"; cx.strokeStyle = "#fff"; cx.lineWidth = 2 * r; cx.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = (k % 2 ? 4 : 9) * r; cx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } cx.closePath(); cx.fill(); cx.stroke();
+    if (view.s < 3) { cx.font = `600 ${13 * r}px system-ui`; cx.fillStyle = "#fff"; cx.strokeStyle = "rgba(0,0,0,.8)"; cx.lineWidth = 3 * r; cx.strokeText("Thera", x + 12 * r, y + 4 * r); cx.fillText("Thera", x + 12 * r, y + 4 * r); } }
+  for (const p of D.places || []) { if (view.s < 3) continue; const [x, y] = toScreen(p.x, p.z); cx.fillStyle = "#fff"; cx.strokeStyle = "#e8c45a"; cx.lineWidth = 2 * r; cx.beginPath(); cx.arc(x, y, 6 * r, 0, 7); cx.fill(); cx.stroke(); }
+}
+
+// the side panel: a town's facts, its tags and notes
+function side(s) {
+  sel = s; const el = document.getElementById("side");
+  if (!s) { el.style.display = "none"; return; }
+  const n = notes[s.id] || { tags: [], text: "" }, tr = D.traditions[s.t ?? (s.p && s.p.t)];
+  const pp = s.p, partner = pp && pp.partner ? D.peoples.find((q) => q.key === pp.partner) : null;
+  const pct = (v) => v == null ? "—" : (100 * v).toFixed(0) + "%";
+  const auto = s.tags || [];
+  document.getElementById("sideBody").innerHTML = `
+    <h2>${esc(s.name)}</h2><div class="sub">${pp ? "A people (the sim's society)" : esc(tr ? tr.name : s.t || s.kind || "")}${s.members > 1 ? ` · ${s.members} peoples` : ""}</div>
+    <dl>${pp ? `<dt>Tradition</dt><dd>${esc(tr ? tr.name : pp.t)}</dd><dt>Temper</dt><dd>${esc(pp.temper ?? "—")}</dd><dt>Living</dt><dd>${esc(Array.isArray(pp.living) ? pp.living.join(", ") : pp.living ?? "—")}</dd><dt>Trade</dt><dd>${pct(pp.trade)}</dd><dt>Partner</dt><dd>${partner ? esc(partner.town ? "the people of " + partner.town : partner.key) : "none"}</dd><dt>Ground</dt><dd>${pp.chunks ?? "—"} chunks</dd>` : ""}${s.folk != null ? `<dt>Folk</dt><dd>${s.folk.toLocaleString()}</dd>` : ""}
+      <dt>Blocks</dt><dd>${Math.round(s.bx ?? s.x * D.PX)}, ${Math.round(s.bz ?? s.z * D.PX)}</dd>
+      <dt>Teleport</dt><dd><code>/tp @s ${Math.round(s.bx ?? s.x * D.PX)} 120 ${Math.round(s.bz ?? s.z * D.PX)}</code></dd>
+      <dt>Key</dt><dd class="muted">${esc(s.id)}</dd>${auto.length ? `<dt>Built as</dt><dd>${auto.map(esc).join(", ")}</dd>` : ""}</dl>
+    ${pp && pp.shares ? `<div class="muted">What they live by</div><div style="margin:4px 0 10px">${Object.entries(pp.shares).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<div style="display:flex;align-items:center;gap:8px"><span style="width:70px">${esc(k)}</span><span style="flex:1;height:6px;background:#1d3157;border-radius:3px"><span style="display:block;height:6px;width:${Math.round(v * 100)}%;background:var(--gold);border-radius:3px"></span></span><span class="muted" style="width:34px;text-align:right">${pct(v)}</span></div>`).join("")}</div>` : ""}
+    <div class="muted">Tags</div><div class="tags">${TAGS.map((t) => `<button class="tag ${n.tags.includes(t) ? "on" : ""}" data-t="${t}">${t}</button>`).join("")}</div>
+    <div class="muted">Notes</div><textarea id="note" placeholder="What to change, what works…">${esc(n.text)}</textarea>
+    <div class="muted" style="margin-top:6px;font-size:12px">Saved with the map, per release; Claude can read them.</div>`;
+  el.style.display = "block";
+  el.querySelectorAll(".tag").forEach((b) => b.onclick = () => { const t = b.dataset.t, cur = notes[s.id] || { tags: [], text: "" }; cur.tags = cur.tags.includes(t) ? cur.tags.filter((x) => x !== t) : [...cur.tags, t]; notes[s.id] = cur; saveNote(s); side(s); draw(); listTagged(); });
+  const ta = document.getElementById("note"); ta.onfocus = () => typing = true; ta.onblur = () => typing = false;
+  ta.oninput = (e) => { const cur = notes[s.id] || { tags: [], text: "" }; cur.text = e.target.value; notes[s.id] = cur; saveNote(s); listTagged(); };
+  draw();
+}
+function listTagged() {
+  const el = document.getElementById("list"); if (!D) return;
+  const all = [...D.settlements, ...(D.places || [])].filter((s) => { const n = notes[s.id]; return n && (n.tags.length || n.text); });
+  el.innerHTML = `<h3>Tagged and noted (${all.length})</h3>` + (all.length ? all.map((s) => `<div class="item" data-id="${esc(s.id)}">${esc(s.name)}<br><small>${notes[s.id].tags.map(esc).join(" · ") || "note"}${notes[s.id].text ? " — " + esc(notes[s.id].text.slice(0, 60)) : ""}</small></div>`).join("") : `<div class="muted">Tag a town or write a note and it lands here.</div>`);
+  el.querySelectorAll(".item").forEach((it) => it.onclick = () => { const s = all.find((x) => x.id === it.dataset.id); goTo(s); });
+}
+function goTo(s) { view.x = s.x; view.z = s.z; view.s = Math.max(view.s, s.kind === "thera" ? 8 : 4); side(s); }
+
+function legend() {
+  const el = document.getElementById("legend");
+  if (layer === "terrain") el.innerHTML = `<b>Terrain</b><div class="bar" style="background:linear-gradient(90deg,#0c1946,#2850aa,#4682c8,#60965a,#8caa5a,#967d55,#827873,#f5f5fa)"></div><div class="ends"><span>deep sea</span><span>coast</span><span>peaks</span></div>`;
+  else if (layer === "heat") el.innerHTML = `<b>Climate · mean temperature</b><div class="bar" style="background:linear-gradient(90deg,#283cc8,#78c8e6,#f0e68c,#f08c32,#b41e1e)"></div><div class="ends"><span>−25°</span><span>5°</span><span>35°</span></div><div class="muted">Sea dimmed.</div>`;
+  else if (layer === "wet") el.innerHTML = `<b>Rain · wetness</b><div class="bar" style="background:linear-gradient(90deg,#d7b46e,#8cbe78,#1e5aa0)"></div><div class="ends"><span>dry</span><span>wet</span></div>`;
+  else if (layer === "biomes") el.innerHTML = `<b>Biomes</b>` + D.biomes.filter((b) => b.n > 40).map((b) => `<div class="row"><span class="sw" style="background:${rgb(b.rgb)}"></span>${esc(b.id.replace(/_/g, " "))}<span class="muted" style="margin-left:auto">${b.sea ? "sea" : ""}</span></div>`).join("");
+  else el.innerHTML = `<b>Peoples by tradition</b>` + Object.values(D.traditions).map((t) => `<div class="row"><span class="sw" style="background:${rgb(t.rgb)}"></span>${esc(t.name)}</div>`).join("") + `<div class="muted">Each people a shade; black lines are borders.</div>`;
+  el.innerHTML += `<div class="muted" style="margin-top:6px">Lines: <span style="color:#78beff">partners</span> · <span style="color:#e8c45a">to Thera</span></div>`;
+}
+
+// controls
+const segs = document.getElementById("layers");
+segs.innerHTML = LAYERS.map(([k, n]) => `<button data-k="${k}" class="${k === layer ? "on" : ""}">${n}</button>`).join("");
+segs.onclick = async (e) => { const k = e.target.dataset.k; if (!k) return; layer = k; segs.querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.k === k)); imgs[k] = await imgs[k]; legend(); draw(); };
+for (const [id, key] of [["tRoutes", "routes"], ["tTowns", "towns"], ["tPeoples", "peoples"]]) { const b = document.getElementById(id); b.onclick = () => { show[key] = !show[key]; b.classList.toggle("on", show[key]); draw(); }; }
+document.getElementById("tList").onclick = (e) => { const el = document.getElementById("list"), on = el.style.display !== "block"; el.style.display = on ? "block" : "none"; e.target.classList.toggle("on", on); };
+document.getElementById("close").onclick = () => side(null);
+document.getElementById("exp").onclick = async (e) => { try { await navigator.clipboard.writeText(JSON.stringify({ release: rel, notes }, null, 2)); e.target.textContent = "Copied"; } catch { e.target.textContent = "Copy failed"; } setTimeout(() => e.target.textContent = "Copy notes", 1500); };
+const relSel = document.getElementById("rel"); relSel.innerHTML = RELEASES.map((r) => `<option>${r}</option>`).join(""); relSel.onchange = () => open(relSel.value);
+document.getElementById("q").oninput = (e) => { const q = e.target.value.trim().toLowerCase(); if (q.length < 2) return; const s = D.settlements.find((s) => s.name.toLowerCase().includes(q)) || (D.places || []).find((s) => s.name.toLowerCase().includes(q)); if (s) { goTo(s); } };
+
+// pan and zoom (mouse, wheel, touch)
+let drag = null, moved = false; const pts = new Map(); let pinch = null;
+cv.addEventListener("pointerdown", (e) => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, [e.clientX, e.clientY]); moved = false; drag = { x: e.clientX, y: e.clientY, vx: view.x, vz: view.z }; cv.classList.add("drag");
+  if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), s: view.s }; } });
+cv.addEventListener("pointermove", (e) => { const r = devicePixelRatio || 1;
+  if (pts.has(e.pointerId)) pts.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && pts.size === 2) { const [a, b] = [...pts.values()]; view.s = Math.max(0.2, Math.min(80, pinch.s * Math.hypot(a[0] - b[0], a[1] - b[1]) / pinch.d)); moved = true; draw(); return; }
+  if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; view.x = drag.vx - dx * r / view.s; view.z = drag.vz - dy * r / view.s; draw(); }
+  if (!D) return; const [mx, mz] = toMap(e.clientX * r, e.clientY * r); hover = pick(e.clientX * r, e.clientY * r);
+  document.getElementById("hud").textContent = `block ${Math.round(((mx % D.W) + D.W) % D.W * D.PX)}, ${Math.round(mz * D.PX)}  ·  zoom ${view.s.toFixed(1)}×${hover ? "  ·  " + hover.name : ""}`;
+  if (!drag) draw(); });
+const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (drag && !moved) { const r = devicePixelRatio || 1; const s = pick(e.clientX * r, e.clientY * r); side(s); } drag = null; cv.classList.remove("drag"); };
+cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
+cv.addEventListener("wheel", (e) => { e.preventDefault(); const r = devicePixelRatio || 1, [mx, mz] = toMap(e.clientX * r, e.clientY * r), f = Math.exp(-e.deltaY * 0.0015); view.s = Math.max(0.2, Math.min(80, view.s * f)); const [nx, nz] = toMap(e.clientX * r, e.clientY * r); view.x += mx - nx; view.z += mz - nz; draw(); }, { passive: false });
+const peopleCache = new Map();
+function asPeople(p) { if (peopleCache.has(p.key)) return peopleCache.get(p.key); const tr = D.traditions[p.t]; const o = { id: "people:" + p.key, kind: "people", name: p.town ? `The people of ${p.town}` : `A ${tr ? tr.name : p.t} people`, x: p.x, z: p.z, p }; peopleCache.set(p.key, o); return o; }
+function pick(sx, sy) { if (!D) return null; const r = devicePixelRatio || 1; let best = null, bd = 12 * r;
+  const cand = [...(show.towns ? D.settlements : []), ...(view.s >= 3 ? D.places || [] : []), ...(show.peoples ? D.peoples.map(asPeople) : [])];
+  for (const s of cand) { const [x, y] = toScreen(s.x, s.z), d = Math.hypot(x - sx, y - sy); if (d < bd) { bd = d; best = s; } } return best; }
+addEventListener("resize", resize); resize(); open(rel);
+if (window.claude && claude.use) claude.use("db").then((d) => { db = d; if (db) watchNotes(); else setSync("notes saved in this browser"); }).catch(() => setSync("notes saved in this browser"));
+
+// ---- the boats in 3D: each boat's model as boxes (ship/tools/boatexport.py), drawn by a small painter's renderer
+const bp = document.getElementById("boats"), bsel = document.getElementById("boatSel"), bcv = document.getElementById("boatCv"), bcx = bcv.getContext("2d");
+let BOATS = null, bcam = { yaw: 0.7, pitch: 0.38, zoom: 1 }, bfaces = [];
+const CLASS = (b) => (b.scale >= 4 ? "great" : b.scale >= 2 ? "ship" : "small");
+function rotP(p, pv, r) { let [x, y, z] = [p[0] - pv[0], p[1] - pv[1], p[2] - pv[2]]; const [a, b, c] = r.map((d) => (d * Math.PI) / 180);
+  [x, y] = [x * Math.cos(c) - y * Math.sin(c), x * Math.sin(c) + y * Math.cos(c)]; [x, z] = [x * Math.cos(b) + z * Math.sin(b), -x * Math.sin(b) + z * Math.cos(b)]; [y, z] = [y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a)];
+  return [x + pv[0], y + pv[1], z + pv[2]]; }
+function buildBoat(id) { const B = BOATS[id]; bfaces = []; let lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (const [ox, oy, oz, sx, sy, sz, px, py, pz, rx, ry, rz, k] of B.boxes) { const C = []; for (const i of [0, 1]) for (const j of [0, 1]) for (const l of [0, 1]) { const q = rotP([ox + i * sx, oy + j * sy, oz + l * sz], [px, py, pz], [rx, ry, rz]); C.push(q); q.forEach((v, n) => { lo[n] = Math.min(lo[n], v); hi[n] = Math.max(hi[n], v); }); }
+    for (const f of [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]]) bfaces.push({ p: f.map((i) => C[i]), c: B.parts[k] }); }
+  const mid = lo.map((v, n) => (v + hi[n]) / 2), span = Math.max(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]);
+  for (const f of bfaces) f.p = f.p.map((q) => q.map((v, n) => v - mid[n]));
+  bcam.fit = 380 / span; bcam.floor = lo[1] - mid[1];
+  document.getElementById("boatInfo").textContent = `${B.name}: ${CLASS(B)} class, ${B.rig ? B.rig.replace("_", " ") + " rig" : "no sail"}, about ${Math.round(hi[2] - lo[2])} blocks long, ${B.boxes.length} pieces`; drawBoat(); }
+function drawBoat() { if (!bfaces.length) return; const W = bcv.width, H = bcv.height, S = bcam.fit * bcam.zoom, cy = Math.cos(bcam.yaw), sy = Math.sin(bcam.yaw), cp = Math.cos(bcam.pitch), sp = Math.sin(bcam.pitch);
+  const P = ([x, y, z]) => { const u = x * cy - z * sy, w = x * sy + z * cy; return [W / 2 + u * S, H / 2 + (-y * cp + w * sp) * S, w * cp + y * sp]; };
+  bcx.fillStyle = "#0f1b30"; bcx.fillRect(0, 0, W, H);
+  bcx.strokeStyle = "rgba(120,170,230,0.25)"; bcx.lineWidth = 1; for (let g = -30; g <= 30; g += 2) { for (const [a, b] of [[[g, bcam.floor, -30], [g, bcam.floor, 30]], [[-30, bcam.floor, g], [30, bcam.floor, g]]]) { const A = P(a), Bq = P(b); bcx.beginPath(); bcx.moveTo(A[0], A[1]); bcx.lineTo(Bq[0], Bq[1]); bcx.stroke(); } }
+  const L = [-0.4, 0.8, -0.45], ln = Math.hypot(...L), out = [];
+  for (const f of bfaces) { const q = f.p.map(P), d = q.reduce((s, v) => s + v[2], 0) / 4, a = f.p[0], b = f.p[1], c = f.p[3], u = [b[0] - a[0], b[1] - a[1], b[2] - a[2]], v = [c[0] - a[0], c[1] - a[1], c[2] - a[2]], n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]], nl = Math.hypot(...n) || 1;
+    const lit = 0.55 + 0.45 * Math.abs((n[0] * L[0] + n[1] * L[1] + n[2] * L[2]) / nl / ln); out.push([d, q, f.c.map((x) => Math.round(x * lit))]); }
+  out.sort((a, b) => b[0] - a[0]);
+  for (const [, q, c] of out) { bcx.fillStyle = `rgb(${c})`; bcx.strokeStyle = `rgba(0,0,0,0.18)`; bcx.beginPath(); bcx.moveTo(q[0][0], q[0][1]); for (let i = 1; i < 4; i++) bcx.lineTo(q[i][0], q[i][1]); bcx.closePath(); bcx.fill(); bcx.stroke(); } }
+let bdrag = null;
+bcv.onpointerdown = (e) => { bdrag = [e.clientX, e.clientY, bcam.yaw, bcam.pitch]; bcv.setPointerCapture(e.pointerId); };
+bcv.onpointermove = (e) => { if (!bdrag) return; bcam.yaw = bdrag[2] + (e.clientX - bdrag[0]) * 0.01; bcam.pitch = Math.max(-0.2, Math.min(1.4, bdrag[3] + (e.clientY - bdrag[1]) * 0.01)); drawBoat(); };
+bcv.onpointerup = () => { bdrag = null; };
+bcv.onwheel = (e) => { e.preventDefault(); bcam.zoom = Math.max(0.3, Math.min(5, bcam.zoom * (e.deltaY < 0 ? 1.12 : 0.89))); drawBoat(); };
+bsel.onchange = () => buildBoat(bsel.value);
+document.getElementById("boatsX").onclick = () => { bp.style.display = "none"; };
+document.getElementById("tBoats").onclick = async () => {
+  bp.style.display = bp.style.display === "none" ? "block" : "none"; if (bp.style.display === "none") return;
+  try { BOATS = await (await fetch(`${rel}/boats.json`)).json(); } catch { document.getElementById("boatInfo").textContent = "This release has no boat models."; bfaces = []; bcx.clearRect(0, 0, bcv.width, bcv.height); return; }
+  const ids = Object.keys(BOATS).sort((a, b) => (a.startsWith("theran") ? -1 : 0) - (b.startsWith("theran") ? -1 : 0) || BOATS[a].scale - BOATS[b].scale || BOATS[a].name.localeCompare(BOATS[b].name));
+  bsel.innerHTML = ids.map((id) => `<option value="${id}">${BOATS[id].name} (${CLASS(BOATS[id])})</option>`).join(""); buildBoat(ids[0]); };
+</script>
+</body>
+</html>

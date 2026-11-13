@@ -1,0 +1,19 @@
+# dependencies and build output
+node_modules/
+dist/
+# the local test server's world and settings (dev/docker-compose mounts ./data)
+dev/data/
+dev/.netmode
+dev/bedrock-server-*.zip
+# packaged builds travel as files / releases, not in history
+*.mcaddon
+*.mcpack
+waterworld-update*.zip
+handover-*.zip
+shipwright-next-src-*.zip
+# OS / editor
+.DS_Store
+*.swp
+.vscode/
+.idea/
+__pycache__/

@@ -1,0 +1,18 @@
+{
+  "format_version": "1.21.40",
+  "minecraft:item": {
+    "description": {
+      "identifier": "shipwright:captains_key",
+      "menu_category": {
+        "category": "items"
+      }
+    },
+    "components": {
+      "minecraft:icon": "shipwright_captains_key",
+      "minecraft:max_stack_size": 1,
+      "minecraft:display_name": {
+        "value": "item.shipwright:captains_key.name"
+      }
+    }
+  }
+}
