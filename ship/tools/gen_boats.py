@@ -1813,6 +1813,14 @@ def glider_parts(b):
     for sx in (-1, 1):
         flank = (sx * 0.62 * W * fat(t1), cy(t1) - 0.55 * H * fat(t1), foot[2])
         frame += slab((0, tip[1] + 0.3, tip[2]), (sx * 0.4, tip[1], tip[2] + 0.2), foot, flank, 0.6, (0, cy(t1), foot[2] - 2))
+    # the foiling keel (Richard: "a foiling keel that could be lift too"): a gold strut down from her keel line just
+    # ahead of her fullest, as deep as her fins, carrying an inverted-V hydrofoil phi^2 of her breadth across: the foil
+    # she rises onto before she flies, her tail riding on the tailplane's canted tips
+    tk = TMAX - 0.06
+    zk, yk = -half + 2 * half * tk, cy(tk) - H * fat(tk)
+    ck = Lt / PHI ** 4
+    frame += slab((-0.45, yk + 0.5, zk - ck / 2), (0.45, yk + 0.5, zk - ck / 2), (-0.45, 1 - side, zk - ck / 3), (0.45, 1 - side, zk - ck / 3), ck * 0.8, (0, 0, zk + ck))
+    frame += lambda_foil(0, 1 - side, zk - ck / 2, ck, PHI ** 2 * W, 0.6)
     bones = [{"name": "rig_glide_body", "parent": "root", "pivot": [0, 0, 0], "cubes": gold(frame)},
              {"name": "rig_glide_body_skin", "parent": "rig_glide_body", "pivot": [0, 0, 0], "cubes": skin(cloth)}]
     # the core: an asterion crystal turned on its corners (three cubes, an icosahedron's look), at her heart
@@ -1840,7 +1848,7 @@ def glider_parts(b):
     # the wings
     yw, zw, hsw = ymid, -half + 2 * half * TMAX, g["wspan"] / 2
     s1, s2 = hsw / PHI, hsw / PHI ** 2
-    a1, a2 = math.atan(1 / PHI), math.atan(1 / PHI ** 2)
+    a1, a2 = math.atan(1 / PHI ** 2), math.atan(1 / PHI ** 2)   # the gull eased (Richard: "angle the wings less down")
     sweep = 1 / PHI ** 2                                  # swept tan 1/phi^2 (about 21 degrees; Richard: "little less swept")
     cr = Lt / PHI ** 2.5
     co, ct = cr / PHI, cr / PHI ** 3
