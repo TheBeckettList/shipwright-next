@@ -56,7 +56,7 @@ export const VISION = Object.freeze({
   COASTAL: 0.15,            // how much wetter the coast is than the island's heart
   // ---- peoples
   SETTLE: 4,                // chunks: the smallest island a people lives on
-  REGION: 48,               // chunks: a big island holds a people every this many chunks across
+  REGION: 48,               // chunks: a big island holds a people about every this many chunks across (world/peoples.js seeds them, golden-jittered)
   RAID: 3,                  // hops: how far raiders look for richer neighbours (in HOP lengths)
   TRADITION_SHARE: [0.05, 0.18],   // every tradition holds at least this share of the peoples and at most this (a diverse sea)
   FEATURED: { japanese: 1.4, pacific: 1.3, shallow: 1.3, birchbark: 1.3, dugout: 1.2, indian_ocean: 1.2 },   // the traditions to see more of: their floors are raised by this

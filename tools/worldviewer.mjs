@@ -36,7 +36,7 @@ const hsl = (h, s, l) => { const a = s * Math.min(l, 1 - l), f = (n) => { const 
 // one pass over the map: height, climate, biome, people
 const terrain = new Uint8Array(W * H * 3), biome = new Uint8Array(W * H * 3), heat = new Uint8Array(W * H * 3), wet = new Uint8Array(W * H * 3), civ = new Uint8Array(W * H * 3);
 const owner = new Int32Array(W * H).fill(-1);
-const { VISION } = await import("../core/given.js"); const L = peoples().list, byKey = new Map(L.map((p, i) => [p.key, i])), R = VISION.REGION;
+const { list: L, owner: grounds } = peoples();
 const biomes = new Map();
 const TRAD = Object.keys(TRADITIONS), TRADCOL = Object.fromEntries(TRAD.map((t, i) => [t, (i * 360) / TRAD.length]));
 for (let z = 0; z < H; z++) {
@@ -56,9 +56,8 @@ for (let z = 0; z < H; z++) {
     heat.set(h > 0 ? tr : tr.map((v) => Math.round(v * 0.45)), o);
     const wr = ramp([[0, [215, 180, 110]], [0.5, [140, 190, 120]], [1, [30, 90, 160]]], c.M);
     wet.set(h > 0 ? wr : [20, 30, 50], o);
-    // the peoples: whose ground (and fishing water) it is
-    const isl = I.label[k] >= 0 ? I.label[k] : I.dist[k] <= 2 ? I.near[k] : -1;
-    if (isl >= 0) { const pk = `${isl}:${Math.floor(x / R)},${Math.floor(z / R)}`, pi = byKey.get(pk); if (pi !== undefined) owner[k] = pi; }
+    // the peoples: whose ground (and fishing water) it is, as world/peoples.js grew it
+    owner[k] = grounds[k];
   }
   if (z % 128 === 0) say(`row ${z} of ${H}`);
 }
