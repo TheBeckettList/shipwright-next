@@ -8,16 +8,17 @@
 // chunk's mark (its north-west corner on the world's floor) last: structure void a surface, deny a life, a
 // barrier all three (a chunk laid whole before the passes is a barrier too).
 import { BlockPermutation, BlockVolume, system } from "@minecraft/server";
-import { chunkColumnsSteps, iceAt, treeAt, plantAt, seaLifeAt, riverLifeAt, theraUV, SEA, BOTTOM } from "./game/ground.js";
+import { chunkColumnsSteps, iceAt, treeAt, plantAt, seaLifeAt, riverLifeAt, theraUV, usePads, SEA, BOTTOM } from "./game/ground.js";
 import { columnRock, provinceOf, PROVINCES, DEEPSLATE } from "./game/strata.js";
 import { CALIBRATION } from "./game/calibration.js";
 import { POOLDRESS, POOLFISH } from "./data/structures.js";
 const WATERBORN = new Set(["minecraft:tropicalfish", "minecraft:pufferfish", "minecraft:axolotl", "minecraft:salmon", "minecraft:cod", "minecraft:glow_squid", "minecraft:tadpole"]);   // the pools' own swimmers: the water keeps them; the park's beasts are leashed (main.js park)
-import { PALETTE, PROTOS, ROT, PLACEMENTS, BY_CHUNK, PAINTS, PAINT_BY, WALLS, WALL_BY } from "./data/structures.js";
+import { PALETTE, PROTOS, ROT, PLACEMENTS, BY_CHUNK, PAINTS, PAINT_BY, WALLS, WALL_BY, PADS, PAD_BY } from "./data/structures.js";
 import { RESIDENTS, FOLK_BY_CHUNK, NAMES, CULTURES } from "./data/folk.js";
 import { golden } from "./core/golden.js";
 import { GROWN_BY, BEAST_TYPES, BEASTS, BEAST_BY } from "./data/grown.js";
 import { b64 } from "./b64.js";
+{ const u = b64(PADS ?? ""), buf = new ArrayBuffer(u.length); new Uint8Array(buf).set(u); usePads(new Int32Array(buf), PAD_BY ?? {}); }   // the pads (terraform.md §2): the ground banked to the buildings that stand on them
 /** A prototype's blocks [x, y, z, palette index, ...], decoded from its base64 Int16Array the first time it's laid (the baked data stays a string till then: a fraction of the memory). */
 export const flatOf = (P) => { if (!P._f) { const u = b64(P.f), buf = new ArrayBuffer(u.length); new Uint8Array(buf).set(u); P._f = new Int16Array(buf); } return P._f; };
 export const FOLK = "waterworld:folk";
@@ -80,7 +81,7 @@ const plans = new Map();   // the last few chunks' columns (the passes share the
 /** A chunk's columns, reckoned a row a step (the layer's steps stay short) and kept: the passes share them. */
 function* planSteps(cx, cz) {
   const k = `${cx},${cz}`; let p = plans.get(k); if (p) return p;
-  const g = chunkColumnsSteps(cx, cz, { mesh: BY_CHUNK[k] || GROWN_BY[k] ? 0 : MESH }); let r;   // a town's ground exact (it was grown on it)
+  const g = chunkColumnsSteps(cx, cz, { mesh: BY_CHUNK[k] || GROWN_BY[k] || PAD_BY?.[k] ? 0 : MESH }); let r;   // a town's ground exact (it was grown on it, or banked to its pads)
   for (;;) { const t0 = Date.now(); r = g.next(); COUNT.js += Date.now() - t0; if (r.done) break; yield; }
   p = r.value; plans.set(k, p); if (plans.size > FIB_PLANS) plans.delete(plans.keys().next().value); return p;
 }
@@ -205,17 +206,17 @@ export function* lifeChunk(dim, cx, cz, { folk = true } = {}) {
   // the structures baked for this chunk, clipped to it: foundations, then their blocks
   const covered = new Set();
   for (const k of BY_CHUNK[`${cx},${cz}`] ?? []) {
-    const a = PLACEMENTS[k], pl = { p: a[0], x: a[1], y: a[2], z: a[3], f: a[4], s: a[5] & 1, c: a[5] & 2, free: a[5] & 4, b: [a[6], a[7], a[8], a[9]] }, P = PROTOS[pl.p], fp = palPerm(pl.f);   // free: a way in the air (a skyway), no foundation and nothing covered under it
+    const a = PLACEMENTS[k], pl = { p: a[0], x: a[1], y: a[2], z: a[3], f: a[4], s: a[5] & 1, c: a[5] & 2, free: a[5] & 4, pad: a[5] & 64, b: [a[6], a[7], a[8], a[9]] }, P = PROTOS[pl.p], fp = palPerm(pl.f);   // pad: it stands on its pad, the ground already at its floor (no footing, nothing to cut)   // free: a way in the air (a skyway), no foundation and nothing covered under it
     const bx0 = Math.max(pl.b[0], x0), bx1 = Math.min(pl.b[2], x0 + C - 1), bz0 = Math.max(pl.b[1], z0), bz1 = Math.min(pl.b[3], z0 + C - 1);
     const under = pl.free ? null : undersOf(P, (a[5] >> 3) & 3, pl);   // the house's own lowest block in each column: a stilt house's piles run up to it, and the ground over it is the house's (a sunk floor, a pit house's)
     if (!pl.free) for (let x = bx0; x <= bx1; x++) for (let z = bz0; z <= bz1; z++) {
       covered.add((z - z0) * C + (x - x0));
       const top = cols[(z - z0) * C + (x - x0)].top;
       const pile = ((x - pl.b[0]) % PILE === 0 || x === pl.b[2]) && ((z - pl.b[1]) % PILE === 0 || z === pl.b[3]);   // a stilt house's piles: a grid every PILE, its edges always
-      if (!pl.s) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp); else if (pile && under.get(`${x},${z}`) <= under.floor + 1) fill(dim, x, top + 1, z, x, under.get(`${x},${z}`) - 1, z, fp);   // piles only under the floor (not under an eave, nor where the box is empty)
+      if (pl.pad) { /* the ground is the pad's: T = L, the floor its top row */ } else if (!pl.s) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp); else if (pile && under.get(`${x},${z}`) <= under.floor + 1) fill(dim, x, top + 1, z, x, under.get(`${x},${z}`) - 1, z, fp);   // piles only under the floor (not under an eave, nor where the box is empty)
       const lo = under.get(`${x},${z}`);
       if (lo !== undefined && top > lo) fill(dim, x, lo + 1, z, x, top, z, "minecraft:air");   // the ground over the house's lowest block is the house's: cut into the slope, or a sunk floor dug out
-      else if (pl.c) fill(dim, x, pl.y + 1, z, x, top, z, "minecraft:air");   // cut into the slope
+      else if (pl.c && !pl.pad) fill(dim, x, pl.y + 1, z, x, top, z, "minecraft:air");   // cut into the slope
     }
     if (a[5] & 32 && theraUV(pl.x, pl.z)) for (let x = pl.b[0] - 1; x <= pl.b[2] + 1; x++) for (let z = pl.b[1] - 1; z <= pl.b[3] + 1; z++) {   // a footing's cut on Thera faced as a pezoula: the ring round the box, where the ground stands over the floor, walled in the three stones
       if (x >= pl.b[0] && x <= pl.b[2] && z >= pl.b[1] && z <= pl.b[3]) continue; if (x < x0 || x >= x0 + C || z < z0 || z >= z0 + C) continue;

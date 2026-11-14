@@ -120,7 +120,7 @@ grown town. So **every closure change is batched into one grow** (phase 4).
 |---|---|---|---|---|
 | 0. S004's fixes | Builder | the deep pass's fill capped under each base; stilts by the grown towns' rule (3 deep), on land too; PR #2 | the probe: buried 121 → 1, doors lost 280 → 0 on Thera | outside |
 | 1. The overlay law | Builder | `world/terraform.js`, the `terraform` lens | the lens's checks: footprints at L, ground moved ≤ 5, banks, risers, no pits, cones meet, T ≡ h with no pads | outside |
-| 2. The plan, proven | Grower | `bakegrown` writes plans; `tools/replay.mjs` lays the 21 from them and compares | building voxels identical; prototype count measured | outside |
+| 2. The plan, proven | Grower | `bakegrown` writes plans; `tools/replay.mjs` lays the 21 from them and compares | building voxels identical; prototype count measured | outside — **done 2026-11-14, 4 of 19 recorded** |
 | 3. Lay from the plan | Builder | `lay.js` stamps plans; `usePads`/`naturalAt`; median pads for Thera and the boxed towns | modtest clean; Thera flight ≤ 23.1 + 3 ms a chunk | restamp |
 | 4. The one grow | Grower + Builder | `layPlace` on T; yards; Thera's cone ×1.5, ring, crater, new kinds; grow all 482 | every town passes terraform.md checks 1–4, 9; a render per tradition | **one grow, ~13 CPU-h** |
 | 5. Thera beneath | Unmaker + Reaper + Trader | `impact.js`, `undercone.js`, `tunnelChunk`, refinery, Koinon House, mint counter, lore | thera.md §7's lenses | outside |
@@ -173,6 +173,112 @@ Across the world:
 
 The plan stands, with fallback 1 (shared seeds) as the rule rather than the fallback. Shipping `buildOf` to the game
 (3.8 ms a building in Node, likely several times that in the game) stays the second choice.
+
+## Phase 2, the plan proven (2026-11-14)
+
+Built on `world/plans` by Richard's stream for W's plan.
+- `tools/plans.mjs` reduces a grown place to its plan.
+  - Each placement keeps its recipe: buildOf's kind, seed and storeys, or the i-th split part of a body.
+  - It also keeps what `layPlace` reads of the place: lanes, gaps, farms, walls, wilds and the spine.
+  - The ground is not kept. It is the game's own (`heightAt`), and the slope and density are worked out again from
+    the ground and the census level.
+- `layOf` lays a plan back without growing.
+- `bakegrown` now writes `lab/plans/<key>.json` beside each grown town. Its column code is `colsOf`, shared with the
+  replay. Nothing is in the closure: the hash is unchanged.
+- `tools/replay.mjs` lays every plan and compares it, block for block, with `lab/grown`.
+- `tools/replay.mjs --record <key>` grows an already current town again. It checks the regrow is identical first, and
+  only then keeps the plan.
+
+**The gate passes on the four towns recorded (three peoples): every block, beast and decor identical.**
+
+| town | people | folk | placements | prototypes | at 5 seeds a kind | plan | blocks | laid from plan |
+|---|---|---|---|---|---|---|---|---|
+| 50:19,6 | indian_ocean | 58 | 29 | 29 | 29 | 86 KB | 0.5 MB | 12 s |
+| 23:21,7 | indian_ocean | 209 | 84 | 84 | 69 | 194 KB | 1.5 MB | 46 s |
+| 23:23,5 | japanese | 556 | 266 | 266 | 110 | 403 KB | 4.1 MB | 80 s |
+| 23:23,6 | european | 683 | 235 | 235 | 91 | 524 KB | 4.7 MB | 120 s |
+
+- **Time.** Each "laid from plan" figure is a fresh process laying one town, and part of it is loading the map. For
+  scale, a 209-folk town laid on its own in 12 s (4 s rebuilding its buildings, 8 s in `layPlace`), against about
+  3 minutes to grow it.
+- **Prototypes.** Every placement is still its own prototype, as the first measurement found. The "at 5 seeds" column
+  counts min(n, 5) for each kind and storey count: the most a town would need once seeds are shared, the phase 4 rule.
+- **What the plan weighs.** 1.18 MB of JSON for the four, 9× smaller than their blocks; 0.42 MB against 1.38 MB
+  gzipped. Of the 1.18 MB:
+  - streets: 45%. The polylines are point by point, in floats.
+  - gaps: 31%. These are cells, now stored as straight runs.
+  - placements: 11%.
+  - wilds: 7%.
+- **The world, at the plan's rate.** About 0.8 KB a head (1.18 MB for 1,506 folk), so ~95 MB for 119,229 folk:
+  barely better than the blocks' 0.92 KB a head in the add-on.
+- **Decided (D-009, Richard, 2026-11-14): about 95 MB is fine.** The streets and gaps are not reworked to cut size,
+  and the 3 MB estimate is dropped as a target. Phase 3 (laying plans in game) starts on today's plans.
+
+## Phase 3, first part: the pads in the game (2026-11-14)
+
+This is terraform.md §6 step 4, on `world/pads`.
+- `game/ground.js`:
+  - `usePads(PADS, PAD_BY)`.
+  - `heightAt` now gives T, the natural ground clamped by the pads: `terraAt`, with a bank's hollow raised to its
+    lowest neighbour as `terraform.js groundAt` does. Sea and river columns are left alone.
+  - `naturalAt` keeps the natural ground, for the growers and the bake.
+  - `chunkColumnsSteps` applies T on its grid and reckons the relief exactly wherever a pad reaches. Every column
+    agrees with `heightAt` (`tests/pads.test.mjs`).
+- `buildmod place()` puts every free-standing building on dry land onto a pad:
+  - L is the median of the natural ground under it (`padOf`), and its floor sits in the pad's top row.
+  - The site is refused past the cut or fill bounds, when its banks would clash with a neighbour's pad
+    (`compatible`), or when its bank can't meet nature within bounds (`bankFits`).
+  - Stilts, set floors, trunks and pieces standing on others keep their old ways.
+  - The pads are baked into `data/structures.js` as `PADS` (Int32) and `PAD_BY`. The bank is kept off grown towns'
+    chunks.
+  - The rest of the bake reads T.
+- `lay.js`:
+  - installs the pads;
+  - plans pad chunks exactly;
+  - lays a padded placement (flag 64) with no footing and no carve. The ground under it is already at its floor.
+
+**Built:** 20,604 buildings on pads.
+
+| refused | sites |
+|---|---|
+| cut | 364 |
+| fill | 154 |
+| bank | 18 |
+| clash | 25 |
+
+Houses in the world's towns: 16,278, against 16,280 before.
+
+**Grown towns: restamped.** The hash changed (ground.js and terraform.js are in the closure), but no pad reaches a
+grown town. 50:19,6 and 50:18,6 grew again identical, and the 19 towns and 4 plans were stamped `505ecbbd51f8`.
+`bakegrown --restamp` takes `--from <hash>` now, so the 7 towns staled earlier stay stale. Before, it stamped every
+stale town.
+
+**The gate (probe: 400 buildings each, before → after):**
+
+| check | Thera | boxed towns |
+|---|---|---|
+| footings of 3 or more | 70 → 14 (the 14 are igloos on the tarn's ice, on a set floor) | 0 → 0 (max 2 → 0) |
+| floors under the ground by more than 3 | 47 → 2 | 0 → 0 |
+| cut over 5 | 45 → 0 | 0 → 0 |
+| sill under the ground by 2 or more | 25 → 0 | 0 → 0 |
+| door 2 or more over the ground | 0 → 0 | 0 → 0 |
+| doors lost | 0 → 0 | 0 → 0 |
+
+**Thera flight:**
+
+| | surface + life + deep, ms a chunk | runs |
+|---|---|---|
+| before | 39.9, 40.8 | 2 |
+| after | 38.9, 38.9, 42.9, 40.8 | 4 |
+
+- Fills are 821 a chunk both ways.
+- This workspace's ms run about 1.7× W's 23.1, and it is noisy. The gate (+1/8) holds.
+
+**Not yet:**
+- The plan stamping in `lay.js`, the "stamps plans" half of phase 3.
+- Thera's TERRACE pads (step 5).
+- WALL and DRAIN columns in the people's plinth. Today a steep face shows as stone, as before.
+- The 3-block door apron. A 1-block step at a door is the most the probe finds.
 
 ## Agreed on Olympus (2026-11-13)
 

@@ -37,6 +37,7 @@ const { theranPeople } = await import("../world/therans.js");
 const { FAITH, WAYS } = await import("../world/faith.js");
 const { DRESS } = await import("../world/dress.js");
 const G = await import("../game/ground.js");
+const TF = await import("../world/terraform.js");
 
 fs.rmSync(DIST, { recursive: true, force: true });
 for (const d of [BP, RP]) fs.mkdirSync(d, { recursive: true });
@@ -45,7 +46,7 @@ const S = path.join(BP, "scripts");
 // ---- 1. the sim's pure modules, at the same relative paths
 const copy = (rel) => { const to = path.join(S, rel); fs.mkdirSync(path.dirname(to), { recursive: true }); fs.copyFileSync(path.join(ROOT, rel), to); };
 for (const f of fs.readdirSync(path.join(ROOT, "core"))) if (f.endsWith(".js")) copy(`core/${f}`);
-for (const f of ["map", "climate", "biomes", "solar", "thera", "sealife", "rivers", "stones", "homesites", "boatsizes", "coinage"]) copy(`world/${f}.js`);
+for (const f of ["map", "climate", "biomes", "solar", "thera", "sealife", "rivers", "stones", "homesites", "boatsizes", "coinage", "terraform"]) copy(`world/${f}.js`);
 for (const f of fs.readdirSync(path.join(ROOT, "game"))) if (f.endsWith(".js")) copy(`game/${f}`);
 say("copied the sim");
 
@@ -137,6 +138,13 @@ const CREPIDOMA = FIB[3];   // given: a crepidoma is three steps, the most a foo
 const LIFT = FIB[2];   // vision: on land the stilt peoples still raise the floor on posts, two blocks over the highest ground under it (terraform.md: a pad raised LIFT)
 const POST_MAX = FIB[4] + 1;   // derived: a post at most six (terraform.md: the pad law's five, and the floor's block)
 const no = (w) => { why[w] = (why[w] ?? 0) + 1; return false; };
+// the pads (design/s004-specs/terraform.md §2, world/terraform.js): a free-standing building stands on a pad at L, the median
+// of the natural ground under it, and the ground round it is banked to it (game/ground.js heightAt applies them in the game)
+const PADS = [], padIndex = new Map(), PAD_C = 16;   // given: a chunk, the pads' index cell
+const padCells = (p, r) => { const out = []; for (let cx = Math.floor((p.x0 - r) / PAD_C); cx <= Math.floor((p.x1 + r) / PAD_C); cx++) for (let cz = Math.floor((p.z0 - r) / PAD_C); cz <= Math.floor((p.z1 + r) / PAD_C); cz++) out.push(`${cx},${cz}`); return out; };
+const padsNear = (p) => { const seen = new Set(), out = []; for (const k of padCells(p, 2 * TF.BANK.REACH)) for (const i of padIndex.get(k) ?? []) if (!seen.has(i)) { seen.add(i); out.push(PADS[i]); } return out; };   // derived: two reaches, the farthest two pads' cones can meet
+const natCache = new Map(), natH = (x, z) => { const k = x * 262144 + z; let v = natCache.get(k); if (v === undefined) { if (natCache.size > 1 << 22) natCache.clear(); const g = G.naturalAt(x, z); v = g.water != null || g.h <= 0 ? null : Math.round(g.h); natCache.set(k, v); } return v; };   // the natural land (null: the sea's or a river's, which no bank fills), kept as the banks are weighed   // given: four million columns kept at most
+let padStats = { n: 0, cut: 0, fill: 0 };
 const colKey = (x, z) => `${x},${z}`;
 const BAD = new Set(["round harbour", "merchant harbour", "fairway", "ring canal", "wall canal", "canal"].map((k) => G.KIND[k]));
 /** Place a prototype with its footprint's middle at world (X, Z): its floor (y 0) on the highest ground under it.
@@ -150,18 +158,27 @@ function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, 
   let top = -Infinity, low = Infinity; const cols = [];
   for (const [x, z] of foot ?? (function* () { for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) yield [x, z]; })()) {
     const wx = ox + x, wz = oz + z;
-    const g = G.heightAt(wx, wz); if (BAD.has(g.kind) && !anyWater) return no("water of the city's plan");
+    const g = G.naturalAt(wx, wz); if (BAD.has(g.kind) && !anyWater) return no("water of the city's plan");   // the natural ground: the pads are reckoned from it
     if (kinds && !kinds.has(g.kind)) return no("outside its ground");
     const t = G.SEA + Math.round(g.h); if (t <= G.SEA && !water) return no("the sea"); top = Math.max(top, t); low = Math.min(low, t); cols.push([wx, wz, t]);
   }
   if (top - low > slope) return no("too steep");
   if (wet) { if (cols.some(([, , t]) => G.SEA - t > STILT_DEEP)) return no("water too deep for stilts");
     stilts = true; foundation = PEOPLE_PAL[wet]?.frame ?? foundation; floorAt = Math.max(G.SEA + 1, top + LIFT); if (floorAt - low > POST_MAX) return no("posts too tall"); }   // always on posts: a block over the shallows, LIFT over the land (the sea's own columns lie under it: lay.js lays water over a top under SEA)
-  let y0 = trunk ? top + 1 : floorAt ?? (carve ? Math.max(low, G.SEA + 1) : Math.max(top, G.SEA + 1));   // a carved house sits at its downhill foot, cut into the slope
-  let cut = false; if (!trunk && floorAt == null && !carve && !over && y0 - 1 - low > CREPIDOMA) { y0 = Math.max(low + CREPIDOMA + 1, G.SEA + 1); carve = cut = true; }   // a footing of three steps at most: past that the floor drops and the slope above is cut back (thera.md §2)
+  // a pad: a free-standing building on dry land (not on posts, a trunk, a set floor or something already placed)
+  let ground = null;
+  if (!trunk && floorAt == null && !over && !stilts && cols.every(([, , t]) => t > G.SEA)) {
+    ground = TF.padOf(cols.map(([x, z, t]) => ({ x, z, h: t - G.SEA })), { carve });
+    if (ground.why) return no(`pad: ${ground.why.split(" ")[0]}`);
+    if (!TF.compatible(ground, padsNear(ground))) return no("pad: its banks clash with a neighbour's");
+    const bank = TF.bankFits(ground, (x, z) => natH(x, z) ?? ground.L); if (bank) return no("pad: bank");
+  }
+  let y0 = trunk ? top + 1 : ground ? G.SEA + ground.L : floorAt ?? (carve ? Math.max(low, G.SEA + 1) : Math.max(top, G.SEA + 1));   // on its pad, its floor in the pad's top (as on flat ground before: the prototype's floor is the ground's top row, so one stands on it at L + 1); a carved house sits at its downhill foot, cut into the slope
+  let cut = false; if (!ground && !trunk && floorAt == null && !carve && !over && y0 - 1 - low > CREPIDOMA) { y0 = Math.max(low + CREPIDOMA + 1, G.SEA + 1); carve = cut = true; }   // a footing of three steps at most: past that the floor drops and the slope above is cut back (thera.md §2)
   if (dry) { let cut = 0, fill = 0; for (const [, , t] of cols) { cut += Math.max(0, t - y0); fill += Math.max(0, y0 - 1 - t); } return { cut, fill, score: cut + PHI * fill }; }   // derived: fill weighs phi to cut's one (a footing is built, a cut only dug)
   for (const [wx, wz] of cols) taken.add(colKey(wx, wz));
-  placements.push({ p: P.i, x: ox, y: y0, z: oz, f: pal(foundation), stilts, carve, cut, tag, b: [ox + x0, oz + z0, ox + x1, oz + z1] });
+  if (ground) { const i = PADS.length; PADS.push(ground); for (const k of padCells(ground, 2 * TF.BANK.REACH)) { let a = padIndex.get(k); if (!a) padIndex.set(k, (a = [])); a.push(i); } padStats.n++; padStats.cut += ground.cut; padStats.fill += ground.fill; carve = false; }
+  placements.push({ p: P.i, x: ox, y: y0, z: oz, f: pal(foundation), stilts, carve, cut, padded: !!ground, tag, b: [ox + x0, oz + z0, ox + x1, oz + z1] });
   return true;
 }
 
@@ -708,6 +725,12 @@ Lw.forEach((p, i) => {
   }
 });
 say(`the world's towns: ${towns} towns, ${townHouses} houses, ${townBeds} beds, ${townWalls} walls, ${paints.length} paved ways`);
+// the pads' chunk index (game/ground.js usePads): each chunk the box and its banks reach, but a grown town's (its ground is its own)
+const PAD_BY = {}; let padsOffGrown = 0;
+for (const [i, q] of PADS.entries()) for (let cx = Math.floor((q.x0 - TF.BANK.REACH) / C0); cx <= Math.floor((q.x1 + TF.BANK.REACH) / C0); cx++) for (let cz = Math.floor((q.z0 - TF.BANK.REACH) / C0); cz <= Math.floor((q.z1 + TF.BANK.REACH) / C0); cz++) {
+  const k = `${cx},${cz}`; if (GROWN_BY[k]) { padsOffGrown++; continue; } (PAD_BY[k] ??= []).push(i); }
+say(`pads: ${padStats.n} buildings on pads (cut ${padStats.cut}, fill ${padStats.fill} blocks at their deepest, summed), ${Object.keys(PAD_BY).length} chunks banked${padsOffGrown ? `, ${padsOffGrown} kept off grown towns' chunks` : ""}; refused: ${Object.entries(why).filter(([k]) => k.startsWith("pad")).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}`);
+G.usePads(Int32Array.from(PADS.flatMap((q) => [q.x0, q.z0, q.x1, q.z1, q.L, q.flags, q.cut, 0])), PAD_BY);   // the rest of the bake reads the ground the game lays
 
 // the League's sea wardens: at the Exchange, the quays and the harbour master's island (world/sealife.js's wardens, the tax's keepers)
 {
@@ -752,7 +775,7 @@ if (process.env.WW_MCSTRUCTURE) { const { writeStructure, blockVersion } = await
 const bases = protos.filter((P) => !P.r), newIdx = new Map(bases.map((P, k) => [P.i, k]));
 const palN = palette.length, ROT = [1, 2, 3].map((r) => palette.slice(0, palN).map(([id, st]) => pal(id, turnStates(st ?? null, r))));
 for (const pl of placements) { const P = protos[pl.p]; pl.turn = P.r ?? 0; pl.p = newIdx.get(P.r ? P.base : P.i); }
-fs.writeFileSync(path.join(S, "data/structures.js"), `// baked by tools/buildmod.mjs: Thera's structures. palette [id, states?]; protos: f, base64 of an Int16Array [x, y, z, palette index, ...] (decoded when first laid: lay.js flatOf), and bounds;\n// placements: [proto, x, y, z (origin), foundation (palette), flags (1 stilts, 2 carved, 4 free: a skyway, bits 3-4 the quarter turns of its proto, 32 a footing's cut: the slope cut back behind it), x0, z0, x1, z1]; byChunk "cx,cz" -> placement indices\nexport const PALETTE = ${JSON.stringify(palette)};\nexport const ROT = ${JSON.stringify(ROT)};\nexport const PROTOS = ${JSON.stringify(bases.map((P) => ({ name: P.name, f: B64(new Uint8Array(Int16Array.from(P.flat).buffer)), b: P.b, o: P.origin })))};\nexport const PLACEMENTS = ${JSON.stringify(placements.map(({ p, x, y, z, f, stilts, carve, cut, free, turn, b }) => [p, x, y, z, f, (stilts ? 1 : 0) | (carve ? 2 : 0) | (free ? 4 : 0) | ((turn ?? 0) << 3) | (cut ? 32 : 0), ...b]))};\nexport const BY_CHUNK = ${JSON.stringify(byChunk)};\nexport const HORAIA = ${JSON.stringify(HORAIA_AT)};\nexport const POOLDRESS = ${JSON.stringify(POOLDRESS)};\nexport const POOLFISH = ${JSON.stringify(POOLFISH)};\nexport const PARK = ${JSON.stringify(PARK)};\nexport const COURSES = ${JSON.stringify(COURSES)};\nexport const PAINTS = ${JSON.stringify(paints.map((q) => q.d))};\nexport const PAINT_BY = ${JSON.stringify(PAINT_BY)};\nexport const WALLS = ${JSON.stringify(walls.map((w) => w.d))};\nexport const WALL_BY = ${JSON.stringify(WALL_BY)};\nexport const PLACES = ${JSON.stringify(PLACES)};\n`);
+fs.writeFileSync(path.join(S, "data/structures.js"), `// baked by tools/buildmod.mjs: Thera's structures. palette [id, states?]; protos: f, base64 of an Int16Array [x, y, z, palette index, ...] (decoded when first laid: lay.js flatOf), and bounds;\n// placements: [proto, x, y, z (origin), foundation (palette), flags (1 stilts, 2 carved, 4 free: a skyway, bits 3-4 the quarter turns of its proto, 32 a footing's cut: the slope cut back behind it, 64 on a pad), x0, z0, x1, z1]; byChunk "cx,cz" -> placement indices\nexport const PALETTE = ${JSON.stringify(palette)};\nexport const ROT = ${JSON.stringify(ROT)};\nexport const PROTOS = ${JSON.stringify(bases.map((P) => ({ name: P.name, f: B64(new Uint8Array(Int16Array.from(P.flat).buffer)), b: P.b, o: P.origin })))};\nexport const PLACEMENTS = ${JSON.stringify(placements.map(({ p, x, y, z, f, stilts, carve, cut, free, turn, padded, b }) => [p, x, y, z, f, (stilts ? 1 : 0) | (carve ? 2 : 0) | (free ? 4 : 0) | ((turn ?? 0) << 3) | (cut ? 32 : 0) | (padded ? 64 : 0), ...b]))};\nexport const PADS = ${JSON.stringify(B64(new Uint8Array(Int32Array.from(PADS.flatMap((q) => [q.x0, q.z0, q.x1, q.z1, q.L, q.flags, q.cut, 0])).buffer)))};\nexport const PAD_BY = ${JSON.stringify(PAD_BY)};\nexport const BY_CHUNK = ${JSON.stringify(byChunk)};\nexport const HORAIA = ${JSON.stringify(HORAIA_AT)};\nexport const POOLDRESS = ${JSON.stringify(POOLDRESS)};\nexport const POOLFISH = ${JSON.stringify(POOLFISH)};\nexport const PARK = ${JSON.stringify(PARK)};\nexport const COURSES = ${JSON.stringify(COURSES)};\nexport const PAINTS = ${JSON.stringify(paints.map((q) => q.d))};\nexport const PAINT_BY = ${JSON.stringify(PAINT_BY)};\nexport const WALLS = ${JSON.stringify(walls.map((w) => w.d))};\nexport const WALL_BY = ${JSON.stringify(WALL_BY)};\nexport const PLACES = ${JSON.stringify(PLACES)};\n`);
 fs.writeFileSync(path.join(S, "data/grown.js"), `// baked by tools/buildmod.mjs from tools/bakegrown.mjs's settlements: per chunk "cx,cz" a base64 of a 32-byte no-tree mask, the lowest y\n// (u16, + 64), the chunk's kinds (u8 n, u16 index in data/structures.js PALETTE each), then columns (u8 j*16+i, u8 runs, each u8 y over the lowest,\n// u8 length, u8 kind); beasts [type, x, y, z]\nexport const GROWN_BY = ${JSON.stringify(GROWN_BY)};\nexport const BEAST_TYPES = ${JSON.stringify(BEAST_TYPES)};\nexport const BEASTS = ${JSON.stringify(BEASTS)};\nexport const BEAST_BY = ${JSON.stringify(BEAST_BY)};\n`);
 fs.writeFileSync(path.join(S, "data/folk.js"), `// baked by tools/buildmod.mjs: Thera's folk [x, y, z, skin, people (index in CULTURES, -1 the League), n]\nexport const CULTURES = ${JSON.stringify(CULTURES)};\nexport const RESIDENTS = ${JSON.stringify(residents)};\nexport const FOLK_BY_CHUNK = ${JSON.stringify(folkByChunk)};\nexport const NAMES = ${JSON.stringify(NAMES)};\nexport const SKINS = ${SKINS};\nexport const RANKS = ${JSON.stringify(RANKS)};\n`);
 fs.writeFileSync(path.join(S, "data/faith.js"), `// baked by tools/buildmod.mjs from world/faith.js\nexport const FAITH = ${JSON.stringify({ name: FAITH.name, tenets: FAITH.tenets, calendar: FAITH.calendar })};\nexport const WAYS = ${JSON.stringify(WAYS)};\nexport const DRESS = ${JSON.stringify(Object.fromEntries(Object.entries(DRESS).map(([k, v]) => [k, v.note])))};\n`);

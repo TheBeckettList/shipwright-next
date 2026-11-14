@@ -23,3 +23,6 @@ Phase 4's whole world is 463 settlements and 107,581 folk, so it is a long run h
 
 **Memory:** about 3 GB a worker at most (the big city peaked at 2.6 GB). On an 8 GB workspace, use
 `--workers 2 --heap 3000`.
+
+**Plans:** every town grown also leaves its plan in `lab/plans/` (phase 2, `tools/plans.mjs`). Check them with
+`node tools/replay.mjs`, which should print IDENTICAL for every town; then commit `lab/grown/` and `lab/plans/` together.
