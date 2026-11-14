@@ -304,15 +304,23 @@ let TP = null, templeOk = false, HORAIA_AT = null; const POOLDRESS = [], POOLFIS
   const ring = (L) => { const pts = []; for (let a = 0; a < 360; a += 2) { const t = (a * Math.PI) / 180; let hit = null; for (let r = 4; r < R * 1.3; r++) if (Hs(Math.round(CX + r * Math.cos(t)), Math.round(CZ + r * Math.sin(t))) <= L) { hit = r; break; } pts.push(hit); }   // vision: a point every two degrees
     const sm = pts.map((r, i) => { if (r == null) return null; let s = 0, n = 0; for (let d = -3; d <= 3; d++) { const q = pts[(i + d + pts.length) % pts.length]; if (q != null) { s += q; n++; } } return s / n; });   // vision: smoothed over fourteen degrees
     const out = []; sm.forEach((r, i) => { if (r != null) out.push([CX + r * Math.cos((i * 2 * Math.PI) / 180), CZ + r * Math.sin((i * 2 * Math.PI) / 180)]); }); if (out.length > 2) out.push(out[0]); return out; };
-  const LEVELS = [FIB[8], FIB[7], FIB[6], FIB[5]];   // derived: 34, 21, 13 and 8 blocks over the sea
+  const LEVELS = [FIB[9], FIB[8], FIB[7], FIB[6]];   // derived: 55, 34, 21 and 13 blocks over the sea (thera.md §2: the stoa's roof at 13, the contours to 55; the low rings at 5 and 8 fall in the waterfront's band)
   for (const L of LEVELS) if (L < Hs(Math.round(CX), Math.round(CZ))) stroke(ring(L));
   // the serpentine ways: from the summit's edge down, each step the most downhill heading that falls no more than a block in phi squared
-  const GRADE = 1 / PHI ** 2, SPOKES = FIB[4];   // derived: a block's fall in two and a half; five ways
+  const GRADE = 1 / PHI ** 2, SPOKES = FIB[5];   // derived: a block's fall in two and a half; eight ways (thera.md §2, up from five)
   for (let s = 0; s < SPOKES; s++) { const a0 = s * GOLDEN_ANGLE, side = s % 2 ? 1 : -1; let x = CX + FIB[9] * Math.cos(a0), z = CZ + FIB[9] * Math.sin(a0), h = Hs(Math.round(x), Math.round(z)); const pts = [[x, z]];   // derived: from fifty-five out (the summit's buildings inside)
     for (let n = 0; n < FIB[10] * FIB[3] && h > 2; n++) { const out = Math.atan2(z - CZ, x - CX); let best = null;
       for (let turn = 0; turn <= 75; turn += 5) { const t = out + side * (turn * Math.PI) / 180, nx = x + Math.cos(t), nz = z + Math.sin(t), nh = G.heightAt(Math.round(nx), Math.round(nz)).h; if (h - nh <= GRADE + 0.5 || turn === 75) { best = [nx, nz, nh]; break; } }   // vision: turning up to seventy-five degrees off the fall line, five at a time
       [x, z] = best; h = best[2]; if (n % 3 === 0) pts.push([x, z]); }   // vision: a point every three blocks
     stroke(pts); }
+  // the Sacred Way (thera.md §2): from the great temple down to the cothon, switchbacked at the same grade, each step
+  // the heading nearest the cothon's bearing that falls no more than a block in phi squared
+  let sacred = 0, sacredEnd = null; { const CGw = (await import("../world/city.js")).cothonWorld(), TX = SX + CGw.x * K, TZ = SZ - CGw.y * K, tp = placements.find((q) => q.tag === "temple");
+    if (tp) { let x = (tp.b[0] + tp.b[2]) / 2, z = tp.b[3] + FIB[3], h = Hs(Math.round(x), Math.round(z)); const pts = [[x, z]];   // from the temple's front step
+      for (let n = 0; n < FIB[10] * FIB[5] && Math.hypot(TX - x, TZ - z) > FIB[8]; n++) { const toward = Math.atan2(TZ - z, TX - x); let best = null;
+        for (let turn = 0; turn <= 90 && !best; turn += 5) for (const side of [1, -1]) { const t = toward + side * (turn * Math.PI) / 180, nx = x + Math.cos(t), nz = z + Math.sin(t), nh = G.heightAt(Math.round(nx), Math.round(nz)).h; if (h - nh <= GRADE + 0.5 && nh > 0) { best = [nx, nz, nh]; break; } }   // vision: turning up to ninety degrees off the cothon's bearing, either side
+        if (!best) break; [x, z] = best; h = best[2]; if (n % 3 === 0) pts.push([x, z]); }
+      stroke(pts, W + 2); sacred = pts.length; sacredEnd = Math.round(Math.hypot(TX - x, TZ - z)); } }   // vision: two wider than the paths, a processional way
   // the spurs: each skyway trunk's foot to the nearest path
   const all = () => [...paths.values()];
   for (const [rx, rz] of SKYROOTS) { let best = null, bd = Infinity; for (const c of all()) { const d = Math.hypot(c.X - rx, c.Z - rz); if (d < bd) { bd = d; best = c; } } if (best && bd < R) stroke([[rx, rz], [best.X, best.Z]]); }
@@ -357,7 +365,7 @@ let TP = null, templeOk = false, HORAIA_AT = null; const POOLDRESS = [], POOLFIS
   for (const [, list] of pieces) { let b = [Infinity, Infinity, -Infinity, -Infinity]; for (const v of list) b = [Math.min(b[0], v.x), Math.min(b[1], v.z), Math.max(b[2], v.x), Math.max(b[3], v.z)];
     const P2 = proto(`cone park ${b[0]},${b[1]}`, new Map(list.map((v) => [`${v.x - b[0]},${v.y},${v.z - b[1]}`, { id: v.id, s: v.s }])), 0);
     placements.push({ p: P2.i, x: b[0], y: 0, z: b[1], f: pal("minecraft:air"), stilts: false, carve: false, free: true, tag: "park", b }); }
-  say(`the cone's park: ${paths.size} path stones (${LEVELS.length} rings, ${SPOKES} serpentine ways, ${SKYROOTS.length} skyway spurs), ${lamps} lamps, ${benches} benches, ${beds} garden plants, ${trees} cypresses; the amphitheatre ${O ? `${tiers} seats on ${FIB[6]} tiers facing the lagoon` : "found no ground"}`); }
+  say(`the cone's park: ${paths.size} path stones (${LEVELS.length} rings, ${SPOKES} serpentine ways, the Sacred Way ${sacred ? `${sacred * 3} steps, ending ${sacredEnd} from the cothon` : "NOT laid"}, ${SKYROOTS.length} skyway spurs), ${lamps} lamps, ${benches} benches, ${beds} garden plants, ${trees} cypresses; the amphitheatre ${O ? `${tiers} seats on ${FIB[6]} tiers facing the lagoon` : "found no ground"}`); }
 // ---- Akrotiri: the old Theran town under the ash, on the ridge's foot toward the south shore (the real site lies
 // there). Thera's red Minoan columns stand only here now (the user's word, 12 Nov: too far from the living city's
 // white, gold and blue): stumps of them broken at different heights on their white bases, fallen capitals, low walls of
