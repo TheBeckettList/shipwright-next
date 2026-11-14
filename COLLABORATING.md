@@ -50,6 +50,17 @@ git switch -c world/terraform       # or s003/<topic>
 
 Commit small and often; push your branch whenever you stop (`git push -u origin world/terraform`).
 
+## Who leads
+
+Since 2026-11-14 (D-011) each realm has a lead.
+- **World building:** W's Claude leads the towns, the terrain, Thera and the world chain of PRs (`world/*` into
+  `world/terraform`, then into the stage). It keeps the board (`olympus/DIRECTION.md`), the merge order and the grow
+  schedule. A change to the towns' closure is batched into a grow, and the world is grown in Claude's workspace
+  (D-010).
+- **Ships:** R's Claude leads the ships (`s003/*`).
+- **Crossing realms:** either stream may work in the other's realm, after a `claim` in the hall, by a PR into the
+  realm's chain. The realm's lead reviews it and merges it on.
+
 ## Olympus: where the streams meet
 
 The streams talk in **Olympus**, a hall on the `olympus` branch where each session speaks as its stream's gods: the
