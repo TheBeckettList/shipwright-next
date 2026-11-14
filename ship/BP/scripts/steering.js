@@ -24,6 +24,7 @@ import { towTick, castOff, useHandling } from "./tender.js";
 import { turnDrag, oarsInLaw } from "./laws.js";
 import { sailLaw, driveLaw, heelLaw, heelTarget, rollPeriod, driftLaw, wakeLaw } from "./laws.js";
 import { isGlider, hasSherd, foldTick, flightTick, clamTick, foilReach, foilTick, foilGain, CORE_TOP } from "./glide.js";
+import { keelLaw, reachOf } from "./keels.js";
 import { PHI } from "../core/golden.js";
 
 const SIGN_KEY = "shipwright:steer_sign";
@@ -1163,10 +1164,38 @@ function tickBoat(e) {
   if (t % 10 === 0 && s.stats) {
     if (!s.anchor) takeSoundings(e, s, s.stats);
     readout(helm, s);
+    keelTick(e, s);
+  }
+  if (s.standing) {
+    // standing on her keels: the floor holds her, as an island stands (keels.js)
+    try {
+      const v = e.getVelocity();
+      e.applyImpulse({ x: -v.x, y: 0, z: -v.z });
+    } catch {
+      /* not this tick */
+    }
   }
 }
 
 useHandling((e) => boatState(e).stats ?? computeHandling(readRecord(e)));
+
+/** The flagship's retracting keels: their reach to the floor, shown, and whether she stands on them (keels.js). */
+function keelTick(e, s) {
+  const reach = reachOf(e.typeId);
+  if (!reach) return;
+  const law = keelLaw({ reach, under: s.sounding?.under, draft: s.stats?.draft ?? 1, anchored: !!s.anchor });
+  const was = s.keel ?? 1;
+  s.keel = was + Math.max(-0.1, Math.min(0.1, law.ext - was));             // a tenth of their run each sounding
+  s.standing = law.standing && Math.abs(s.keel - law.ext) < 0.02;
+  if (Math.abs(s.keel - (s.keelShown ?? -1)) >= 0.02) {
+    try {
+      e.setProperty("shipwright:keel", Math.round(s.keel * 100) / 100);
+      s.keelShown = s.keel;
+    } catch {
+      /* visual only */
+    }
+  }
+}
 
 export function startSteering() {
   // Owners who step away from a boat (or leave the game) get their sea chest items sent home.

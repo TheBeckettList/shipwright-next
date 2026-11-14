@@ -62,7 +62,7 @@
         "foils": {
           "position": [
             0,
-            0,
+            "(1 - q.property('shipwright:keel')) * 16.469",
             "-q.property('shipwright:mids') * 8"
           ]
         },
