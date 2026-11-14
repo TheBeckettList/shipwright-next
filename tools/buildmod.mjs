@@ -115,13 +115,14 @@ const protos = [], protoKey = new Map();
 /** A prototype from a vox map, turned r quarter-turns clockwise: { flat [x,y,z,p,...], bounds }. */
 function proto(name, vox, r = 0) {
   const key = `${name}@${r}`; if (protoKey.has(key)) return protoKey.get(key);
+  const base = r ? proto(name, vox, 0) : null; if (base) vox = base.vox;   // a turn of the name's own base, never of another vox under the same name (the game lays the base turned: a turn built from other blocks stood in a box its blocks didn't fill, and lost its doors to the chunk's edge)
   const flat = []; let b = [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity];
   for (const [k, blk] of vox) {
     let [x, y, z] = k.split(",").map(Number); for (let t = 0; t < r; t++) [x, z] = [-z, x];
     flat.push(x, y, z, pal(blk.id, turnStates(blk.s, r)));
     b = [Math.min(b[0], x), Math.max(b[1], x), Math.min(b[2], y), Math.max(b[3], y), Math.min(b[4], z), Math.max(b[5], z)];
   }
-  const P = { i: protos.length, name: key, flat, b, r, base: r ? proto(name, vox, 0).i : null }; protos.push(P); protoKey.set(key, P); return P;   // a turned prototype keeps its base: only the bases are written (the game turns them: lay.js)
+  const P = { i: protos.length, name: key, flat, b, r, base: base ? base.i : null, vox: r ? null : vox }; protos.push(P); protoKey.set(key, P); return P;   // a turned prototype keeps its base: only the bases are written (the game turns them: lay.js)
 }
 const footOf = (vox) => { let b = [Infinity, -Infinity, Infinity, -Infinity]; for (const k of vox.keys()) { const [x, , z] = k.split(",").map(Number); b = [Math.min(b[0], x), Math.max(b[1], x), Math.min(b[2], z), Math.max(b[3], z)]; } return b; };
 
@@ -170,6 +171,17 @@ const eu = byT.get("european");
 const theran = theranPeople(eu);   // vision: the Therans as the pack draws them (tools/lab.mjs's houses lens)
 const houseVox = new Map();
 const houseFor = (t) => { if (houseVox.has(t)) return houseVox.get(t); const p = t === "therans" ? theran : byT.get(t); const law = FORM[t]?.form ?? "twocell", h = houseOf(p, { n: HOUSEHOLD[law] ?? 5, job: "fisherman", tradition: t }); houseVox.set(t, h); return h; };   // the same house the boxes are sized from (world/boxes.js houseBox)
+/** A stilt house's way up: where its blocks carry no ladder, one at the floor's level outside its lowest door, hung on
+ *  the floor (the game runs it on down to the ground: lay.js). A copy: the house's own blocks are shared. */
+const withLadder = (vox) => {
+  const has = (x, z) => { for (const k of vox.keys()) { const [a, , c] = k.split(","); if (+a === x && +c === z) return true; } return false; };
+  if ([...vox.values()].some((b) => b.id === "minecraft:ladder")) return vox;
+  let door = null; for (const [k, b] of vox) { if (!/_door$/.test(b.id) || b.s?.upper_block_bit) continue; const [x, y, z] = k.split(",").map(Number); if (!door || y < door[1]) door = [x, y, z]; }
+  if (!door) return vox;
+  for (const [ux, uz, face] of [[1, 0, 5], [-1, 0, 4], [0, 1, 3], [0, -1, 2]]) { const nx = door[0] + ux, nz = door[2] + uz; if (has(nx, nz) || !vox.has(`${door[0]},${door[1] - 1},${door[2]}`)) continue;   // given: out of the door each way, the ladder's facing that way
+    const out = new Map(vox); out.set(`${nx},${door[1] - 1},${nz}`, { id: "minecraft:ladder", s: { facing_direction: face } }); return out; }
+  return vox;
+};
 const small = (blocks) => new Map(blocks.map(([x, y, z, id, s]) => [`${x},${y},${z}`, { id, s: s ?? null }]));
 const WELL = small([...[-1, 0, 1].flatMap((a) => [-1, 0, 1].flatMap((b) => (a || b ? [[a, 0, b, "minecraft:cobblestone"], [a, 1, b, "minecraft:cobblestone_wall"]] : [[0, 0, 0, "minecraft:water"]]))), [0, -1, 0, "minecraft:water"], [-1, 2, -1, "minecraft:oak_fence"], [1, 2, 1, "minecraft:oak_fence"], [-1, 2, 1, "minecraft:oak_fence"], [1, 2, -1, "minecraft:oak_fence"], ...[-1, 0, 1].flatMap((a) => [-1, 0, 1].map((b) => [a, 3, b, "minecraft:oak_slab"]))]);   // vision: a village well
 const BELL = small([[0, 0, 0, "minecraft:stone_bricks"], [0, 1, 0, "minecraft:oak_fence"], [0, 2, 0, "minecraft:bell", { attachment: "standing", direction: 0 }], [0, 3, 0, "minecraft:lantern", { hanging: false }]]);   // vision
@@ -486,7 +498,7 @@ const scan = (kinds, kind, cultureOf, slope, stride = 1, { max = Infinity, class
     const cls = clsAt(i, j), fp = footOf(b.vox), area = (fp[1] - fp[0] + 1 + 2 * pad) * (fp[3] - fp[2] + 1 + 2 * pad), keep = cls ? ((KEEP[cls] ?? 1) * (t === "therans" ? THINNER : 1) * (G.CELL * stride) ** 2) / area : 1;
     if (classed && golden(j * N + i) >= keep) continue;
     if (made >= max) return;
-    for (const r of [0, 1, 2, 3]) if (place(proto(key, b.vox, r), X, Z, { pad, kinds, slope, carve: kind === "caldera" || (kind === "outer" && !!CLIFF[t]), foundation: kind === "caldera" ? ST.plaster : "minecraft:calcite", wet: t === "shallow" && t, water: t === "shallow", tag: `${kind}|${t}` })) {
+    for (const r of [0, 1, 2, 3]) if (place(proto(key, t === "shallow" ? withLadder(b.vox) : b.vox, r), X, Z, { pad, kinds, slope, carve: kind === "caldera" || (kind === "outer" && !!CLIFF[t]), foundation: kind === "caldera" ? ST.plaster : "minecraft:calcite", wet: t === "shallow" && t, water: t === "shallow", tag: `${kind}|${t}` })) {
       houses++; made++; beds += b.beds; const key = t === "therans" ? `therans (${kind})` : kind === "caldera" ? `${t} (cliff)` : t; perCulture[key] = (perCulture[key] ?? 0) + 1;
       placements[placements.length - 1].folk = { t, kind, beds: b.beds, door: b.door, storeys: b.storeys, r };
       settle(placements[placements.length - 1], b, t, kind, r);
@@ -674,7 +686,7 @@ Lw.forEach((p, i) => {
           const face = [Math.cos(part.face ?? 0), Math.sin(part.face ?? 0)], dc = [hb.door.x - (fx0 + fx1) / 2, hb.door.z - (fz0 + fz1) / 2];   // town boxes are in world axes (z south)
           const opts = [0, 1, 2, 3].map((r) => { let [dx, dz] = dc; for (let k = 0; k < r; k++) [dx, dz] = [-dz, dx]; const [w, l] = r % 2 ? [pl, pw] : [pw, pl]; return { r, over: Math.max(0, w - bw) + Math.max(0, l - bl), align: (dx * face[0] + dz * face[1]) / (Math.hypot(dx, dz) || 1) }; }).sort((a, c) => a.over - c.over || c.align - a.align);
           const water = !!LAYOUT_WATER[t];
-          for (const o of opts.slice(0, 2)) if (place(proto(`town ${t} ${b.storeys ?? 1}`, hb.vox, o.r), X, Z, { pad: 0, water, wet: water && t })) { townHouses++; townBeds += hb.beds; settle(placements[placements.length - 1], hb, t, "town", o.r, SHOWN_TOWN); break; }
+          for (const o of opts.slice(0, 2)) if (place(proto(`town ${t} ${b.storeys ?? 1}`, water ? withLadder(hb.vox) : hb.vox, o.r), X, Z, { pad: 0, water, wet: water && t })) { townHouses++; townBeds += hb.beds; settle(placements[placements.length - 1], hb, t, "town", o.r, SHOWN_TOWN); break; }
         }
       }
     }

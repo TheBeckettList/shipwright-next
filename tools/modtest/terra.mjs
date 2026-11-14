@@ -75,7 +75,7 @@ for (const ck of chunks) {
 
 function judge(k, m) {
   const a = ST.PLACEMENTS[k], name = ST.PROTOS[a[0]].name, cells = cellsOf(a), y0 = a[2], at = (x, y, z) => m.get(`${x},${y},${z}`) ?? AIR;
-  const foot = new Set(), floorCols = new Set(); let blocked = 0, blockedFloor = 0, air = 0, doors = 0, lost = 0; const steps = [];
+  const foot = new Set(), floorCols = new Set(); let blocked = 0, blockedFloor = 0, air = 0, doors = 0, lost = 0; const steps = [], lostAt = [];
   // a prototype needn't write its empty cells: each column's cells between its lowest and highest solid block that it
   // leaves empty are its rooms' air (a stilt house's posts stand under its floor, so its floor isn't always at y 0)
   const span = new Map();   // "x,z" -> [lowest solid, highest solid]
@@ -86,7 +86,7 @@ function judge(k, m) {
     const [x, y, z] = key.split(",").map(Number), got = at(x, y, z);
     if (e[0] === AIR) { air++; if (!soft(got)) { blocked++; if (floorAt.get(`${x},${z}`) === y) blockedFloor++; } }
     if (isDoor(e[0]) && !(e[1]?.upper_block_bit)) {
-      doors++; if (got !== e[0]) lost++;
+      doors++; if (got !== e[0]) { lost++; if (!lostAt.length) lostAt.push(`${x},${y},${z} ${got}`); }
       for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, nz = z + dz; if (foot.has(`${nx},${nz}`)) continue;   // the outside: a column the house doesn't stand on
         let gy = null; for (let yy = y + 1; yy >= y - 34; yy--) { const id = at(nx, yy, nz); if (!soft(id) || id === WATER) { gy = yy; break; } }   // vision: 34 down
         if (gy !== null) steps.push(y - 1 - gy); }
@@ -100,7 +100,7 @@ function judge(k, m) {
   gaps.sort((p, q) => p - q);
   for (const d of gaps) { fill = Math.max(fill, d); cut = Math.max(cut, -d); }
   const med = gaps.length ? gaps[gaps.length >> 1] : 0;
-  return { k, name, people: people(name), thera: !!G.theraUV(a[1], a[3]), stilts: !!(a[5] & 1), carved: !!(a[5] & 2), at: [a[1], y0, a[3]], air, blocked, blockedFloor, doors, lost, steps, footMax, footCols3, postMax, fill, cut, med, waterCols: water, overDeep: over, cols: floorCols.size };
+  return { k, name, people: people(name), thera: !!G.theraUV(a[1], a[3]), stilts: !!(a[5] & 1), carved: !!(a[5] & 2), at: [a[1], y0, a[3]], air, blocked, blockedFloor, doors, lost, lostAt, steps, footMax, footCols3, postMax, fill, cut, med, waterCols: water, overDeep: over, cols: floorCols.size };
 }
 
 // the readings
@@ -120,8 +120,9 @@ const sum = (rs) => {
 };
 const groups = { all: res, thera: res.filter((r) => r.thera), "boxed towns": res.filter((r) => !r.thera), carved: res.filter((r) => r.carved), shallow: res.filter((r) => r.people === "shallow") };
 const report = Object.fromEntries(Object.entries(groups).map(([g, rs]) => [g, sum(rs)]));
-const worst = (f, n = 3) => [...res].sort((p, q) => f(q) - f(p)).slice(0, n).map((r) => `${r.name} at ${r.at.join(",")}`);
-const examples = { buried: worst((r) => r.blocked), footing: worst((r) => r.footMax), posts: worst((r) => r.postMax), "under the ground": worst((r) => -r.med) };
+const worst = (f, n = 3) => [...res].sort((p, q) => f(q) - f(p)).slice(0, n).map((r) => `${r.name} at ${r.at.join(",")}${r.lostAt?.length && f === lostF ? ` (door ${r.lostAt[0]})` : ""}`);
+const lostF = (r) => r.lost;
+const examples = { buried: worst((r) => r.blocked), footing: worst((r) => r.footMax), posts: worst((r) => r.postMax), "under the ground": worst((r) => -r.med), "doors lost": worst(lostF, 6) };
 console.log(`terraform probe: ${res.length} buildings over ${chunks.length} chunks in ${((Date.now() - t0) / 1000).toFixed(0)} s${only ? ` (${only})` : ""}${Number.isFinite(limit) ? ` (sample of ${limit})` : ""}`);
 const keys = Object.keys(report.all); console.log(["", ...Object.keys(groups)].map((s) => s.padStart(12)).join(""));
 for (const key of keys) console.log(key.padEnd(40).slice(0, 40) + Object.keys(groups).map((g) => String(report[g][key]).padStart(10)).join(""));
