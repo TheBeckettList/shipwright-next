@@ -3134,77 +3134,73 @@ def mesh_dict(quads, uv_px):
     return {"normalized_uvs": False, "positions": pos, "normals": nor, "uvs": [list(uv_px)], "polys": polys}
 
 
-def theran_keel(b):
-    """The Theran ship's and flagship's keels, cast as the Exokoitos's is (lost-keels.md): the boat's shadow in gold at
-    1/phi^3. The ship's, the twin: a drop under each hull on one wing that runs through both, its tips curving down;
-    a stab-and-fins band at each drop's tail. The flagship's, the great keel: a drop under her main hull, its wing
-    reaching out under both floats, a blade at its root and one up from each tip into a float. Returns its quads."""
-    mh = multihull(b)
-    L, side = mh["L"], b["side"]
-    Ld = L / PHI ** 3                                  # vision: the drop, her length at 1/phi^3
+def keel_at(x0, Ld, yax, y_top, tip_cant=True):
+    """One Theran keel, the Exokoitos's in form, its drop Ld long with its axis at (x0, yax), its blade up to y_top:
+    a slim drop; a wing of half span Ld/sqrt(phi), swept atan 1/phi^2, its chord elliptic to a rounded tip, its outer
+    part curving down to atan 1/phi; a stab-and-fins band at the drop's tail; a raked blade flared into the drop."""
     rb = Ld / (2 * PHI ** 5)
-    yax = 1 - 1.2 * side                               # the foil's depth, as her foils had it
-    z0 = -Ld / PHI ** 2                                # the wing at the third of the drop
-    c0 = Ld / PHI ** 2                                 # vision: the wing's root chord
-    swq = math.atan(1 / PHI ** 2)                      # vision: swept back atan 1/phi^2
-    q = []
-    xs = [-mh["twin_gap"] / 2, mh["twin_gap"] / 2] if b.get("twin") else [0.0]
-    for x0 in xs:
-        q += drop_quads(x0, yax, z0, Ld, rb)
-    if b.get("tri"):
-        X = mh["float_out"]                            # out to the floats
-        tip_cant = 0.0
-    else:
-        X = mh["twin_gap"] / 2 + Ld / PHI              # past each hull by 1/phi of the drop
-        tip_cant = math.tan(math.atan(1 / PHI))
+    z0 = -Ld / PHI ** 2
+    c0 = Ld / PHI ** 2
+    swq = math.atan(1 / PHI ** 2)
+    X = Ld / math.sqrt(PHI)                            # vision: the wing's half span, the Exokoitos's proportion
+    q = drop_quads(x0, yax, z0, Ld, rb)
     zle = -c0 / 2
-    chord = lambda u: max(c0 / PHI ** 4, c0 * math.sqrt(max(0.0, 1 - u ** 2.2))) if not b.get("tri") else c0 * (1 - 0.38 * u)
+    tc = math.tan(math.atan(1 / PHI)) if tip_cant else 0.0
     u_b = 1 / PHI
     for sx in (-1, 1):
         st = []
         for u in (0.0, 0.18, 0.36, 0.52, 0.66, 0.78, 0.88, 0.95, 1.0):
-            c_ = chord(u)
-            dy = -tip_cant * X * max(0.0, u - u_b) ** 2 / (2 * (1 - u_b))
-            sl = -tip_cant * max(0.0, u - u_b) / (1 - u_b)
+            c_ = max(c0 / PHI ** 4, c0 * math.sqrt(max(0.0, 1 - u ** 2.2)))
+            dy = -tc * X * max(0.0, u - u_b) ** 2 / (2 * (1 - u_b))
+            sl = -tc * max(0.0, u - u_b) / (1 - u_b)
             n_ = (-sx * sl, 1.0, 0.0); nn = math.hypot(n_[0], n_[1])
-            st.append(((sx * X * u, yax + dy, zle + X * u * math.tan(swq) * (0.5 if b.get("tri") else 1) + (c0 - c_) * 0.75), c_, (0, 0, 1), (n_[0] / nn, n_[1] / nn, 0)))
+            st.append(((x0 + sx * X * u, yax + dy, zle + X * u * math.tan(swq) + (c0 - c_) * 0.75), c_, (0, 0, 1), (n_[0] / nn, n_[1] / nn, 0)))
         q += loft_quads(st)
-    # the tail band at each drop: a stab with fins dropping from its tips, round-cornered, canted out, raked aft
-    hsm, csm = Ld / PHI ** 3, c0 / PHI
+    hsm, csm = X / PHI ** 2, c0 / PHI                  # the tail band, as the Exokoitos's
     cft, hf = csm / PHI, Ld / PHI ** 4
     cant, rake = math.atan(1 / PHI ** 3), math.atan(1 / PHI ** 2)
     zt = z0 + Ld * (1 - 1 / PHI ** 2)
-    for x0 in xs:
-        rr = min(hsm, hf) / PHI
-        def side_(sx):
-            cx_, cy_ = x0 + sx * (hsm - rr), yax - rr
-            pts = [(cx_ + sx * rr * math.sin((math.pi / 2 - cant) * k / 4), cy_ + rr * math.cos((math.pi / 2 - cant) * k / 4)) for k in range(5)]
-            e = pts[-1]; Lf = hf - rr
-            return pts + [(e[0] + sx * Lf * 0.5 * math.sin(cant), e[1] - Lf * 0.5 * math.cos(cant)), (e[0] + sx * Lf * math.sin(cant), e[1] - Lf * math.cos(cant))]
-        path = side_(-1)[::-1] + [(x0, yax)] + side_(1)
-        st = []
-        for i, (x_, y_) in enumerate(path):
-            a_, c2 = path[max(0, i - 1)], path[min(len(path) - 1, i + 1)]
-            tx, ty = c2[0] - a_[0], c2[1] - a_[1]; tn = math.hypot(tx, ty) or 1
-            o_ = min(1.0, abs(x_ - x0) / hsm)
-            st.append(((x_, y_, zt + min(abs(x_ - x0), hsm) * math.tan(swq) + max(0.0, yax - y_) * math.tan(rake)), csm + (cft - csm) * o_, (0, 0, 1), (-ty / tn, tx / tn, 0)))
-        q += loft_quads(st)
-    # the blades: raked as her rudders, a NACA section of the rudders' chord, flared at the root into the drop
-    ck = c0 / PHI
-    rk = math.atan(1 / PHI ** 2)
-    def blade(x0, y_bot, y_top, z_mid, lean=0.0):
-        h = (y_top - y_bot) / math.cos(rk)
-        st = []
-        for s_ in (0.0, 0.08, 0.2, 0.5, 1.0):
-            fl = 1 + 0.6 * max(0.0, 1 - s_ / 0.2) ** 2
-            st.append(((x0 + lean * s_ * h, y_bot + s_ * h * math.cos(rk), z_mid - ck * fl / 2 - s_ * h * math.sin(rk)), ck * fl, (0, 0, 1), (1.0, 0.0, 0.0)))
-        return loft_quads(st)
-    for x0 in xs:
-        q += blade(x0, yax + rb * 0.6, 2.5, 0.0)
-    if b.get("tri"):                                   # a blade up from each wingtip into a float
-        fl_y = b["wl"] - mh["float_r"]
+    rr = min(hsm, hf) / PHI
+    def side_(sx):
+        cx_, cy_ = x0 + sx * (hsm - rr), yax - rr
+        pts = [(cx_ + sx * rr * math.sin((math.pi / 2 - cant) * k / 4), cy_ + rr * math.cos((math.pi / 2 - cant) * k / 4)) for k in range(5)]
+        e = pts[-1]; Lf = hf - rr
+        return pts + [(e[0] + sx * Lf * 0.5 * math.sin(cant), e[1] - Lf * 0.5 * math.cos(cant)), (e[0] + sx * Lf * math.sin(cant), e[1] - Lf * math.cos(cant))]
+    path = side_(-1)[::-1] + [(x0, yax)] + side_(1)
+    st = []
+    for i, (x_, y_) in enumerate(path):
+        a_, c2 = path[max(0, i - 1)], path[min(len(path) - 1, i + 1)]
+        tx, ty = c2[0] - a_[0], c2[1] - a_[1]; tn = math.hypot(tx, ty) or 1
+        o_ = min(1.0, abs(x_ - x0) / hsm)
+        st.append(((x_, y_, zt + min(abs(x_ - x0), hsm) * math.tan(swq) + max(0.0, yax - y_) * math.tan(rake)), csm + (cft - csm) * o_, (0, 0, 1), (-ty / tn, tx / tn, 0)))
+    q += loft_quads(st)
+    ck, rk = c0 / PHI, math.atan(1 / PHI ** 2)         # the blade, raked as her rudders, flared at its root
+    h = (y_top - (yax + rb * 0.6)) / math.cos(rk)
+    st = []
+    for s_ in (0.0, 0.08, 0.2, 0.5, 1.0):
+        fl = 1 + 0.6 * max(0.0, 1 - s_ / 0.2) ** 2
+        st.append(((x0, yax + rb * 0.6 + s_ * h * math.cos(rk), -ck * fl / 2 - s_ * h * math.sin(rk)), ck * fl, (0, 0, 1), (1.0, 0.0, 0.0)))
+    q += loft_quads(st)
+    return q
+
+
+def theran_keel(b):
+    """The Theran ship's and flagship's keels, each its own casting (Richard: "don't connect them all; separate them
+    out; a main one on the tri, and the sides not as main"). The ship: a keel under each hull, the same, apart. The
+    flagship: her main keel under the main hull, and under each float a lesser one at 1/phi of it."""
+    mh = multihull(b)
+    L, side = mh["L"], b["side"]
+    Ld = L / PHI ** 3                                  # vision: the drop, her length at 1/phi^3
+    yax = 1 - 1.2 * side                               # the foil's depth, as her foils had it
+    q = []
+    if b.get("tri"):
+        q += keel_at(0.0, Ld, yax, 2.5)
+        fl_y = b["wl"] - mh["float_r"]                 # a float's underside, as the ama draws it
         for sx in (-1, 1):
-            q += blade(sx * X, yax + 0.3, fl_y + mh["float_r"] * 0.5, X * math.tan(swq) * 0.5)
+            q += keel_at(sx * mh["float_out"], Ld / PHI, fl_y - 1.2 * side / PHI, fl_y + mh["float_r"])
+    else:
+        for sx in (-1, 1):
+            q += keel_at(sx * mh["twin_gap"] / 2, Ld / math.sqrt(PHI), yax, 2.5)   # vision: each hull's its own, 1/sqrt(phi) of a single keel
     return q
 
 
