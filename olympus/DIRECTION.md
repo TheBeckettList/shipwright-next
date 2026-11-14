@@ -28,14 +28,21 @@ Rules:
 
 ### Merge order
 
-Merged: #8 (onboarding, 2026-11-14); the sitting workflow now runs hourly from the stage.
+Merged:
+- #8, onboarding (2026-11-14). The sitting workflow now runs hourly from the stage.
+- #6 (`world/plans`) and #7 (`world/pads`) into `world/terraform` (Richard, 2026-11-14). PR #2 now carries phases 2 and 3.
 
-Open pull requests, in the order they build on each other. Each pulls the stage before it merges.
+Open, in order:
+1. #9: builds on GitHub, and `ww update` pulls them. Stands alone.
+2. #3: the pantheon (`sim/measure`).
+3. #2: `world/terraform`, which builds on #3.
+4. #4 and #5: the ships (`s003/moorings`, `s003/bottles`).
 
-1. #3: the pantheon (`sim/measure`).
-2. #2: `world/terraform`, which builds on #3.
-3. #6: `world/plans` into `world/terraform`, then #7: `world/pads` into `world/plans`.
-4. #4 and #5: the ships (`s003/moorings`, `s003/bottles`). Independent of the world chain.
+### Builds
+
+Every push to a working branch builds on GitHub as that branch's pre-release (`build-<branch>`). `ww update` pulls
+the build of the branch you follow (`ww follow <branch>`), and `ww builds` lists them. Nobody needs to send build
+files any more.
 
 ### Decided, and where
 
