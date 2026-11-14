@@ -122,7 +122,7 @@ const groups = { all: res, thera: res.filter((r) => r.thera), "boxed towns": res
 const report = Object.fromEntries(Object.entries(groups).map(([g, rs]) => [g, sum(rs)]));
 const worst = (f, n = 3) => [...res].sort((p, q) => f(q) - f(p)).slice(0, n).map((r) => `${r.name} at ${r.at.join(",")}${r.lostAt?.length && f === lostF ? ` (door ${r.lostAt[0]})` : ""}`);
 const lostF = (r) => r.lost;
-const examples = { buried: worst((r) => r.blocked), footing: worst((r) => r.footMax), posts: worst((r) => r.postMax), "under the ground": worst((r) => -r.med), "doors lost": worst(lostF, 6), "blocked floors": [...res].filter((r) => r.blockedFloor).sort((p, q) => q.blockedFloor - p.blockedFloor).slice(0, 8).map((r) => `${r.name} at ${r.at.join(",")} (${r.blockedFloor}: ${r.blockedAt[0]})`) };
+const examples = { buried: worst((r) => r.blocked), "step up": worst((r) => Math.max(0, ...r.steps)), footing: worst((r) => r.footMax), posts: worst((r) => r.postMax), "under the ground": worst((r) => -r.med), "doors lost": worst(lostF, 6), "blocked floors": [...res].filter((r) => r.blockedFloor).sort((p, q) => q.blockedFloor - p.blockedFloor).slice(0, 8).map((r) => `${r.name} at ${r.at.join(",")} (${r.blockedFloor}: ${r.blockedAt[0]})`) };
 console.log(`terraform probe: ${res.length} buildings over ${chunks.length} chunks in ${((Date.now() - t0) / 1000).toFixed(0)} s${only ? ` (${only})` : ""}${Number.isFinite(limit) ? ` (sample of ${limit})` : ""}`);
 const keys = Object.keys(report.all); console.log(["", ...Object.keys(groups)].map((s) => s.padStart(12)).join(""));
 for (const key of keys) console.log(key.padEnd(40).slice(0, 40) + Object.keys(groups).map((g) => String(report[g][key]).padStart(10)).join(""));

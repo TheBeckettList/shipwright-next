@@ -5,7 +5,8 @@
 // tools/buildmod.mjs reads them and bakes them into the mod (data/grown.js).
 //   node tools/bakegrown.mjs [--folk 8000] [--secs 540] [--only key] [--keys k1;k2;...]
 //   (many cores: tools/growall.mjs shares the settlements among workers, the biggest first)
-//   node tools/bakegrown.mjs --restamp [n]   the sources changed but not the towns (a Thera-only change): grow the n smallest stale
+//   node tools/bakegrown.mjs --restamp [n] [--from <hash>]   the sources changed but not the towns (a Thera-only change): grow the n smallest stale
+//                                            (--from: only those grown under that hash)
 //                                            towns again (2 by default), and if each comes out identical, stamp every stale town current
 import fs from "node:fs";
 import path from "node:path";
@@ -69,7 +70,8 @@ if (isMain) {
   const { cityOf } = await import("../world/cities.js"), { layPlace } = await import("../world/district.js"), { heightAt, SEA } = await import("../game/ground.js");
   const restamp = process.argv.includes("--restamp"), proofs = [];
   let list = (await chosen(budget)).filter(({ s }) => (!only || s.key === only) && (!keys || keys.has(s.key)));
-  const stale = ({ s }) => fs.existsSync(fileOf(s.key)) && JSON.parse(fs.readFileSync(fileOf(s.key), "utf8")).hash !== hash;
+  const from = arg("from", null);   // --restamp --from <hash>: only the towns grown under that hash (others staled earlier are left stale)
+  const stale = ({ s }) => { if (!fs.existsSync(fileOf(s.key))) return false; const h0 = JSON.parse(fs.readFileSync(fileOf(s.key), "utf8")).hash; return h0 !== hash && (!from || h0 === from); };
   if (restamp) list = list.filter(stale).sort((a, b) => a.s.folk - b.s.folk).slice(0, Number(arg("restamp", 2)) || 2);   // vision: two towns' proof
   let grown = 0, kept = 0, left = 0;
   for (const { s, d } of list) {
@@ -85,6 +87,7 @@ if (isMain) {
     try { const { planOf, writePlan } = await import("./plans.mjs"); writePlan(await planOf(s, c, hash)); } catch (e) { console.log(`${s.key}: no plan kept (${String(e.message).split("\n")[0]})`); }   // phase 2: the town as its plan too (tools/plans.mjs)
     console.log(`${s.key} ${t} ${s.folk} folk, ${Math.round(d)} from Thera: ${rec.buildings} buildings, ${rec.farms} farms, ${blocks} blocks in ${cols.length} columns, ${beasts.length} beasts${skipped ? `, ${skipped} columns where the game's ground differs, left` : ""}, ${rec.ms} ms`);
   }
-  if (restamp) { if (proofs.length && proofs.every(([, same]) => same)) { let n = 0; for (const g of fs.readdirSync(OUT)) { const f = path.join(OUT, g), o = JSON.parse(fs.readFileSync(f, "utf8")); if (o.hash !== hash) { o.hash = hash; fs.writeFileSync(f, JSON.stringify(o)); n++; } } console.log(`restamped ${n} towns to ${hash}`); } else console.log("not restamped: a town came out different (or none was stale); grow them again"); process.exit(0); }
+  if (restamp) { if (proofs.length && proofs.every(([, same]) => same)) { let n = 0; for (const g of fs.readdirSync(OUT)) { const f = path.join(OUT, g), o = JSON.parse(fs.readFileSync(f, "utf8")); if (o.hash !== hash && (!from || o.hash === from)) { o.hash = hash; fs.writeFileSync(f, JSON.stringify(o)); n++; } } const PL = path.join(ROOT, "lab/plans"); let np = 0; if (fs.existsSync(PL)) for (const g of fs.readdirSync(PL)) { const f = path.join(PL, g), o = JSON.parse(fs.readFileSync(f, "utf8")); if (o.hash !== hash && (!from || o.hash === from)) { o.hash = hash; fs.writeFileSync(f, JSON.stringify(o)); np++; } }   // their plans too (tools/plans.mjs)
+    console.log(`restamped ${n} towns and ${np} plans to ${hash}`); } else console.log("not restamped: a town came out different (or none was stale); grow them again"); process.exit(0); }
   console.log(`grown ${grown}, kept ${kept}, left for the next run ${left} (of ${list.length}), ${Math.round((Date.now() - t00) / 1000)} s`);
 }

@@ -12,6 +12,7 @@ import { riverAt } from "../world/rivers.js";
 import { stoneAt } from "../world/stones.js";
 import { shapeHome } from "../world/homesites.js";
 import { SEA as SEA_LIFE } from "../world/sealife.js";
+import { terraAt } from "../world/terraform.js";
 
 export const SEA = GIVEN.SEA;                  // given: the sea's level (the water's top block)
 export const BOTTOM = -64;                     // given: the world's floor in a vanilla overworld
@@ -43,8 +44,38 @@ const wrapU = (x) => { const W = D.W; let du = x - SX; if (du > W / 2) du -= W; 
 /** Is a block inside Thera's reach? Returns [u, v] (blocks from the caldera's middle) or null. */
 export function theraUV(x, z) { const u = wrapU(x), v = z - SZ; return Math.abs(u) <= TR && Math.abs(v) <= TR ? [u, v] : null; }
 
-/** A column's height over the sea (blocks, a float) and the city's kind there. */
-export function heightAt(x, z) { return groundAt(x, z, null); }
+/** A column's height over the sea (blocks, a float) and the city's kind there: the ground the game lays, the
+ *  settlements' pads applied (the overlay law, world/terraform.js). */
+export function heightAt(x, z) { const g = groundAt(x, z, null); return PADS ? padded(x, z, g) : g; }
+/** The same before any pad: the natural ground (the growers' and the bake's, terraform.md §3). */
+export function naturalAt(x, z) { return groundAt(x, z, null); }
+
+// ---- the pads (terraform.md §2): baked by tools/buildmod.mjs place(); T = the natural ground clamped by them
+let PADS = null, PAD_BY = null;
+const padCache = new Map();
+export const PAD_FIELDS = 8;   // given: x0, z0, x1, z1, L, flags, cut, t (an Int32 each: the world is wider than an Int16)
+/** Use the baked pads: an Int32Array of PAD_FIELDS a pad, and each chunk's ("cx,cz") pads, those whose box and reach touch it. */
+export function usePads(pads, by) { PADS = pads?.length ? pads : null; PAD_BY = by ?? null; padCache.clear(); }
+/** A chunk's pads, as world/terraform.js reads them (null where none reach). */
+export function padsOf(cx, cz) {
+  if (!PADS || !PAD_BY) return null;
+  const k = `${cx},${cz}`; if (padCache.has(k)) return padCache.get(k);
+  const ix = PAD_BY[k], out = ix ? ix.map((i) => { const o = i * PAD_FIELDS; return { x0: PADS[o], z0: PADS[o + 1], x1: PADS[o + 2], z1: PADS[o + 3], L: PADS[o + 4], flags: PADS[o + 5], cut: PADS[o + 6], t: PADS[o + 7] }; }) : null;
+  if (padCache.size > FIB[11]) padCache.delete(padCache.keys().next().value);   // vision: eighty-nine chunks' pads kept
+  padCache.set(k, out); return out;
+}
+/** A natural column g at (x, z) with its chunk's pads applied: T, and the hollow a bank would leave nature lacks raised to
+ *  its lowest neighbour (terraform.js groundAt). Land only: water stays the water's. */
+function padded(x, z, g) {
+  const ps = padsOf(Math.floor(x / C), Math.floor(z / C)); if (!ps || g.water != null || g.h <= 0) return g;   // the sea's and the rivers' own: no bank fills them
+  const h = Math.round(g.h), r = terraAt(x, z, h, ps); if (r.pad < 0) return g;
+  let T = r.h;
+  if (r.d > 0) { let m = Infinity, natural = true;
+    for (const [dx, dz] of N4) { const hn = Math.round(groundAt(x + dx, z + dz, null).h); m = Math.min(m, terraAt(x + dx, z + dz, hn, ps).h); if (hn < h) natural = false; }
+    if (m > T && !natural) T = m; }
+  return T === h ? g : { ...g, h: T, pad: r.pad };
+}
+const N4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];   // given: the four neighbours
 /** The same over a given relief (the map's blockHeight there, or the mesh's estimate of it; null: reckon it). */
 function groundAt(x, z, relief) {
   const uv = theraUV(x, z);
@@ -154,9 +185,20 @@ export function chunkColumns(cx, cz) { const g = chunkColumnsSteps(cx, cz); let 
  *  chunk's whole reckoning) and returns the plan. */
 export function* chunkColumnsSteps(cx, cz, { mesh = 0 } = {}) {
   const x0 = cx * C, z0 = cz * C, N = C + 2, frozen = new Set(), snowy = new Set(), pooled = new Map(), tops = new Int16Array(N * N), kinds = new Uint8Array(N * N), waters = new Int16Array(N * N), rivs = new Array(N * N);
-  const relief = mesh && !theraUV(x0 + C / 2, z0 + C / 2) ? reliefMesh(x0 - 1, z0 - 1, N, mesh) : null;
+  const ps = padsOf(cx, cz), relief = mesh && !ps && !theraUV(x0 + C / 2, z0 + C / 2) ? reliefMesh(x0 - 1, z0 - 1, N, mesh) : null;   // exact where a pad reaches
   if (relief) yield;
   for (let j = 0; j < N; j++) { for (let i = 0; i < N; i++) { const g = groundAt(x0 + i - 1, z0 + j - 1, relief ? relief[j * N + i] : null); tops[j * N + i] = SEA + Math.round(g.h); kinds[j * N + i] = g.kind; waters[j * N + i] = g.water != null ? SEA + Math.round(g.water) : 0; if (g.frozen) frozen.add(j * N + i); if (g.snowy) snowy.add(j * N + i); if (g.pool) pooled.set(j * N + i, g); rivs[j * N + i] = g.river ?? null; } yield; }
+  if (PADS && PAD_BY) {   // the pads (terraform.md §2): T on the grid, as heightAt gives it column by column
+    const nat = tops.slice(), held = new Int16Array(N * N), near = new Int8Array(N * N);   // near: 0 no pad, 1 on a box, 2 on a bank
+    let any = false;
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const k = j * N + i, x = x0 + i - 1, z = z0 + j - 1, pp = padsOf(Math.floor(x / C), Math.floor(z / C));
+      held[k] = nat[k]; if (!pp || waters[k] || nat[k] <= SEA) continue; const r = terraAt(x, z, nat[k] - SEA, pp); if (r.pad < 0) continue; held[k] = SEA + r.h; near[k] = r.d > 0 ? 2 : 1; any = true; }
+    if (any) { for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const k = j * N + i; if (near[k] !== 2) { tops[k] = held[k]; continue; }
+        if (i === 0 || j === 0 || i === N - 1 || j === N - 1) { tops[k] = SEA + Math.round(heightAt(x0 + i - 1, z0 + j - 1).h); continue; }   // the border: its own column's ground, its neighbours past the grid
+        let m = Infinity, natural = true; for (const d of [1, -1, N, -N]) { m = Math.min(m, held[k + d]); if (nat[k + d] < nat[k]) natural = false; }
+        tops[k] = m > held[k] && !natural ? m : held[k]; }   // a hollow nature lacks, raised to its lowest neighbour (terraform.js groundAt)
+      yield; }
+  }
   const cl = climateAtBlock(cx * C + C / 2, cz * C + C / 2), biome = cl.biome?.id ?? "plains";
   const cols = [];
   for (let j = 0; j < C; j++) { if (j) yield; for (let i = 0; i < C; i++) {

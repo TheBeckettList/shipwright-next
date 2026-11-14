@@ -214,6 +214,72 @@ Built on `world/plans` by Richard's stream for W's plan.
 - **Decided (D-009, Richard, 2026-11-14): about 95 MB is fine.** The streets and gaps are not reworked to cut size,
   and the 3 MB estimate is dropped as a target. Phase 3 (laying plans in game) starts on today's plans.
 
+## Phase 3, first part: the pads in the game (2026-11-14)
+
+This is terraform.md §6 step 4, on `world/pads`.
+- `game/ground.js`:
+  - `usePads(PADS, PAD_BY)`.
+  - `heightAt` now gives T, the natural ground clamped by the pads: `terraAt`, with a bank's hollow raised to its
+    lowest neighbour as `terraform.js groundAt` does. Sea and river columns are left alone.
+  - `naturalAt` keeps the natural ground, for the growers and the bake.
+  - `chunkColumnsSteps` applies T on its grid and reckons the relief exactly wherever a pad reaches. Every column
+    agrees with `heightAt` (`tests/pads.test.mjs`).
+- `buildmod place()` puts every free-standing building on dry land onto a pad:
+  - L is the median of the natural ground under it (`padOf`), and its floor sits in the pad's top row.
+  - The site is refused past the cut or fill bounds, when its banks would clash with a neighbour's pad
+    (`compatible`), or when its bank can't meet nature within bounds (`bankFits`).
+  - Stilts, set floors, trunks and pieces standing on others keep their old ways.
+  - The pads are baked into `data/structures.js` as `PADS` (Int32) and `PAD_BY`. The bank is kept off grown towns'
+    chunks.
+  - The rest of the bake reads T.
+- `lay.js`:
+  - installs the pads;
+  - plans pad chunks exactly;
+  - lays a padded placement (flag 64) with no footing and no carve. The ground under it is already at its floor.
+
+**Built:** 20,604 buildings on pads.
+
+| refused | sites |
+|---|---|
+| cut | 364 |
+| fill | 154 |
+| bank | 18 |
+| clash | 25 |
+
+Houses in the world's towns: 16,278, against 16,280 before.
+
+**Grown towns: restamped.** The hash changed (ground.js and terraform.js are in the closure), but no pad reaches a
+grown town. 50:19,6 and 50:18,6 grew again identical, and the 19 towns and 4 plans were stamped `505ecbbd51f8`.
+`bakegrown --restamp` takes `--from <hash>` now, so the 7 towns staled earlier stay stale. Before, it stamped every
+stale town.
+
+**The gate (probe: 400 buildings each, before → after):**
+
+| check | Thera | boxed towns |
+|---|---|---|
+| footings of 3 or more | 70 → 14 (the 14 are igloos on the tarn's ice, on a set floor) | 0 → 0 (max 2 → 0) |
+| floors under the ground by more than 3 | 47 → 2 | 0 → 0 |
+| cut over 5 | 45 → 0 | 0 → 0 |
+| sill under the ground by 2 or more | 25 → 0 | 0 → 0 |
+| door 2 or more over the ground | 0 → 0 | 0 → 0 |
+| doors lost | 0 → 0 | 0 → 0 |
+
+**Thera flight:**
+
+| | surface + life + deep, ms a chunk | runs |
+|---|---|---|
+| before | 39.9, 40.8 | 2 |
+| after | 38.9, 38.9, 42.9, 40.8 | 4 |
+
+- Fills are 821 a chunk both ways.
+- This workspace's ms run about 1.7× W's 23.1, and it is noisy. The gate (+1/8) holds.
+
+**Not yet:**
+- The plan stamping in `lay.js`, the "stamps plans" half of phase 3.
+- Thera's TERRACE pads (step 5).
+- WALL and DRAIN columns in the people's plinth. Today a steep face shows as stone, as before.
+- The 3-block door apron. A 1-block step at a door is the most the probe finds.
+
 ## Agreed on Olympus (2026-11-13)
 
 - **The shore line** (the Mover, `0001609268-mover`): the line runs along the quay's face. What stands is land (the
