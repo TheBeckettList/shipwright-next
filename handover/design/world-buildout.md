@@ -329,12 +329,8 @@ Flight: 38.6 ms a chunk, and 819 fills a chunk (in the gate).
 
 **The grown towns need a real regrow.** This isn't a restamp: 50:19,6 and 50:18,6 come out different after the resize, because the closure reads Thera's island (peoples, trade, boxes). The build leaves all 19 out until they're grown again.
 
-**Next: the laptop grow.** On this branch:
-```
-node tools/growall.mjs --dry
-node tools/growall.mjs --workers 4 --heap 3000
-node tools/replay.mjs
-```
-Then commit `lab/grown` and `lab/plans`.
+**Next: the regrow, in Claude's workspace (D-010).** On this branch, run `node tools/growall.mjs --dry`, then
+`node tools/growall.mjs --workers 2 --heap 3000`, then `node tools/replay.mjs`. Then commit `lab/grown` and
+`lab/plans`.
 
 **Not done:** §2a (the ring quay, the stoa, the cothon on the ring line, the Koinon House) and the six rings and skyway roots at DECK 30.
