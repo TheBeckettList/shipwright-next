@@ -3,3 +3,5 @@ pack.description=Historical boatbuilding from vanilla materials
 item.shipwright:chart_book.name=Chart Book
 item.shipwright:sea_chart.name=Sea Chart
 item.shipwright:captains_key.name=Captain's Key
+item.shipwright:glass_float.name=Glass Float
+entity.shipwright:glass_float.name=Glass Float

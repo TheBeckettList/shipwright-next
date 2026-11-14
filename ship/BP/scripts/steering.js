@@ -126,8 +126,8 @@ function onIce(e) {
 }
 
 /** Water under the boat: whether it's afloat and how many blocks deep the water is. */
-function waterUnder(e) {
-  const { x, y, z } = e.location;
+function waterUnder(e, at = e.location) {
+  const { x, y, z } = at;
   const fx = Math.floor(x), fz = Math.floor(z);
   const get = (yy) => {
     try {
@@ -180,7 +180,7 @@ function boatState(e) {
     // Anchor: a hand-dropped anchor is saved in the record and survives restarts.
     let anchor = null;
     const rec0 = readRecord(e);
-    if (rec0?.anchor) anchor = { x: rec0.anchor.x, z: rec0.anchor.z, manual: !!rec0.anchor.manual };
+    if (rec0?.anchor) anchor = { x: rec0.anchor.x, z: rec0.anchor.z, manual: !!rec0.anchor.manual, float: rec0.anchor.float };
     s = { heading, speed: 0, stats: null, statsAt: -1e9, sailSet, anchor, anchorType: rec0?.anchorType ?? "stone" };
     state.set(e.id, s);
   }
@@ -414,7 +414,7 @@ function setSail(e, s, up, hands) {
 function saveAnchor(e, s) {
   const rec = readRecord(e);
   if (!rec) return;
-  rec.anchor = s.anchor && s.anchor.manual ? { x: s.anchor.x, z: s.anchor.z, manual: true } : null;
+  rec.anchor = s.anchor && s.anchor.manual ? { x: s.anchor.x, z: s.anchor.z, manual: true, float: s.anchor.float } : null;
   writeRecord(e, rec);
 }
 
@@ -440,8 +440,8 @@ export function weighAnchor(e, s, hands) {
 /** Holds an anchored boat on its spot: cancels drift and draws it gently back. */
 export function holdAtAnchor(e, s) {
   if (!s.anchor) return;
-  // A strong enough wind drags the anchor.
-  if (s.wind) {
+  // A strong enough wind drags the anchor (not a line made fast to a float: she swings on it, moorings.js).
+  if (s.wind && !s.anchor.float) {
     const holding = (ANCHORS[s.anchorType] ?? ANCHORS.stone).holding;
     const w = Math.hypot(s.wind.x, s.wind.z);
     if (w > holding) {
@@ -655,7 +655,11 @@ export function steerBoat(e, helm) {
     if (Math.abs(turnRight) > 0.3) unlash(s, "Tiller freed");           // steering frees a lashed tiller
     else turnRight = 0;
   }
-  let water = waterUnder(e);
+  // Whether she floats is read under her middle, where her hull is deepest, not under her helm: a long hull's helm sits
+  // far aft, and launched to the water's edge it could hang over the slip while her body floated, so she neither moved
+  // nor turned (Richard, S003: "the ship was stuck in the yard; it wasn't rotating or responding to input")
+  let water = waterUnder(e, centreOf(e.location, s.heading, h));
+  if (!water.wet) water = waterUnder(e);
   if (!water.wet && h.iceRunners && onIce(e)) water = { wet: true, depth: 99, ice: true };
   s.aground = water.wet && water.depth < h.draft && !water.lip;   // a lip she scrapes over (with a touch of drag)
   if (water.lip) s.speed *= 0.985;
@@ -694,7 +698,7 @@ export function steerBoat(e, helm) {
     setRudder(e, s, 0);
     settle(e, s);
     s.pushingAtAnchor = Math.abs(throttle) > 0.3 || Math.abs(turnRight) > 0.3;
-    if (s.pushingAtAnchor) say(s, "Anchored: hold jump to weigh anchor");
+    if (s.pushingAtAnchor) say(s, s.anchor.float ? "Moored: hold jump to cast off" : "Anchored: hold jump to weigh anchor");
     updateExposure(e, s);
     s.wind = windAt(e.dimension, e.location, s);
     holdAtAnchor(e, s);
@@ -904,7 +908,8 @@ export function steerBoat(e, helm) {
   // the bow (or the stern going astern), grounding scrapes the bottom, strong wind frays the sail.
   const sewn = h.sewnSeams ? 0.5 : 1;
   if (water.wet && !h.oneTrunk) for (const z of ["bow", "mid", "stern"]) addWear(s, z, Math.abs(s.speed) * ROT_PER_BLOCK);
-  if (s.bumped && !s.wasBumped && Math.abs(prevSpeed) > IMPACT_SPEED) {
+  const fendered = (system.currentTick ?? 0) - (s.fendered ?? -1e9) < 20;   // vision: a second: a fender took the knock (moorings.js)
+  if (s.bumped && !s.wasBumped && !fendered && Math.abs(prevSpeed) > IMPACT_SPEED) {
     addWear(s, prevSpeed > 0 ? "bow" : "stern", (Math.abs(prevSpeed) - IMPACT_SPEED) * IMPACT_WEAR * sewn);
   }
   s.wasBumped = s.bumped;

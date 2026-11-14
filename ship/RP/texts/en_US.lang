@@ -40,3 +40,5 @@ entity.shipwright:league_monoreme.name=Monoreme
 entity.shipwright:league_bireme.name=Bireme
 entity.shipwright:league_trireme.name=Trireme
 entity.shipwright:theran_flagship.name=Theran Flagship
+item.shipwright:glass_float.name=Glass Float
+entity.shipwright:glass_float.name=Glass Float

@@ -194,7 +194,9 @@ export function buildLocation(yard, boatLength, half = null) {
 /** Where a boat lands in the water at launch (in a dock it's already afloat). */
 export function launchLocation(yard, boatLength) {
   if (yard.kind === "dock") return dockLocation(yard, boatLength);
-  const c = yard.waterDist + boatLength / 2;
+  // her whole length clear of the slip, a block and a half past the water's edge, on the slip's centre line (lateral):
+  // launched to the edge itself, a long hull's stern hung over the slip and she stuck (Richard, S003)
+  const c = yard.waterDist + boatLength / 2 + 1.5;   // vision: a block and a half of clear water astern
   const l = lateral(yard);
   return {
     x: yard.origin.x + 0.5 + yard.dir.x * c + l.x,

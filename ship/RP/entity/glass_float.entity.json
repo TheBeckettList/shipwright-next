@@ -1,0 +1,30 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "shipwright:glass_float",
+      "materials": {
+        "default": "entity_alphablend"
+      },
+      "textures": {
+        "default": "textures/entity/shipwright/glass_float"
+      },
+      "geometry": {
+        "default": "geometry.shipwright.glass_float"
+      },
+      "animations": {
+        "bob": "animation.shipwright.glass_float.bob",
+        "parts": "animation.shipwright.glass_float.parts"
+      },
+      "scripts": {
+        "animate": [
+          "bob",
+          "parts"
+        ]
+      },
+      "render_controllers": [
+        "controller.render.shipwright.glass_float"
+      ]
+    }
+  }
+}
