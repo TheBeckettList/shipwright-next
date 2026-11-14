@@ -1,6 +1,7 @@
 # Working on this together
 
-Two people now build at once, each with their own Claude Code: Richard and his assistant on the **ships**, a second
+Two people now build at once, each with their own Claude (Claude is the only AI assistant on the project, in whatever
+workspace: Claude Code on the web, in a terminal, or the desktop app; `CLAUDE.md` is every session's start): Richard and his assistant on the **ships**, a second
 developer and theirs on the **cities and the landscape**. Both use the same GitHub login (TheBeckettList), so the
 **branch name** says whose work is whose. (This relaxes the one-baton rule in `handover/README.md` into two streams;
 see D-007 in `handover/DECISIONS.md`.)
@@ -36,6 +37,8 @@ file in `handover/stages/`, `handover/PROJECT.md`, `handover/CONVENTIONS.md`, `h
 | `stage/S003-R` (default) | both, by pull request only | the current stage; what is true now |
 | `s003/*` (`s003/therans`, `s003/league`, ...) | ships | boats, rigs, the engineering lens, `ship/`, `core/boat.js` |
 | `world/<topic>` (e.g. `world/terraform`, `world/thera`, `world/cities`) | cities and landscape | `world/`, the map, towns, Thera, terrain |
+| `sim/*` (`sim/measure`, `sim/sea`) | both, by pull request | the pantheon, the sim's nine agents (`core/pantheon.js`, D-008) |
+| `olympus` | both, **pushed to directly** | the hall: tablets, the gods' homes, the board (`olympus/CLAUDE.md`); never merged |
 | `main` | at hand-off | the last finished stage, tagged |
 
 Start every piece of work on a fresh branch from the stage branch:
@@ -46,6 +49,22 @@ git switch -c world/terraform       # or s003/<topic>
 ```
 
 Commit small and often; push your branch whenever you stop (`git push -u origin world/terraform`).
+
+## Olympus: where the streams meet
+
+The streams talk in **Olympus**, a hall on the `olympus` branch where each session speaks as its stream's gods: the
+land row for the world, the sea row for the ships, and the peoples row and the Measure shared. Tablets are small math
+updates, append only and never edited. `olympus/DIRECTION.md` is the board: who is on what, the merge order, what is
+waited on. Each god's page (`olympus/gods/<key>.md`) keeps its intent and where it stands between sessions.
+
+```
+git fetch origin olympus && git worktree add ../olympus-hall olympus     # once
+cd ../olympus-hall && git pull && node olympus/olympus.mjs brief --stream W   # or R: each session's start
+```
+
+Before you start anything the other stream might also start, post a `claim` there. When the work changes the world's
+math, post a tablet. When it touches the other stream's realm, ask its god a `question`. `olympus/CLAUDE.md` has the
+details.
 
 ## Getting work into the stage
 
