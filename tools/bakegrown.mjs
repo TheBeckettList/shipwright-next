@@ -3,7 +3,8 @@
 // grass over dirt, sand under water, is the game's own), and every block of that skin a town dug away as air.
 // One file a settlement in lab/grown/, keyed by a hash of core/ and world/: a rerun grows only what changed or is new.
 // tools/buildmod.mjs reads them and bakes them into the mod (data/grown.js).
-//   node tools/bakegrown.mjs [--folk 8000] [--secs 540] [--only key]
+//   node tools/bakegrown.mjs [--folk 8000] [--secs 540] [--only key] [--keys k1;k2;...]
+//   (many cores: tools/growall.mjs shares the settlements among workers, the biggest first)
 //   node tools/bakegrown.mjs --restamp [n]   the sources changed but not the towns (a Thera-only change): grow the n smallest stale
 //                                            towns again (2 by default), and if each comes out identical, stamp every stale town current
 import fs from "node:fs";
@@ -41,12 +42,12 @@ export const fileOf = (key) => path.join(OUT, `${key.replace(/[^\w]/g, "_")}.jso
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
-  const budget = Number(arg("folk", 8000)), secs = Number(arg("secs", 540)), only = arg("only", null);   // vision: the first towns round Thera; a run fits under ten minutes
+  const budget = Number(arg("folk", 8000)), secs = Number(arg("secs", 540)), only = arg("only", null), keys = arg("keys", null) ? new Set(arg("keys").split(";")) : null;   // keys: a worker's share (tools/growall.mjs), ";" between them   // vision: the first towns round Thera; a run fits under ten minutes
   fs.mkdirSync(OUT, { recursive: true });
   const hash = sourceHash(), t00 = Date.now();
   const { cityOf } = await import("../world/cities.js"), { layPlace } = await import("../world/district.js"), { heightAt, SEA } = await import("../game/ground.js");
   const restamp = process.argv.includes("--restamp"), proofs = [];
-  let list = (await chosen(budget)).filter(({ s }) => !only || s.key === only);
+  let list = (await chosen(budget)).filter(({ s }) => (!only || s.key === only) && (!keys || keys.has(s.key)));
   const stale = ({ s }) => fs.existsSync(fileOf(s.key)) && JSON.parse(fs.readFileSync(fileOf(s.key), "utf8")).hash !== hash;
   if (restamp) list = list.filter(stale).sort((a, b) => a.s.folk - b.s.folk).slice(0, Number(arg("restamp", 2)) || 2);   // vision: two towns' proof
   let grown = 0, kept = 0, left = 0;
