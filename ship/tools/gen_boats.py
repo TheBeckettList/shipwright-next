@@ -3184,23 +3184,84 @@ def keel_at(x0, Ld, yax, y_top, tip_cant=True):
     return q
 
 
+def fin_quads(x0, y_top, y_bot, z_le_top, c_top, c_bot, sweep):
+    """A vertical fin (a keel's blade, a daggerboard), lofted from NACA sections: its chord running c_top to c_bot, its
+    leading edge swept aft by sweep going down, its foot rounded."""
+    st = []
+    for f in (0.0, 0.25, 0.5, 0.75, 0.9, 0.97, 1.0):
+        c_ = c_top + (c_bot - c_top) * f
+        c_ *= math.sqrt(max(0.0, 1 - ((f - 0.9) / 0.1) ** 2)) if f > 0.9 else 1.0
+        c_ = max(c_, c_bot / PHI ** 3)
+        y_ = y_top + (y_bot - y_top) * f
+        z_ = z_le_top + (y_top - y_) * math.tan(sweep) + (c_bot - c_) * 0.5 * (f > 0.9)
+        st.append(((x0, y_, z_), c_, (0, 0, 1), (1.0, 0.0, 0.0)))
+    return loft_quads(st)
+
+
+def wing_quads(x0, y0, z_le, span, c_root, c_tip, sweep, dihedral=0.0):
+    """A small horizontal wing out each side from x0 (winglets, a tail's stab), NACA lofted, swept, its tip rounded."""
+    q = []
+    for sx in (-1, 1):
+        st = []
+        for u in (0.0, 0.4, 0.75, 0.92, 1.0):
+            c_ = (c_root + (c_tip - c_root) * u) * (math.sqrt(max(0.0, 1 - ((u - 0.75) / 0.25) ** 2)) if u > 0.75 else 1.0)
+            c_ = max(c_, c_tip / PHI ** 2)
+            st.append(((x0 + sx * span * u, y0 + span * u * math.tan(dihedral), z_le + span * u * math.tan(sweep) + (c_root - c_) * 0.3 * (u > 0.75)), c_,
+                       (0, 0, 1), (-sx * math.sin(dihedral), math.cos(dihedral), 0)))
+        q += loft_quads(st)
+    return q
+
+
+def classic_keel(x0, Ld, y_top, y_ax, winglets=True, tail=False, bulb=True):
+    """The Theran ship's and flagship's keels (Richard: "not all the same: differentiate by ship; the small one is
+    super unique; the others a bit more classical looking, but still gold and Theran"): a classical fin keel, its
+    blade tapering and swept down to a bulb; on the ship winglets at the bulb, drooping at the golden angle; on the
+    flagship a bulb with a cruciform tail, as an old torpedo's. The bulb's tail carries the emitter's ring."""
+    q = []
+    rb = Ld / (2 * PHI ** 3) if bulb else 0.0          # vision: a classical bulb, fuller than the Exokoitos's drop
+    z_nose = -Ld / PHI ** 2
+    c_bot = Ld / PHI if bulb else Ld / PHI ** 1.5
+    c_top = c_bot * PHI ** 0.5                         # vision: the blade widens to its root by sqrt(phi)
+    sweep = math.atan(1 / PHI ** 2)
+    zb_le = z_nose + Ld * 0.22                         # the blade's foot leading edge, over the bulb's fullest
+    z_le_top = zb_le - (y_top - y_ax) * math.tan(sweep)
+    q += fin_quads(x0, y_top, y_ax + rb * 0.5, z_le_top, c_top, c_bot, sweep)
+    if bulb:
+        q += drop_quads(x0, y_ax, z_nose, Ld, rb)
+        if winglets:                                   # winglets at the bulb, drooping at atan 1/phi^2
+            q += wing_quads(x0, y_ax, zb_le + c_bot * 0.25, Ld / PHI ** 2, c_bot / PHI, c_bot / PHI ** 3, math.atan(1 / PHI), -math.atan(1 / PHI ** 2))
+        if tail:                                       # a cruciform tail on the bulb, an old torpedo's
+            zt = z_nose + Ld * (1 - 1 / PHI ** 3)
+            q += wing_quads(x0, y_ax, zt, rb * PHI ** 2, Ld / PHI ** 4, Ld / PHI ** 5, math.atan(1 / PHI))
+            q += fin_quads(x0, y_ax - rb * PHI ** 2, y_ax, zt + rb * PHI ** 2 * math.tan(math.atan(1 / PHI)), Ld / PHI ** 5, Ld / PHI ** 4, -math.atan(1 / PHI))
+    return q
+
+
 def theran_keel(b):
-    """The Theran ship's and flagship's keels, each its own casting (Richard: "don't connect them all; separate them
-    out; a main one on the tri, and the sides not as main"). The ship: a keel under each hull, the same, apart. The
-    flagship: her main keel under the main hull, and under each float a lesser one at 1/phi of it."""
+    """The Theran ship's and flagship's keels, each its own casting, apart (Richard: "don't connect them all; a main one
+    on the tri, and the sides not as main"; "not all the same: the small one super unique, the others more classical,
+    still gold and Theran"; "the medium make foil, the large no"). The ship: under each hull a classical blade down to
+    a T-foil, its wing swept and drooping a little, as a foiling racer's. The flagship, who never leaves the water: a
+    classical fin keel down to a bulb under her main hull, no wing; under each float a plain daggerboard."""
     mh = multihull(b)
     L, side = mh["L"], b["side"]
-    Ld = L / PHI ** 3                                  # vision: the drop, her length at 1/phi^3
-    yax = 1 - 1.2 * side                               # the foil's depth, as her foils had it
+    Ld = L / PHI ** 3                                  # vision: the keel's measure, her length at 1/phi^3
+    yax = 1 - 1.2 * side                               # the keel's depth, as her foils had it
     q = []
     if b.get("tri"):
-        q += keel_at(0.0, Ld, yax, 2.5)
-        fl_y = b["wl"] - mh["float_r"]                 # a float's underside, as the ama draws it
+        q += classic_keel(0.0, Ld, 2.5, yax - side / PHI ** 2, winglets=False, tail=False)
+        fl_y = b["wl"] - mh["float_r"]
         for sx in (-1, 1):
-            q += keel_at(sx * mh["float_out"], Ld / PHI, fl_y - 1.2 * side / PHI, fl_y + mh["float_r"])
+            q += classic_keel(sx * mh["float_out"], Ld / PHI, fl_y + mh["float_r"], fl_y - 1.2 * side / PHI, bulb=False)
     else:
+        Lk = Ld / math.sqrt(PHI)                       # vision: each hull's its own, 1/sqrt(phi) of a single keel
         for sx in (-1, 1):
-            q += keel_at(sx * mh["twin_gap"] / 2, Ld / math.sqrt(PHI), yax, 2.5)   # vision: each hull's its own, 1/sqrt(phi) of a single keel
+            x0 = sx * mh["twin_gap"] / 2
+            q += classic_keel(x0, Lk, 2.5, yax, bulb=False)
+            # the T-foil at its foot: half span Lk/phi, swept atan 1/phi^2, drooping atan 1/phi^3, its chord to 1/phi^2
+            c_bot = Lk / PHI ** 1.5
+            zle = -Lk / PHI ** 2 + Lk * 0.22 - c_bot * 0.15
+            q += wing_quads(x0, yax, zle, Lk / PHI, c_bot * 1.15, c_bot / PHI ** 2, math.atan(1 / PHI ** 2), -math.atan(1 / PHI ** 3))
     return q
 
 
