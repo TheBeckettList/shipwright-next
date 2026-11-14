@@ -1340,10 +1340,18 @@ def parts(b):
         # obtuse inverted V (Richard, S003: "kinda like an upside down V but obtuse"), its two arms sweeping down and
         # out at the golden angle (tan 1/phi^2, about 21 degrees: an included angle near 138)
         xs = [-multihull(b)["twin_gap"] / 2, multihull(b)["twin_gap"] / 2] if b.get("twin") else [0]
-        cubes_ = []
-        for x0 in xs:
-            cubes_ += [cube([x0 - 0.6, 1 - depth_, -4], [1.2, depth_, 5])] + lambda_foil(x0, 1 - depth_, -6, 8, span, 0.8)
-        bones.append({"name": "foils", "parent": "root", "pivot": [0, 0, 0], "cubes": cubes_})
+        if os.environ.get("KEEL_MESH", "1") != "0" and b.get("crown"):
+            # the Theran keels, cast (theran_keel): one gold mesh, coloured from the sheet's corner as her foils were
+            kq = theran_keel(b)
+            if os.environ.get("KEEL_DUMP_SHIPS"):
+                with open(os.environ["KEEL_DUMP_SHIPS"], "a") as fh_:
+                    fh_.write(json.dumps({"boat": b.get("_id", ""), "twin": bool(b.get("twin")), "quads": kq}) + "\n")
+            bones.append({"name": "foils", "parent": "root", "pivot": [0, 0, 0], "cubes": [], "poly_mesh": mesh_dict(kq, (1, 127))})
+        else:
+            cubes_ = []
+            for x0 in xs:
+                cubes_ += [cube([x0 - 0.6, 1 - depth_, -4], [1.2, depth_, 5])] + lambda_foil(x0, 1 - depth_, -6, 8, span, 0.8)
+            bones.append({"name": "foils", "parent": "root", "pivot": [0, 0, 0], "cubes": cubes_})
     if b.get("glider"):
         bones += glider_parts(b)
     # The Theran trimaran: two slim wave-piercing floats (true hulls, rounded and decked), each carried on a single
@@ -3073,6 +3081,131 @@ def swept_wing(y, le, c0, span, mode, t, n=10):
             out += slab((sx * x0, y - d0, l0), (sx * x1, y - d1, l1), (sx * x0, y - d0, l0 + c_0),
                         (sx * x1, y - d1, l1 + c_1), t, (0, y + 99, le))
     return out
+
+
+# ---------------------------------------------------------------- cast keels (the Theran keels as castings)
+# Each Theran keel is her shadow in gold, modelled first as a real casting (lofted NACA 0012 sections, bodies of
+# revolution, rounded corners) and laid into the game as one polygon mesh (D: the Exokoitos's foil; lost-keels.md).
+def naca12(x):
+    """A NACA 0012's half thickness at x of the chord (given)."""
+    return 5 * 0.12 * (0.2969 * math.sqrt(max(x, 0)) - 0.126 * x - 0.3516 * x ** 2 + 0.2843 * x ** 3 - 0.1036 * x ** 4)
+
+
+CAST_XS = [0.0, 0.08, 0.3, 0.65, 1.0]                 # vision: a section's stations, leading edge to trailing
+
+
+def loft_quads(stations):
+    """stations: (leading edge (x, y, z), chord, chord direction, normal). The quads round each span, upper and lower."""
+    rings, out = [], []
+    for O, c_, dv, nv in stations:
+        up = [tuple(O[k] + dv[k] * c_ * x + nv[k] * c_ * naca12(x) for k in range(3)) for x in CAST_XS]
+        lo = [tuple(O[k] + dv[k] * c_ * x - nv[k] * c_ * naca12(x) for k in range(3)) for x in CAST_XS]
+        rings.append((up, lo))
+    for (ua, la), (ub, lb) in zip(rings, rings[1:]):
+        for j in range(len(CAST_XS) - 1):
+            out.append((ua[j], ub[j], ub[j + 1], ua[j + 1]))
+            out.append((la[j], lb[j], lb[j + 1], la[j + 1]))
+    return out
+
+
+def drop_quads(x0, y0, z0, Ld, rb, nr=8):
+    """A slim drop, a body of revolution along z from its nose z0, full at 0.38 of its length (vision)."""
+    prof = [(0.0, 0.0), (0.03, 0.42), (0.1, 0.72), (0.22, 0.93), (1 / PHI ** 2, 1.0), (0.55, 0.92), (0.75, 0.62), (0.92, 0.3), (1.0, 0.16)]
+    ring = lambda f, r: [(x0 + r * rb * math.cos(2 * math.pi * k / nr), y0 + r * rb * math.sin(2 * math.pi * k / nr), z0 + Ld * f) for k in range(nr)]
+    out = []
+    for (f0, r0), (f1, r1) in zip(prof, prof[1:]):
+        A, B = ring(f0, r0), ring(f1, r1)
+        out += [(A[k], A[(k + 1) % nr], B[(k + 1) % nr], B[k]) for k in range(nr)]
+    return out
+
+
+def mesh_dict(quads, uv_px):
+    """Quads as one poly_mesh, each face both sides (so no winding hides it), one UV for all (a flat colour)."""
+    pos, nor, polys = [], [], []
+    for q in quads:
+        q = [[round(P[0], 4), round(P[1], 4), round(P[2], 4)] for P in q]
+        u_ = [q[1][k] - q[0][k] for k in range(3)]; v_ = [q[3][k] - q[0][k] for k in range(3)]
+        nv = [u_[1] * v_[2] - u_[2] * v_[1], u_[2] * v_[0] - u_[0] * v_[2], u_[0] * v_[1] - u_[1] * v_[0]]
+        nn = math.sqrt(sum(c * c for c in nv)) or 1
+        nv = [round(c / nn, 4) for c in nv]
+        base = len(pos); pos += q; nor += [nv, [-c for c in nv]]; ni = len(nor) - 2
+        polys.append([[base + k, ni, 0] for k in range(4)])
+        polys.append([[base + k, ni + 1, 0] for k in (3, 2, 1, 0)])
+    return {"normalized_uvs": False, "positions": pos, "normals": nor, "uvs": [list(uv_px)], "polys": polys}
+
+
+def theran_keel(b):
+    """The Theran ship's and flagship's keels, cast as the Exokoitos's is (lost-keels.md): the boat's shadow in gold at
+    1/phi^3. The ship's, the twin: a drop under each hull on one wing that runs through both, its tips curving down;
+    a stab-and-fins band at each drop's tail. The flagship's, the great keel: a drop under her main hull, its wing
+    reaching out under both floats, a blade at its root and one up from each tip into a float. Returns its quads."""
+    mh = multihull(b)
+    L, side = mh["L"], b["side"]
+    Ld = L / PHI ** 3                                  # vision: the drop, her length at 1/phi^3
+    rb = Ld / (2 * PHI ** 5)
+    yax = 1 - 1.2 * side                               # the foil's depth, as her foils had it
+    z0 = -Ld / PHI ** 2                                # the wing at the third of the drop
+    c0 = Ld / PHI ** 2                                 # vision: the wing's root chord
+    swq = math.atan(1 / PHI ** 2)                      # vision: swept back atan 1/phi^2
+    q = []
+    xs = [-mh["twin_gap"] / 2, mh["twin_gap"] / 2] if b.get("twin") else [0.0]
+    for x0 in xs:
+        q += drop_quads(x0, yax, z0, Ld, rb)
+    if b.get("tri"):
+        X = mh["float_out"]                            # out to the floats
+        tip_cant = 0.0
+    else:
+        X = mh["twin_gap"] / 2 + Ld / PHI              # past each hull by 1/phi of the drop
+        tip_cant = math.tan(math.atan(1 / PHI))
+    zle = -c0 / 2
+    chord = lambda u: max(c0 / PHI ** 4, c0 * math.sqrt(max(0.0, 1 - u ** 2.2))) if not b.get("tri") else c0 * (1 - 0.38 * u)
+    u_b = 1 / PHI
+    for sx in (-1, 1):
+        st = []
+        for u in (0.0, 0.18, 0.36, 0.52, 0.66, 0.78, 0.88, 0.95, 1.0):
+            c_ = chord(u)
+            dy = -tip_cant * X * max(0.0, u - u_b) ** 2 / (2 * (1 - u_b))
+            sl = -tip_cant * max(0.0, u - u_b) / (1 - u_b)
+            n_ = (-sx * sl, 1.0, 0.0); nn = math.hypot(n_[0], n_[1])
+            st.append(((sx * X * u, yax + dy, zle + X * u * math.tan(swq) * (0.5 if b.get("tri") else 1) + (c0 - c_) * 0.75), c_, (0, 0, 1), (n_[0] / nn, n_[1] / nn, 0)))
+        q += loft_quads(st)
+    # the tail band at each drop: a stab with fins dropping from its tips, round-cornered, canted out, raked aft
+    hsm, csm = Ld / PHI ** 3, c0 / PHI
+    cft, hf = csm / PHI, Ld / PHI ** 4
+    cant, rake = math.atan(1 / PHI ** 3), math.atan(1 / PHI ** 2)
+    zt = z0 + Ld * (1 - 1 / PHI ** 2)
+    for x0 in xs:
+        rr = min(hsm, hf) / PHI
+        def side_(sx):
+            cx_, cy_ = x0 + sx * (hsm - rr), yax - rr
+            pts = [(cx_ + sx * rr * math.sin((math.pi / 2 - cant) * k / 4), cy_ + rr * math.cos((math.pi / 2 - cant) * k / 4)) for k in range(5)]
+            e = pts[-1]; Lf = hf - rr
+            return pts + [(e[0] + sx * Lf * 0.5 * math.sin(cant), e[1] - Lf * 0.5 * math.cos(cant)), (e[0] + sx * Lf * math.sin(cant), e[1] - Lf * math.cos(cant))]
+        path = side_(-1)[::-1] + [(x0, yax)] + side_(1)
+        st = []
+        for i, (x_, y_) in enumerate(path):
+            a_, c2 = path[max(0, i - 1)], path[min(len(path) - 1, i + 1)]
+            tx, ty = c2[0] - a_[0], c2[1] - a_[1]; tn = math.hypot(tx, ty) or 1
+            o_ = min(1.0, abs(x_ - x0) / hsm)
+            st.append(((x_, y_, zt + min(abs(x_ - x0), hsm) * math.tan(swq) + max(0.0, yax - y_) * math.tan(rake)), csm + (cft - csm) * o_, (0, 0, 1), (-ty / tn, tx / tn, 0)))
+        q += loft_quads(st)
+    # the blades: raked as her rudders, a NACA section of the rudders' chord, flared at the root into the drop
+    ck = c0 / PHI
+    rk = math.atan(1 / PHI ** 2)
+    def blade(x0, y_bot, y_top, z_mid, lean=0.0):
+        h = (y_top - y_bot) / math.cos(rk)
+        st = []
+        for s_ in (0.0, 0.08, 0.2, 0.5, 1.0):
+            fl = 1 + 0.6 * max(0.0, 1 - s_ / 0.2) ** 2
+            st.append(((x0 + lean * s_ * h, y_bot + s_ * h * math.cos(rk), z_mid - ck * fl / 2 - s_ * h * math.sin(rk)), ck * fl, (0, 0, 1), (1.0, 0.0, 0.0)))
+        return loft_quads(st)
+    for x0 in xs:
+        q += blade(x0, yax + rb * 0.6, 2.5, 0.0)
+    if b.get("tri"):                                   # a blade up from each wingtip into a float
+        fl_y = b["wl"] - mh["float_r"]
+        for sx in (-1, 1):
+            q += blade(sx * X, yax + 0.3, fl_y + mh["float_r"] * 0.5, X * math.tan(swq) * 0.5)
+    return q
 
 
 def lambda_foil(x0, apex_y, z0, chord, span, t):
