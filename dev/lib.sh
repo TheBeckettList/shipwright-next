@@ -6,6 +6,9 @@ C=waterworld-dev
 # Network mode: DEV_NET env wins, then dev/.netmode (written by connect.sh), else host.
 NETMODE="${DEV_NET:-$(cat "$DEV/.netmode" 2>/dev/null || echo host)}"
 if [ "$NETMODE" = "ports" ]; then FILE="$DEV/docker-compose.ports.yml"; else FILE="$DEV/docker-compose.yml"; fi
+# The Bedrock server's version: BDS_VERSION env wins, then dev/.bds_version (ww pin), else the newest. Pin it to the
+# Switch's own Minecraft version: a server newer than the client shows in the list but never lets it in.
+[ -z "${BDS_VERSION:-}" ] && [ -s "$DEV/.bds_version" ] && export BDS_VERSION="$(tr -d ' \n' < "$DEV/.bds_version")"
 compose() { docker compose -f "$FILE" "$@"; }
 
 mac_ip() {

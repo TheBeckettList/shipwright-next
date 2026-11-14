@@ -849,7 +849,8 @@ say(`packs written (${nt} block textures)`);
     put(path.join(BP, `items/${n}.json`), { format_version: "1.21.40", "minecraft:item": { description: { identifier: c.id, menu_category: { category: "items" } }, components: { "minecraft:icon": `waterworld_${n}`, "minecraft:max_stack_size": 64, "minecraft:display_name": { value: `item.${c.id}.name` } } } });
     lang.push(`item.${c.id}.name=${c.name} (${c.worth} obol${c.worth === 1 ? "" : "s"})`); }
   fs.writeFileSync(it, JSON.stringify(items, null, 1));
-  const recipe = (id, tag, body) => put(path.join(BP, `recipes/${id.replace(":", "_")}.json`), { format_version: "1.20.10", ...body(id, tag) });
+  const recipe = (id, tag, body) => { const r = body(id, tag); for (const k of Object.keys(r)) r[k].unlock ??= [{ context: "AlwaysUnlocked" }];   // 1.20.30+ recipes carry unlock data (the 1.26.63 server refuses them without it)
+    put(path.join(BP, `recipes/${id.replace(":", "_")}.json`), { format_version: "1.20.30", ...r }); };
   const shapeless = (id, tags, ins, out, count = 1) => recipe(id, tags, () => ({ "minecraft:recipe_shapeless": { description: { identifier: id }, tags, ingredients: ins.map((i) => ({ item: i })), result: { item: out, count } } }));
   let n = 0;
   for (const c of COINS) { shapeless(`waterworld:strike_${c.metal}`, ["theran_mint"], [c.ingot], c.id); shapeless(`waterworld:melt_${c.metal}_coin`, ["theran_mint"], [c.id], c.ingot); n += 2; }   // an ingot strikes its coin; a coin melts back

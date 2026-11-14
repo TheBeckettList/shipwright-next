@@ -25,3 +25,4 @@ tools/modtest/scripts*/
 dev/.pull/
 dev/.build
 dev/.follow
+dev/.bds_version

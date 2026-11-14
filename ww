@@ -11,6 +11,8 @@
 #   ww update --local [zip]   the old way: the newest waterworld-update*.zip in Downloads (or the zip given)
 #   ww follow <branch>   the branch ww update pulls from (it starts on the stage, stage/S003-R)
 #   ww builds        the builds on GitHub: each branch's newest, when, and from which commit
+#   ww pin <version> keep the server on that Minecraft version (the Switch's own, e.g. 1.26.62.1), restarting it on the
+#                    same world; ww pin latest follows the newest again; ww pin shows the pin
 #   ww start | stop  start or stop the server (the world is kept)
 #   ww status        is it up, can the Switch reach it, which version is running
 #   ww watch         live: Waterworld's messages and every error, as they happen (Ctrl-C to stop)
@@ -87,6 +89,14 @@ case "${1:-help}" in
     [ -n "$z" ] && [ -f "$z" ] || { echo "No waterworld-update zip in Downloads: ww update pulls from GitHub instead."; exit 1; }
     unzip -oq "$z" ww 'dev/*' -d "$HERE" 2>/dev/null && chmod +x "$HERE/ww"   # the tools update themselves too
     exec bash "$DEV/refresh.sh" $wipe "$z"
+    ;;
+
+  pin)
+    shift
+    if [ -z "${1:-}" ]; then echo "Server version: $(cat "$DEV/.bds_version" 2>/dev/null || echo "the newest (not pinned)")   running: $(logs 2>/dev/null | grep -oE 'Version:? *[0-9.]+' | tail -1)"; exit 0; fi
+    need_docker
+    if [ "$1" = "latest" ]; then rm -f "$DEV/.bds_version"; echo "The server follows the newest Minecraft again."; else echo "$1" > "$DEV/.bds_version"; echo "The server stays on Minecraft $1."; fi
+    exec bash "$DEV/fresh.sh" --keep
     ;;
 
   follow)
