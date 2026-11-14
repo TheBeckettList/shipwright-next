@@ -13,6 +13,12 @@
     },
     "shipwright_glass_float": {
       "textures": "textures/items/glass_float"
+    },
+    "shipwright_ship_in_bottle": {
+      "textures": "textures/items/ship_in_bottle"
+    },
+    "shipwright_ship_in_bottle_gold": {
+      "textures": "textures/items/ship_in_bottle_gold"
     }
   }
 }

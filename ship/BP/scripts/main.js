@@ -27,6 +27,7 @@ import { startCharts, navigatorChart, captainLoot, chartItem, keyItem } from "./
 import { tenderOptions, doTender } from "./tender.js";
 import { boatStateOf } from "./steering.js";
 import { FLOAT, startMoorings } from "./moorings.js";
+import { startBottles } from "./bottles.js";
 import { menu } from "./ui.js";
 import { ItemStack } from "@minecraft/server";
 useItemStack(ItemStack);
@@ -330,5 +331,6 @@ system.afterEvents.scriptEventReceive.subscribe((ev) => {
 });
 start("buoyancy", () => startBuoyancy());
 start("moorings", () => startMoorings());
+start("bottles", () => startBottles());
 start("self-checks", () => startChecks());
 console.warn(bootLine(VERSION));
