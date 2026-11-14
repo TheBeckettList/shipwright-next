@@ -120,7 +120,7 @@ grown town. So **every closure change is batched into one grow** (phase 4).
 |---|---|---|---|---|
 | 0. S004's fixes | Builder | the deep pass's fill capped under each base; stilts by the grown towns' rule (3 deep), on land too; PR #2 | the probe: buried 121 → 1, doors lost 280 → 0 on Thera | outside |
 | 1. The overlay law | Builder | `world/terraform.js`, the `terraform` lens | the lens's checks: footprints at L, ground moved ≤ 5, banks, risers, no pits, cones meet, T ≡ h with no pads | outside |
-| 2. The plan, proven | Grower | `bakegrown` writes plans; `tools/replay.mjs` lays the 21 from them and compares | building voxels identical; prototype count measured | outside |
+| 2. The plan, proven | Grower | `bakegrown` writes plans; `tools/replay.mjs` lays the 21 from them and compares | building voxels identical; prototype count measured | outside — **done 2026-11-14, 4 of 19 recorded** |
 | 3. Lay from the plan | Builder | `lay.js` stamps plans; `usePads`/`naturalAt`; median pads for Thera and the boxed towns | modtest clean; Thera flight ≤ 23.1 + 3 ms a chunk | restamp |
 | 4. The one grow | Grower + Builder | `layPlace` on T; yards; Thera's cone ×1.5, ring, crater, new kinds; grow all 482 | every town passes terraform.md checks 1–4, 9; a render per tradition | **one grow, ~13 CPU-h** |
 | 5. Thera beneath | Unmaker + Reaper + Trader | `impact.js`, `undercone.js`, `tunnelChunk`, refinery, Koinon House, mint counter, lore | thera.md §7's lenses | outside |
@@ -173,6 +173,47 @@ Across the world:
 
 The plan stands, with fallback 1 (shared seeds) as the rule rather than the fallback. Shipping `buildOf` to the game
 (3.8 ms a building in Node, likely several times that in the game) stays the second choice.
+
+## Phase 2, the plan proven (2026-11-14)
+
+Built on `world/plans` by Richard's stream for W's plan.
+- `tools/plans.mjs` reduces a grown place to its plan.
+  - Each placement keeps its recipe: buildOf's kind, seed and storeys, or the i-th split part of a body.
+  - It also keeps what `layPlace` reads of the place: lanes, gaps, farms, walls, wilds and the spine.
+  - The ground is not kept. It is the game's own (`heightAt`), and the slope and density are worked out again from
+    the ground and the census level.
+- `layOf` lays a plan back without growing.
+- `bakegrown` now writes `lab/plans/<key>.json` beside each grown town. Its column code is `colsOf`, shared with the
+  replay. Nothing is in the closure: the hash is unchanged.
+- `tools/replay.mjs` lays every plan and compares it, block for block, with `lab/grown`.
+- `tools/replay.mjs --record <key>` grows an already current town again. It checks the regrow is identical first, and
+  only then keeps the plan.
+
+**The gate passes on the four towns recorded (three peoples): every block, beast and decor identical.**
+
+| town | people | folk | placements | prototypes | at 5 seeds a kind | plan | blocks | laid from plan |
+|---|---|---|---|---|---|---|---|---|
+| 50:19,6 | indian_ocean | 58 | 29 | 29 | 29 | 86 KB | 0.5 MB | 12 s |
+| 23:21,7 | indian_ocean | 209 | 84 | 84 | 69 | 194 KB | 1.5 MB | 46 s |
+| 23:23,5 | japanese | 556 | 266 | 266 | 110 | 403 KB | 4.1 MB | 80 s |
+| 23:23,6 | european | 683 | 235 | 235 | 91 | 524 KB | 4.7 MB | 120 s |
+
+- **Time.** Each "laid from plan" figure is a fresh process laying one town, and part of it is loading the map. For
+  scale, a 209-folk town laid on its own in 12 s (4 s rebuilding its buildings, 8 s in `layPlace`), against about
+  3 minutes to grow it.
+- **Prototypes.** Every placement is still its own prototype, as the first measurement found. The "at 5 seeds" column
+  counts min(n, 5) for each kind and storey count: the most a town would need once seeds are shared, the phase 4 rule.
+- **What the plan weighs.** 1.18 MB of JSON for the four, 9× smaller than their blocks; 0.42 MB against 1.38 MB
+  gzipped. Of the 1.18 MB:
+  - streets: 45%. The polylines are point by point, in floats.
+  - gaps: 31%. These are cells, now stored as straight runs.
+  - placements: 11%.
+  - wilds: 7%.
+- **The world, at the plan's rate.** About 0.8 KB a head (1.18 MB for 1,506 folk), so ~95 MB for 119,229 folk:
+  barely better than the blocks' 0.92 KB a head in the add-on.
+- **Next before the 3 MB target.** The streets and gaps have to be stored the way the buildings are, as the few numbers
+  they're grown from: a street as its control points and class, a gap as its kind and outline. That is in
+  `growth.js`'s closure, so it rides phase 4. Phase 3 (laying plans in game) can start on today's plans.
 
 ## Agreed on Olympus (2026-11-13)
 

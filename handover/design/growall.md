@@ -37,7 +37,10 @@ moved). Anyone, or their Claude, follows the run with `node olympus/olympus.mjs 
 **Check:** the bake log line `grown settlements: N (…)` should list every chosen settlement, with none left out as
 "grown under older sources".
 
-**Then commit** `lab/grown/` with the source hash in the message, push to the branch you grew for, and post a tablet on
+**Plans:** every town grown also leaves its plan in `lab/plans/` (phase 2, `tools/plans.mjs`). Check them with
+`node tools/replay.mjs`, which lays each again from its plan and should print IDENTICAL for every one.
+
+**Then commit** `lab/grown/` and `lab/plans/` with the source hash in the message, push to the branch you grew for, and post a tablet on
 Olympus (the Grower) with the counts and times.
 
 ## What not to run yet
