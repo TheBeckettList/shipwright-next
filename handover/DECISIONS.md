@@ -99,3 +99,14 @@ and the next god answers at psi^2. (7) a stock lives in [0, room], starting at r
 alone the one-day sample's stocks climbed as a walk reflected at zero (the root of their writes); with both ends they
 stay in the room and the overflow is a debt like the shortfall. Open: counterparts for the shallow-water and European
 peoples.
+
+## D-011 — Each realm has a lead; W's Claude leads world building and keeps the board  (accepted · W · 2026-11-14 · S004)
+Context: on 2026-11-14 the ships' stream did world work (phases 2-3 and step 5 on Thera, #6, #7, #10) and handed the
+floor back ("You have the floor on world building", handover/notes/2026-11-14-R-to-W.md). The world owner named W's
+Claude the lead.
+Decision: W's Claude leads world building: the world chain of PRs, the board (olympus/DIRECTION.md), the merge order
+and the grow schedule. R's Claude leads the ships. Work in the other's realm is claimed in the hall first and goes into
+that realm's chain by PR, for its lead to merge on.
+Consequence: CLAUDE.md and COLLABORATING.md say so. Changes to the towns' closure (s003/therans' boatsizes.js among
+them) are batched into the grows the lead schedules. D-010 and D-009 stand.
+

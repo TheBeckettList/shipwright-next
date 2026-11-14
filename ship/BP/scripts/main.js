@@ -26,6 +26,7 @@ import { startCrew, takeBerth, shipOf } from "./crew.js";
 import { startCharts, navigatorChart, captainLoot, chartItem, keyItem } from "./charts.js";
 import { tenderOptions, doTender } from "./tender.js";
 import { boatStateOf } from "./steering.js";
+import { FLOAT, startMoorings } from "./moorings.js";
 import { menu } from "./ui.js";
 import { ItemStack } from "@minecraft/server";
 useItemStack(ItemStack);
@@ -175,7 +176,7 @@ function patchBoat(player, boat, held) {
 // stopped before any screen opens, theirs go home and yours come in; use it again to open.
 world.beforeEvents.playerInteractWithEntity?.subscribe((ev) => {
   const boat = ev.target;
-  if (!ev.player.isSneaking || !boat?.typeId?.startsWith("shipwright:") || boat.typeId === "shipwright:sea_chest") return;
+  if (!ev.player.isSneaking || !boat?.typeId?.startsWith("shipwright:") || boat.typeId === "shipwright:sea_chest" || boat.typeId === FLOAT) return;
   const owner = chestOwner(boat);
   if (owner === ev.player.id) return;                 // your items are already in it
   const player = ev.player;
@@ -210,7 +211,7 @@ world.afterEvents.playerInteractWithEntity?.subscribe((ev) => {
 
 world.afterEvents.playerInteractWithEntity?.subscribe((ev) => {
   const boat = ev.target;
-  if (!boat?.typeId?.startsWith("shipwright:") || boat.typeId === "shipwright:sea_chest" || boat.typeId === PEG) return;   // chests open themselves
+  if (!boat?.typeId?.startsWith("shipwright:") || boat.typeId === "shipwright:sea_chest" || boat.typeId === PEG || boat.typeId === FLOAT) return;   // chests open themselves
   if (ev.player.isSneaking) return;   // sneaking opens the sea chest (the game's own container screen)
   const held = heldItem(ev.player);
   if (/_bed$|^minecraft:bed$/.test(held?.typeId ?? "")) {               // a bed used on a ship with a bunk: your berth aboard
@@ -328,5 +329,6 @@ system.afterEvents.scriptEventReceive.subscribe((ev) => {
   tell(p, `§6${chart.title} and the ${loot.key.captain}'s key and loot. Use the chart to copy it into your chart book (craft one: book, compass, paper).`);
 });
 start("buoyancy", () => startBuoyancy());
+start("moorings", () => startMoorings());
 start("self-checks", () => startChecks());
 console.warn(bootLine(VERSION));

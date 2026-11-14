@@ -1,0 +1,39 @@
+{
+  "format_version": "1.8.0",
+  "animations": {
+    "animation.shipwright.glass_float.bob": {
+      "loop": true,
+      "bones": {
+        "root": {
+          "position": [
+            0,
+            "math.sin(q.life_time * 72) * (q.property('shipwright:drop') > 0 ? 0.15 : 0.6)",
+            0
+          ],
+          "rotation": [
+            "math.sin(q.life_time * 55) * 4",
+            0,
+            "math.cos(q.life_time * 47) * 4"
+          ]
+        }
+      }
+    },
+    "animation.shipwright.glass_float.parts": {
+      "loop": true,
+      "bones": {
+        "hanger": {
+          "scale": [
+            1,
+            "math.max(q.property('shipwright:drop'), 0.0001)",
+            1
+          ],
+          "position": [
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    }
+  }
+}
