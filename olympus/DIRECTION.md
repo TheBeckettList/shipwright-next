@@ -28,13 +28,14 @@ Rules:
 
 ### Merge order
 
+Merged: #8 (onboarding, 2026-11-14); the sitting workflow now runs hourly from the stage.
+
 Open pull requests, in the order they build on each other. Each pulls the stage before it merges.
 
-1. #8: onboarding (`CLAUDE.md`, Olympus on the stage's map, the sitting workflow). It stands alone.
-2. #3: the pantheon (`sim/measure`).
-3. #2: `world/terraform`, which builds on #3.
-4. #6: `world/plans` into `world/terraform`, then #7: `world/pads` into `world/plans`.
-5. #4 and #5: the ships (`s003/moorings`, `s003/bottles`). Independent of the world chain.
+1. #3: the pantheon (`sim/measure`).
+2. #2: `world/terraform`, which builds on #3.
+3. #6: `world/plans` into `world/terraform`, then #7: `world/pads` into `world/plans`.
+4. #4 and #5: the ships (`s003/moorings`, `s003/bottles`). Independent of the world chain.
 
 ### Decided, and where
 
