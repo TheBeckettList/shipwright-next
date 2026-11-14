@@ -13,6 +13,14 @@ the stream say whose work is whose.
 
 If you don't know which stream you're working for, ask the person before you change anything.
 
+**Who leads (D-011).**
+- **World building and the board:** W's Claude leads world building (towns, terrain, Thera, the world chain of PRs)
+  and keeps the board (`olympus/DIRECTION.md`) and the merge order.
+- **Ships:** R's Claude leads the ships.
+- **Work in the other stream's realm** needs a `claim` in the hall first, and goes to that stream's branch chain
+  (world work into `world/terraform`, ship work into its `s003/*` branch). The realm's lead then merges it toward the
+  stage.
+
 ## Start every session here
 
 1. **The rules:** `COLLABORATING.md` covers branches, pull requests and the shared files. The house rules are in
