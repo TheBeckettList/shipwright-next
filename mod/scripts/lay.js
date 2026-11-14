@@ -44,6 +44,7 @@ export const MARKS = ["minecraft:bedrock", "minecraft:structure_void", "minecraf
 import { LEVEL } from "./rings.js";
 export { LEVEL };
 const C = 16;   // given: a chunk's side
+const SKIN = { EARTH: 5, WALL: 13 };   // derived: a riser up to five (FIB[4], the pad law's bound) shows earth; to thirteen (FIB[6]) a pezoula walls it; past that it is a cliff, its own rock
 const PEZOULA = ["minecraft:smooth_basalt", "minecraft:red_sandstone", "waterworld:theran_marble_ashlar"];   // given: Thera's three stones, black, red and white (Plato, Critias 116a)
 const PILE = 3;   // derived: a stilt house's piles every three blocks, FIB[3] (the stilt peoples' shallows are three deep)
 const BEHIND = { 2: [0, 1], 3: [0, -1], 4: [1, 0], 5: [-1, 0] };   // given: a ladder facing north (2), south (3), west (4) or east (5) hangs on the block behind it
@@ -128,6 +129,10 @@ export function* surfaceChunk(dim, cx, cz) {
       if (c.top < SEA) fill(dim, xa, c.top + 1, z, xb, SEA, z, "minecraft:water");
       if (c.water) fill(dim, xa, c.top + 1, z, xb, c.water, z, "minecraft:water");   // a river's water (or the tarn's)
       if (c.frozen && c.water) fill(dim, xa, c.water, z, xb, c.water, z, "minecraft:packed_ice");   // the Arctic tarn, frozen over (packed ice never melts)
+      if (thera) for (let k = i; k <= e; k++) { const q = cols[j * C + k]; if (q.top <= SEA || q.water || q.rise < 2) continue;   // the cone's skin (thera.md §2): a riser shows earth, a taller one a pezoula, a cliff its rock
+        const under = q.under === "minecraft:calcite" ? "minecraft:packed_mud" : q.under;   // the city's calcite under its soil reads as earth on a riser
+        if (q.rise <= SKIN.EARTH) fill(dim, x0 + k, q.top - q.rise - 1, z, x0 + k, q.top - 1, z, under);
+        else if (q.rise <= SKIN.WALL) for (let y = q.top - q.rise; y < q.top; y++) set(dim, x0 + k, y, z, perm(y === q.top - 1 ? PEZOULA[2] : PEZOULA[y & 1])); }
       i = e + 1;
     }
     for (let i = 0; i < C; i++) { if (!iceAt(cols[j * C + i])) continue; let e = i; while (e + 1 < C && iceAt(cols[j * C + e + 1])) e++; fill(dim, x0 + i, SEA, z0 + j, x0 + e, SEA, z0 + j, ICE); i = e; }   // the sea's ice by its own columns, in runs (its edge in floes)
