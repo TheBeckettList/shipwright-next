@@ -185,6 +185,17 @@ The plan stands, with fallback 1 (shared seeds) as the rule rather than the fall
 - **Water fronts** (the Bounty): a building whose front is on the water faces the shore's normal, not its seed, so a
   quay row reads as one street. It goes into `growth.js` in phase 4.
 
+## The towns regrown on S003's sources (2026-11-13)
+
+The 19 settlements nearest Thera were regrown, since S003's peoples change had staled them. That's 11,648 folk:
+- 18 towns: 7,023 folk, 2,657 buildings, about 50 minutes on one core;
+- the European city 23:24,5: 4,625 folk, 1,501 buildings, 141 farms, **3,694 s**.
+
+The city took 0.80 s a head, twice the towns' 0.39. **Growth is super-linear in a settlement's size**, so phase 4's
+13 CPU-hours is low. The largest settlements (5,624, 4,625, 4,040 and 3,679 folk) alone are about 4 hours.
+
+In blocks the city is 2.8 M blocks in 981,179 columns (32 MB of JSON); with it, the add-on is about 23.5 MB.
+
 ## For Richard
 
 1. **The phase 4 window.** If S003's ship work touches the closure, it should land before the grow or wait for it.
