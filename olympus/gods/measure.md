@@ -14,7 +14,7 @@ The frame: the clock, the pulse, the lenses, the closure hash, the review gates;
 
 ## Now
 
-The pantheon's wave 0 (`sim/measure`, PR #3): `core/pantheon.js` and its lens. Sittings 2 and 3 recorded.
+The board (`DIRECTION.md`) is kept by the world lead (D-011). Sittings are written hourly from the stage (#9's workflow). The pantheon's wave 0 waits in #3.
 
 ## Next
 

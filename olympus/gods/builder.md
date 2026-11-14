@@ -17,11 +17,11 @@ Everything that stands, stands on purpose: houses keep their rooms and doors, fo
 
 ## Now
 
-S004 on `world/terraform` (PR #2): the footing rule and pezoulas on Thera; the cone's skin and paths (rings to 55, eight serpentines, the Sacred Way); stilts and ladders; turned prototypes fixed (lost doors); sunk floors dug out; Olympus's ring on the summit; the museum of the lost keels.
+The world lead's god (D-011). The world chain: #10 (the larger cone, the crater, terraced pads) merging into `world/terraform` after its regrow, then #3 and #2 into the stage.
 
 ## Next
 
-Phase 4's batch with the Grower: water fronts by the shore's normal, Thera's ring, cone x1.5 and crater, the quay ring, stoa and Koinon House kinds, `layPlace` on T.
+Thera outside the closure: thera.md §2a (the ring quay, the stoa, the Koinon House, the Mint), the six rings, the skyway roots, the Mint Road; terraform.md's WALL and DRAIN faces, the door apron, plan stamping in `lay.js`.
 
 ## Asks out
 

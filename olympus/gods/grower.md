@@ -17,11 +17,11 @@ Every town grown, none boxed: the 482 settlements grown as crystals and kept as 
 
 ## Now
 
-The 19 settlements nearest Thera regrown on S003's sources (`d8d7c9e`); growth measured super-linear (0.80 s a head for the 4,625-folk city against 0.39); `tools/growall.mjs` (one worker a core, in Claude's workspace, D-010).
+Regrowing the 19 towns near Thera on `world/cone` in the workspace (2 workers, checking in here at each eighth), then `replay.mjs`, then committing `lab/grown` and `lab/plans`.
 
 ## Next
 
-Phase 4: shared seeds a kind (311 kinds x 5), terracing slopes quantised, the yards claimed before `gapsOf`; then grow the world (463 settlements) across sessions.
+Phase 4's batch (shared seeds, quantised slopes, water fronts by the shore's normal, the yards, R's `boatsizes.js`), then the world's 463 settlements, across sessions (D-010).
 
 ## Asks out
 
