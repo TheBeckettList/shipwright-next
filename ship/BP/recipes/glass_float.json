@@ -1,0 +1,33 @@
+{
+  "format_version": "1.20.10",
+  "minecraft:recipe_shaped": {
+    "description": {
+      "identifier": "shipwright:glass_float"
+    },
+    "tags": [
+      "crafting_table"
+    ],
+    "pattern": [
+      " S ",
+      "SGS",
+      " S "
+    ],
+    "key": {
+      "S": {
+        "item": "minecraft:string"
+      },
+      "G": {
+        "item": "minecraft:glass"
+      }
+    },
+    "unlock": [
+      {
+        "item": "minecraft:glass"
+      }
+    ],
+    "result": {
+      "item": "shipwright:glass_float",
+      "count": 2
+    }
+  }
+}

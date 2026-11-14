@@ -23,6 +23,9 @@ import { manageShields, shieldsLaw, PEG } from "./shields.js";
 import { towTick, castOff, useHandling } from "./tender.js";
 import { turnDrag, oarsInLaw } from "./laws.js";
 import { sailLaw, driveLaw, heelLaw, heelTarget, rollPeriod, driftLaw, wakeLaw } from "./laws.js";
+import { isGlider, hasSherd, foldTick, flightTick, clamTick, foilReach, foilTick, foilGain, CORE_TOP } from "./glide.js";
+import { keelLaw, reachOf } from "./keels.js";
+import { PHI } from "../core/golden.js";
 
 const SIGN_KEY = "shipwright:steer_sign";
 import { DIMENSIONS } from "./dims.js";
@@ -126,8 +129,9 @@ function onIce(e) {
 }
 
 /** Water under the boat: whether it's afloat and how many blocks deep the water is. */
-function waterUnder(e) {
-  const { x, y, z } = e.location;
+function waterUnder(e, at = e.location, reach = 0) {
+  const { x, z } = at;
+  const y = at.y - reach;   // a foiling hull: her foil, below her, is what's in the water
   const fx = Math.floor(x), fz = Math.floor(z);
   const get = (yy) => {
     try {
@@ -180,7 +184,7 @@ function boatState(e) {
     // Anchor: a hand-dropped anchor is saved in the record and survives restarts.
     let anchor = null;
     const rec0 = readRecord(e);
-    if (rec0?.anchor) anchor = { x: rec0.anchor.x, z: rec0.anchor.z, manual: !!rec0.anchor.manual };
+    if (rec0?.anchor) anchor = { x: rec0.anchor.x, z: rec0.anchor.z, manual: !!rec0.anchor.manual, float: rec0.anchor.float };
     s = { heading, speed: 0, stats: null, statsAt: -1e9, sailSet, anchor, anchorType: rec0?.anchorType ?? "stone" };
     state.set(e.id, s);
   }
@@ -414,7 +418,7 @@ function setSail(e, s, up, hands) {
 function saveAnchor(e, s) {
   const rec = readRecord(e);
   if (!rec) return;
-  rec.anchor = s.anchor && s.anchor.manual ? { x: s.anchor.x, z: s.anchor.z, manual: true } : null;
+  rec.anchor = s.anchor && s.anchor.manual ? { x: s.anchor.x, z: s.anchor.z, manual: true, float: s.anchor.float } : null;
   writeRecord(e, rec);
 }
 
@@ -440,8 +444,8 @@ export function weighAnchor(e, s, hands) {
 /** Holds an anchored boat on its spot: cancels drift and draws it gently back. */
 export function holdAtAnchor(e, s) {
   if (!s.anchor) return;
-  // A strong enough wind drags the anchor.
-  if (s.wind) {
+  // A strong enough wind drags the anchor (not a line made fast to a float: she swings on it, moorings.js).
+  if (s.wind && !s.anchor.float) {
     const holding = (ANCHORS[s.anchorType] ?? ANCHORS.stone).holding;
     const w = Math.hypot(s.wind.x, s.wind.z);
     if (w > holding) {
@@ -638,6 +642,8 @@ export function steerBoat(e, helm) {
   const s = boatState(e);
   if (!s.stats) return s;
   const h = s.stats;
+  const glider = isGlider(e);   // the Exokoitos: her core, her wings, her flight (glide.js)
+  if (glider) foldTick(e, s, helm);
   const prevSpeed = s.speed;
   const cond = s.cond ?? { bow: 1, mid: 1, stern: 1, sail: 1 };
   const hullF = 0.7 + 0.3 * ((cond.bow + cond.mid + cond.stern) / 3);   // a worn hull is slower
@@ -655,7 +661,13 @@ export function steerBoat(e, helm) {
     if (Math.abs(turnRight) > 0.3) unlash(s, "Tiller freed");           // steering frees a lashed tiller
     else turnRight = 0;
   }
-  let water = waterUnder(e);
+  // Whether she floats is read under her middle, where her hull is deepest, not under her helm: a long hull's helm sits
+  // far aft, and launched to the water's edge it could hang over the slip while her body floated, so she neither moved
+  // nor turned (Richard, S003: "the ship was stuck in the yard; it wasn't rotating or responding to input")
+  const foilDown = glider ? foilReach(s) : 0;
+  let water = waterUnder(e, centreOf(e.location, s.heading, h), foilDown);
+  if (!water.wet) water = waterUnder(e, e.location, foilDown);
+  if (glider) foilTick(e, s, water);
   if (!water.wet && h.iceRunners && onIce(e)) water = { wet: true, depth: 99, ice: true };
   s.aground = water.wet && water.depth < h.draft && !water.lip;   // a lip she scrapes over (with a touch of drag)
   if (water.lip) s.speed *= 0.985;
@@ -694,13 +706,14 @@ export function steerBoat(e, helm) {
     setRudder(e, s, 0);
     settle(e, s);
     s.pushingAtAnchor = Math.abs(throttle) > 0.3 || Math.abs(turnRight) > 0.3;
-    if (s.pushingAtAnchor) say(s, "Anchored: hold jump to weigh anchor");
+    if (s.pushingAtAnchor) say(s, s.anchor.float ? "Moored: hold jump to cast off" : "Anchored: hold jump to weigh anchor");
     updateExposure(e, s);
     s.wind = windAt(e.dimension, e.location, s);
     holdAtAnchor(e, s);
     return s;
   }
   s.pushingAtAnchor = false;
+  if (glider && s.fly?.flying && flightTick(e, s, helm, { wet: false, turnRight })) return s;   // aloft: the air's laws, not the water's
 
   // Wind: ease toward the local cell's wind so it changes gradually as you sail.
   updateExposure(e, s);
@@ -711,7 +724,11 @@ export function steerBoat(e, helm) {
   const sailing = h.sail && s.sailSet && water.wet;
   if (s.lashed && water.wet) lashedDrift(s, windSpeed);
   // Law: the sail. Projection: telltales and the cloth's fill.
-  const sail = sailLaw(h, { sailing, off, windSpeed, sailF, hullF });
+  // the Exokoitos's seed sail is a rigid wing: its own law (clamsail.js), no cloth to fill
+  const sail = glider
+    ? { fill: 0, telltale: 0, target: foilGain(s) * clamTick(e, s, { sailing, wind: windSpeed, off, flying: !!s.fly?.flying,
+        tack: Math.sign(s.wind.x * Math.cos((s.heading * Math.PI) / 180) + s.wind.z * Math.sin((s.heading * Math.PI) / 180)) || 1 }).target * sailF * hullF }
+    : sailLaw(h, { sailing, off, windSpeed, sailF, hullF });
   const fill = sail.fill, sailTarget = sail.target;
   setProp(e, s, "telltale", Math.round(sail.telltale * 10) / 10, 0.1);
   setProp(e, s, "sail_fill", Math.round(fill * 20) / 20, 0.05);
@@ -728,6 +745,8 @@ export function steerBoat(e, helm) {
   s.oars = oars;
   const rowing = water.wet && Math.abs(throttle) > 0.05 && !oars.shipped;
   const power = h.power ? POWER[h.power] : null;
+  const core = glider && hasSherd(helm, s);   // her core wakes for a Theran's sherd: it drives her, and never tires anyone
+  s.core = core;
   const hungry = foodLevel(helm) <= HUNGRY_FOOD;
   let furnaceDrive = false;
   if (rowing && power) {
@@ -738,14 +757,14 @@ export function steerBoat(e, helm) {
     }
     furnaceDrive = s.fuel > 0;
   }
-  const baseTop = poleOut ? h.max * 0.15 : furnaceDrive ? Math.min(h.max * 1.25, h.max * power.top) : h.max;
-  const rowTop = (!furnaceDrive && hungry ? baseTop * 0.5 : baseTop) * hullF;
-  if (rowing && !furnaceDrive && hungry && !s.warnedHungry) { say(s, "Too hungry to row hard"); s.warnedHungry = true; }
+  const baseTop = poleOut ? h.max * 0.15 : core ? CORE_TOP * foilGain(s) : furnaceDrive ? Math.min(h.max * 1.25, h.max * power.top) : h.max;
+  const rowTop = (core ? baseTop : !furnaceDrive && hungry ? baseTop * 0.5 : baseTop) * hullF;
+  if (rowing && !core && !furnaceDrive && hungry && !s.warnedHungry) { say(s, "Too hungry to row hard"); s.warnedHungry = true; }
   if (!hungry) s.warnedHungry = false;
   const want = throttle > 0.05 ? throttle * rowTop : 0;
   s.effort = rowing && throttle > 0 ? rowingEffort(h, want, Math.max(0, s.speed), sailTarget) : rowing ? 0.4 * Math.abs(throttle) : 0;
   if (furnaceDrive) s.fuel -= power.burn * (0.3 + s.effort);   // easy cruising sips fuel, flat out burns it
-  else if (rowing) tire(helm, ROW_EXHAUSTION * s.effort * Math.sqrt(h.weight || 1));
+  else if (rowing && !core) tire(helm, ROW_EXHAUSTION * s.effort * Math.sqrt(h.weight || 1));
   setProp(e, s, "rowing", rowing ? Math.round(Math.min(1, 0.25 + s.effort) * 10) / 10 : 0, 0.1);
   // Each side's stroke: both together ahead or astern, and turning pulls one side and backs the other
   // (on the spot) or eases the inside oars (under way).
@@ -766,7 +785,7 @@ export function steerBoat(e, helm) {
     }
   }
   if (furnaceDrive && (system.currentTick ?? 0) % 8 === 0) smoke(e);
-  const pull = (poleOut ? 0.15 : 1) * (furnaceDrive ? power.pull : 1) * (h.benchPull ?? 1);
+  const pull = (poleOut ? 0.15 : 1) * (core ? PHI : furnaceDrive ? power.pull : 1) * (h.benchPull ?? 1);   // vision: the core pulls phi times an oar
 
   // Law: the drive. Oars and sail together; with the sail drawing, the boat sails on its own.
   const before = s.speed;
@@ -795,6 +814,12 @@ export function steerBoat(e, helm) {
       s.heading = next;
     }
     // A turn that would swing her into the bank simply doesn't happen: she holds her heading.
+  }
+
+  // Up and away: aimed up at her lift speed, she leaves the water (glide.js)
+  if (glider && flightTick(e, s, helm, { wet: water.wet, turnRight })) {
+    setRudder(e, s, turnRight * 25);
+    return s;
   }
 
   // Look ahead along the hull: stop rather than slide into the shore.
@@ -904,7 +929,8 @@ export function steerBoat(e, helm) {
   // the bow (or the stern going astern), grounding scrapes the bottom, strong wind frays the sail.
   const sewn = h.sewnSeams ? 0.5 : 1;
   if (water.wet && !h.oneTrunk) for (const z of ["bow", "mid", "stern"]) addWear(s, z, Math.abs(s.speed) * ROT_PER_BLOCK);
-  if (s.bumped && !s.wasBumped && Math.abs(prevSpeed) > IMPACT_SPEED) {
+  const fendered = (system.currentTick ?? 0) - (s.fendered ?? -1e9) < 20;   // vision: a second: a fender took the knock (moorings.js)
+  if (s.bumped && !s.wasBumped && !fendered && Math.abs(prevSpeed) > IMPACT_SPEED) {
     addWear(s, prevSpeed > 0 ? "bow" : "stern", (Math.abs(prevSpeed) - IMPACT_SPEED) * IMPACT_WEAR * sewn);
   }
   s.wasBumped = s.bumped;
@@ -1144,10 +1170,38 @@ function tickBoat(e) {
   if (t % 10 === 0 && s.stats) {
     if (!s.anchor) takeSoundings(e, s, s.stats);
     readout(helm, s);
+    keelTick(e, s);
+  }
+  if (s.standing) {
+    // standing on her keels: the floor holds her, as an island stands (keels.js)
+    try {
+      const v = e.getVelocity();
+      e.applyImpulse({ x: -v.x, y: 0, z: -v.z });
+    } catch {
+      /* not this tick */
+    }
   }
 }
 
 useHandling((e) => boatState(e).stats ?? computeHandling(readRecord(e)));
+
+/** The flagship's retracting keels: their reach to the floor, shown, and whether she stands on them (keels.js). */
+function keelTick(e, s) {
+  const reach = reachOf(e.typeId);
+  if (!reach) return;
+  const law = keelLaw({ reach, under: s.sounding?.under, draft: s.stats?.draft ?? 1, anchored: !!s.anchor });
+  const was = s.keel ?? 1;
+  s.keel = was + Math.max(-0.1, Math.min(0.1, law.ext - was));             // a tenth of their run each sounding
+  s.standing = law.standing && Math.abs(s.keel - law.ext) < 0.02;
+  if (Math.abs(s.keel - (s.keelShown ?? -1)) >= 0.02) {
+    try {
+      e.setProperty("shipwright:keel", Math.round(s.keel * 100) / 100);
+      s.keelShown = s.keel;
+    } catch {
+      /* visual only */
+    }
+  }
+}
 
 export function startSteering() {
   // Owners who step away from a boat (or leave the game) get their sea chest items sent home.

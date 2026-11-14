@@ -118,7 +118,9 @@ export async function lawdump(models = null) {
     const tradition = plan.fleet?.tradition ?? plan.tradition;
     const s = sizeOf(type), ex = s.exact ?? {};
     const L = ex.L ?? s.L;
-    const B = ex.B ?? ex.beam ?? L / type.lb;
+    // the Theran catamaran: the law's beam is her two hulls' together (gen_boats.py _apply_laws, Richard S003: "make the
+    // hulls the necessary size"), each B/2 at the same length and depth, so each hull is held to half
+    const B = (ex.B ?? ex.beam ?? L / type.lb) / (plan.twin && id.startsWith("theran_") ? 2 : 1);
     const D = ex.depth ?? ex.D ?? B / (type.flat ? PHI * PHI : PHI);
     const T = ex.draft ?? ex.draught ?? ex.T ?? D / PHI;
     const fb = ex.freeboard ?? ex.fb ?? D - T;
@@ -135,7 +137,7 @@ export async function lawdump(models = null) {
     const lMax = type.range[1];
     out[id] = {
       id, tradition, cls: type.cls, name: type.name, reach: type.reach, drive: type.drive, flat: type.flat, full: type.full,
-      lb: type.lb, range: type.range, scale: plan.modelScale ?? 1, maxMids: plan.maxMids, twin: !!plan.twin, tri: !!plan.tri,
+      lb: type.lb * (plan.twin && id.startsWith("theran_") ? 2 : 1), range: type.range, scale: plan.modelScale ?? 1, maxMids: plan.maxMids, twin: !!plan.twin, tri: !!plan.tri,
       L, B, D, T, fb, exactFromSizeOf: !!s.exact, rounded: { B: s.B, depth: s.depth, draft: s.draft }, masts: s.masts,
       need: nd, designWind: DESIGN_WIND[type.reach], washstrake: Math.max(0, nd - fb),
       wall: { built, K, floor, raw, w, keel: Math.max(2, PHI * w), wale: Math.max(2, PHI * w), deck: Math.max(2, w / PHI), plank: Math.max(1, w / PHI ** 2) },   // vision: any edge against the sky reads at 2 px, a texel at least

@@ -9,8 +9,12 @@
   uniform mat4 M; out vec2 uv; out float lit;
   void main() { gl_Position = M * vec4(p, 1.0); uv = t; vec3 L = normalize(vec3(-0.4, 0.8, -0.45)); lit = 0.5 + 0.5 * abs(dot(normalize(n), L)); }`;
   const FS = `#version 300 es
-  precision mediump float; in vec2 uv; in float lit; uniform sampler2D tex; uniform vec4 tint; out vec4 o;
-  void main() { vec4 c = texture(tex, uv); if (tint.a > 0.0) c = tint; else if (c.a < 0.5) discard; o = vec4(c.rgb * lit, tint.a > 0.0 ? tint.a : 1.0); }`;
+  precision mediump float; in vec2 uv; in float lit; uniform sampler2D tex; uniform vec4 tint; uniform float clear; out vec4 o;
+  // pass 0 the solid (cut by alpha at a half, as entity_alphatest); pass 1 the see-through cloth (the Exokoitos's skin,
+  // entity_alphablend in the game): only what is partly clear, blended over the rest
+  void main() { vec4 c = texture(tex, uv); if (tint.a > 0.0) { o = vec4(tint.rgb * lit, tint.a); return; }
+    if (clear < 0.5) { if (c.a < 0.5) discard; o = vec4(c.rgb * lit, 1.0); }
+    else { if (c.a >= 0.5 || c.a < 0.05) discard; o = vec4(c.rgb * lit, c.a); } }`;
   const SIZE = 128;                                   // given: the sheets' size (the models' texture_width)
 
   function make(canvas) {
@@ -74,7 +78,11 @@
         gl.viewport(0, 0, canvas.width, canvas.height); gl.clearColor(0.13, 0.2, 0.31, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
         gl.useProgram(prog); gl.uniformMatrix4fv(U("M"), false, mat()); gl.uniform1i(U("tex"), 0); gl.activeTexture(gl.TEXTURE0);
         gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND); gl.depthMask(true);
+        gl.uniform1f(U("clear"), 0);
         for (const p of parts) { if (!p.n) continue; gl.bindTexture(gl.TEXTURE_2D, p.tex); gl.uniform4f(U("tint"), 0, 0, 0, 0); gl.bindVertexArray(p.vao); gl.drawArrays(gl.TRIANGLES, 0, p.n); }
+        gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.uniform1f(U("clear"), 1);
+        for (const p of parts) { if (!p.n) continue; gl.bindTexture(gl.TEXTURE_2D, p.tex); gl.uniform4f(U("tint"), 0, 0, 0, 0); gl.bindVertexArray(p.vao); gl.drawArrays(gl.TRIANGLES, 0, p.n); }
+        gl.depthMask(true); gl.disable(gl.BLEND); gl.uniform1f(U("clear"), 0);
         if (showSea && sea) { gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false); gl.uniform4f(U("tint"), 0.16, 0.36, 0.62, 0.55); gl.bindVertexArray(sea.vao); gl.drawArrays(gl.TRIANGLES, 0, sea.n); gl.depthMask(true); }
       });
     }

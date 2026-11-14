@@ -141,13 +141,23 @@ def export(pid, with_uv=False, mids=None, names=False):
     lift = G.root_lift(b)                            # world px: the keel the law's draught under the water (launched)
     foot = G.mast_foot(b)                            # the mast's step, which its height grows from
     plan = G.mast_plan(b)
-    rig = None if pid in SAILLESS else RIG_OF.get(pid, "square")
+    rig = None if pid in SAILLESS or b.get("sail") else RIG_OF.get(pid, "square")   # a glider with her own sail: no rig
     geo = {g["description"]["identifier"].replace(f"geometry.shipwright.{pid}", ""): g for g in
            json.loads((ROOT / f"RP/models/entity/{pid}.geo.json").read_text())["minecraft:geometry"]}
     out, mf, tf = [], G.mast_factors(b), G.mast_thickness(b)
     for gid in (".launched", ".fittings", ".rig", ".outfit"):
+        byname = {bn["name"]: bn for bn in geo[gid]["bones"]}
+        def ancestors(bone):                             # the turned bones above this one, nearest first (the game turns
+            out_, p_ = [], byname.get(bone.get("parent"))  # a bone's cubes by its own rotation, then by each parent's)
+            while p_:
+                if any(p_.get("rotation", [0, 0, 0])):
+                    out_.append((p_["pivot"], R_of(p_["rotation"])))
+                p_ = byname.get(p_.get("parent"))
+            return out_
         for bone in geo[gid]["bones"]:
             n = bone["name"]
+            chain = ancestors(bone)
+            up = lambda q: [*__import__("functools").reduce(lambda q_, pr: turn(q_, [-pr[0][0], pr[0][1], pr[0][2]], pr[1]), chain, q)]
             if gid == ".outfit" and (n != "ram" or not pid.startswith(("league_", "theran_"))):
                 continue                                 # D-005: a ram only where it was used (unfitted ships show none)
             rows = (b.get("ports") or b.get("banks")) and re.match(r"oar_(\d+)_[rl]$", n) and int(n.split("_")[1]) < mids
@@ -155,14 +165,14 @@ def export(pid, with_uv=False, mids=None, names=False):
                 continue
             if gid == ".fittings" and n.startswith("mast") and not rig:
                 continue
-            if n.startswith("rudder") and n != ("rudder_post" if b.get("scale", 1) > 1 else "rudder"):
+            if n.startswith("rudder") and n.removesuffix("_p") != ("rudder_post" if b.get("scale", 1) > 1 else "rudder"):
                 continue
             mm = re.match(r"mid_(\d+)", n)
             if mm and int(mm.group(1)) >= mids:
                 continue
             if gid == ".rig":
                 base = re.sub(r"_\d+$", "", n)
-                if not rig or (base != G.RIG_BONES[rig] and not n.startswith("pennant")):
+                if not n.startswith("rig_glide") and (not rig or (base != G.RIG_BONES[rig] and not n.startswith("pennant"))):
                     continue
             k = int(n.rsplit("_", 1)[1]) if re.search(r"(mast|rig_\w+)_\d+$", n) else 0
             dz = 0.0
@@ -172,7 +182,7 @@ def export(pid, with_uv=False, mids=None, names=False):
                 dy = (mf[rig] - 1) * (bone["pivot"][1] - foot)
                 bone = dict(bone, pivot=[bone["pivot"][0], bone["pivot"][1] + dy, bone["pivot"][2]],
                             cubes=[dict(c, origin=[c["origin"][0], c["origin"][1] + dy, c["origin"][2]]) for c in bone["cubes"]])
-            if n.startswith(("foils", "amas", "akas", "nets")):
+            if n.startswith(("foils", "amas", "akas", "nets")) or n.startswith("rig_glide"):   # amidships, with her foils (every glider bone)
                 dz = -mids * 8
             elif n.startswith("bow") or n == "ram":
                 dz = (G.max_mids(b) - mids) * G.SEG   # the bow slides aft to close up on the last mid section
@@ -195,17 +205,23 @@ def export(pid, with_uv=False, mids=None, names=False):
                         zm = z + sz / 2
                         quad = [(x, y + sy, zm), (x + sx, y + sy, zm), (x + sx, y, zm), (x, y, zm)]
                     R = R_of(rot) if any(rot) else None
+                    Rc, cp = (R_of(c["rotation"]), c.get("pivot", [0, 0, 0])) if c.get("rotation") else (None, None)
                     flat = []
                     for q in quad:
                         q = [-q[0], q[1], q[2]]
+                        if Rc:                               # the panel's own turn (a chord of the belly) about its pivot
+                            q = turn(q, [-cp[0], cp[1], cp[2]], Rc)
                         if R:
                             q = turn(q, [-piv[0], piv[1], piv[2]], R)
+                        q = up(q) if chain else q
                         flat += [round(q[0] * hs / 16, 3), round((q[1] * ys + lift) / 16, 3), round((q[2] + dz) * hs / 16, 3)]
                     face = c["uv"]["west" if axis == "z" else "north"]
                     out.append(["cloth", k_, u0, u1] + flat + ([[*face["uv"], *face["uv_size"]]] if with_uv else []))
                     tags.append([n, gid[1:]])
                     continue
                 pts = corners(c, piv, rot, grow)
+                if chain:
+                    pts = [up(q) for q in pts]
                 flat = []
                 for (x, y, z) in pts:
                     flat += [round(x * hs / 16, 3), round((y * ys + lift) / 16, 3), round((z + dz) * hs / 16, 3)]

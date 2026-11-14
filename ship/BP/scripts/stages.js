@@ -25,8 +25,14 @@ export function layKeel(yard, plan, length) {
   writeRecord(entity, rec);
   applyRecord(entity, rec);
   syncOrientation(entity);
+  freshProps(entity, yawFor(yard));
+  return entity;
+}
+
+/** A new hull's moving parts at rest, facing `yaw`. */
+function freshProps(entity, yaw) {
   try {
-    setP(entity, "yaw", yawFor(yard)); // starting heading: facing the water
+    setP(entity, "yaw", yaw); // starting heading: facing the water
     setP(entity, "sail_set", true);
     setP(entity, "wind_rel", 0.0);
     setP(entity, "wind_str", 0.0);
@@ -43,7 +49,6 @@ export function layKeel(yard, plan, length) {
   } catch {
     /* property not available */
   }
-  return entity;
 }
 
 function save(entity, rec) {
@@ -87,4 +92,36 @@ export function launch(entity, yard, name) {
   entity.addTag(LAUNCHED_TAG);
   entity.teleport(helmAt(launchLocation(yard, rec.dims.length), yard.dir, rec), { rotation: { x: 0, y: yawFor(yard) } });
   return rec;
+}
+
+/**
+ * A ship in a bottle, uncorked: a finished, launched `plan` at `preset` ({ length, beam, depth },
+ * one of sizePresets), her middle at `centre` on the water, her bow toward `dirName`. No yard, no costs.
+ */
+export function uncork(dimension, plan, preset, centre, dirName) {
+  const dir = DIRS[dirName];
+  const yaw = dir.yaw + MODEL_YAW_OFFSET;
+  const rec = newRecord(plan, "bottle", preset.length);
+  rec.dims.beam = preset.beam;
+  rec.dims.depth = preset.depth ?? 1;
+  rec.sections.rig = { ...rec.sections.rig, sail: true };
+  rec.name = plan.name;
+  rec.stage = STAGES.LAUNCHED;
+  rec.launchedDay = world.getDay();
+  const entity = dimension.spawnEntity(plan.entity, helmAt(centre, dir, rec));
+  try {
+    entity.setRotation({ x: 0, y: yaw });
+  } catch {
+    /* set again by the teleport below */
+  }
+  writeRecord(entity, rec);
+  freshProps(entity, yaw);
+  applyRecord(entity, rec);
+  syncOrientation(entity);
+  entity.nameTag = rec.name;
+  entity.triggerEvent("shipwright:launch");
+  entity.triggerEvent(seatEvent(readRecord(entity)));
+  entity.addTag(LAUNCHED_TAG);
+  entity.teleport(helmAt(centre, dir, rec), { rotation: { x: 0, y: yaw } });
+  return entity;
 }

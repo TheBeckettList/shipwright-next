@@ -340,7 +340,13 @@
           "rudder_post": "q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 2), 2)) == 1"
         },
         {
+          "rudder_post_p": "q.property('shipwright:stage') >= 4 && (math.mod(math.floor(q.property('shipwright:kinds') / 2), 2)) == 1"
+        },
+        {
           "staff": "q.property('shipwright:stage') >= 5 && !(math.mod(math.floor(q.property('shipwright:flags') / 1), 2))"
+        },
+        {
+          "foils": "q.property('shipwright:stage') >= 4"
         },
         {
           "akas": "q.property('shipwright:stage') >= 3"
