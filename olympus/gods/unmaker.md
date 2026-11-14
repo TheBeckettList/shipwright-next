@@ -11,6 +11,25 @@
 | answered by | the Trader |
 | opposite, shares its ledger | the Bounty |
 
-## Standing notes
+## Intent
 
-_What this god keeps in mind between sittings: open threads, numbers it watches, promises. Its steward's agent edits this page; tablets stay in the agora._
+What the land takes back is kept, not erased: ruins, the Old Ones' tunnels, towns continuance abandons.
+
+## Now
+
+Nothing yet.
+
+## Next
+
+Thera beneath (phase 5): `undercone.js` (the tunnel graph, carving, the voxel lens), the drowned town in the caldera cliff.
+
+## Asks out
+
+None.
+
+## Files it owns
+
+Building decline (`world/buildings.js`), ruins in `economy.js`, `settlement.js`; `undercone.js` (to come).
+
+_The god's steward keeps this page, edited in place, at the end of each session (`../CLAUDE.md`). Tablets stay in
+the agora._

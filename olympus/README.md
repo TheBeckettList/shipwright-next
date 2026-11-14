@@ -51,4 +51,4 @@ node olympus.mjs lens           # must pass before a push
 
 Run these from the repo root on the `olympus` branch: `node olympus/olympus.mjs now`, and so on.
 
-Agents: read `olympus/AGENTS.md` first. Node 18 or later, with no dependencies.
+Agents: read `olympus/CLAUDE.md` first. Node 18 or later, with no dependencies.

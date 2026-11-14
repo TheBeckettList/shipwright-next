@@ -16,6 +16,7 @@
 //
 //   node olympus/olympus.mjs now                                     Olympus time: tick, sitting, year, who leads
 //   node olympus/olympus.mjs speak --god builder --title "..." [--kind tablet] [--answers <id>] [--asks <god>] [--refs a,b] [--body file|-]
+//   node olympus/olympus.mjs brief [--stream W|R|<god>]                 a session's start: the direction, what your gods owe, open claims
 //   node olympus/olympus.mjs read [--sitting n] [--god key] [--full]
 //   node olympus/olympus.mjs digest [--sitting n]                    the Measure's record of a sitting (default: the last closed)
 //   node olympus/olympus.mjs matrix                                  the answer matrix, the lead's councils, what each god owes
@@ -23,13 +24,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 import * as P from "../core/pantheon.js";
 import { RUNGS, YEAR_TICKS } from "../core/clock.js";
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url)), AGORA = path.join(ROOT, "agora"), SITTINGS = path.join(ROOT, "sittings");
 export const FOUNDED = Date.UTC(2026, 10, 13);   // given: the day the pantheon was drawn, 2026-11-13 00:00 UTC
 export const MONTH = RUNGS.month * RUNGS.day;   // derived: 720,000 ticks, ten hours: a sitting
-export const KINDS = ["tablet", "question", "answer", "offering", "rite"];   // vision: a math update, an ask, a reply, a gift (a tool, a render, a number), the Great Rite's summary
+export const KINDS = ["tablet", "question", "answer", "offering", "rite", "claim"];   // vision: a math update, an ask, a reply, a gift (a tool, a render, a number), the Great Rite's summary
 export const STEWARD = { builder: "W", grower: "W", unmaker: "W", bounty: "R", mover: "R", toll: "R", reaper: "both", trader: "both", measure: "both" };   // the land row the world stream's, the sea row the ships', the peoples row and the frame shared
 
 /** Olympus time at a moment (ms since the epoch). */
@@ -52,18 +54,24 @@ export function parse(text) {
 export function tablets() {
   if (!fs.existsSync(AGORA)) return [];
   const out = []; for (const d of fs.readdirSync(AGORA).sort()) { const dir = path.join(AGORA, d); if (!fs.statSync(dir).isDirectory()) continue;
-    for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".md")).sort()) { const t = parse(fs.readFileSync(path.join(dir, f), "utf8")); out.push({ ...(t ?? {}), file: path.join("agora", d, f), bad: !t }); } }
+    for (const f of fs.readdirSync(dir).filter((f) => f.endsWith(".md")).sort()) { const t = parse(fs.readFileSync(path.join(dir, f), "utf8")); out.push({ ...(t ?? {}), file: ["agora", d, f].join("/"), bad: !t }); } }   // the file a posix path on every platform (the lens reads it)
   return out.sort((a, b) => a.tick - b.tick || (a.id < b.id ? -1 : 1));
 }
 const words = (s) => (s ?? "").split(/\s+/).filter(Boolean).length;
 
+/** Who is speaking: --by, or OLYMPUS_BY, or the git user and the platform (one GitHub login is shared, so say the stream and the workspace). */
+function byOf() {
+  if (arg("--by")) return arg("--by"); if (process.env.OLYMPUS_BY) return process.env.OLYMPUS_BY;
+  let user = "?"; try { user = execFileSync("git", ["config", "user.name"], { cwd: ROOT, encoding: "utf8" }).trim() || "?"; } catch {}
+  return `${user} · Claude on ${process.platform}`;
+}
 function speak() {
   const g = god(arg("--god")), title = arg("--title"), kind = arg("--kind", arg("--answers") ? "answer" : "tablet");
   if (!title) throw new Error("--title is required"); if (!KINDS.includes(kind)) throw new Error(`--kind is one of ${KINDS.join(", ")}`);
   const now = timeAt(), id = `${String(now.tick).padStart(10, "0")}-${g.key}`, cause = arg("--answers", "-");
   if (cause !== "-" && !tablets().some((t) => t.id === cause)) throw new Error(`no tablet ${cause} to answer`);
   const src = arg("--body", "-"), body = src === "-" ? (process.stdin.isTTY ? "" : fs.readFileSync(0, "utf8")) : fs.readFileSync(src, "utf8");
-  const head = { id, god: g.key, title: g.title, name: g.name, v: g.v.join(","), slot: g.slot, steward: STEWARD[g.key], kind, tick: now.tick, sitting: now.sitting, answers: cause, to: P.next(g).key, asks: arg("--asks") ? god(arg("--asks")).key : "-", opposite: P.opposite(g).key, refs: arg("--refs", "-"), subject: title };
+  const head = { id, god: g.key, title: g.title, name: g.name, v: g.v.join(","), slot: g.slot, steward: STEWARD[g.key], by: byOf(), kind, tick: now.tick, sitting: now.sitting, answers: cause, to: P.next(g).key, asks: arg("--asks") ? god(arg("--asks")).key : "-", opposite: P.opposite(g).key, refs: arg("--refs", "-"), subject: title };
   const dir = path.join(AGORA, String(now.sitting).padStart(5, "0")); fs.mkdirSync(dir, { recursive: true });
   const file = path.join(dir, `${id}.md`); if (fs.existsSync(file)) throw new Error(`${file} exists (one tablet a god a tick)`);
   fs.writeFileSync(file, `---\n${Object.entries(head).map(([k, v]) => `${k}: ${v}`).join("\n")}\n---\n${body.trim()}\n`);
@@ -188,6 +196,23 @@ function showMatrix() {
   for (const g of P.GODS) { const x = o[g.key]; if (x.open || x.debt) console.log(`  ${pad(g.title, 32)} open ${x.open}, debt ${x.debt}, ${x.words} words`); }
 }
 
+/** A session's brief for a stream (W, R) or one god: where the hall stands, the direction, what is owed to its gods, the claims open, its gods' Now. */
+export function brief(who = "W") {
+  const all = tablets(), now = timeAt(), gods = P.GODS.filter((g) => STEWARD[g.key] === who || g.key === who || (who !== "R" && who !== "W" ? false : STEWARD[g.key] === "both")).map((g) => g.key);
+  const answered = new Map(); for (const t of all) if (t.answers !== "-") (answered.get(t.answers) ?? answered.set(t.answers, []).get(t.answers)).push(t);
+  const out = [`# Brief for ${who}: ${gods.map((k) => P.godByKey[k].title).join(", ")}`, "", `Olympus: sitting ${now.sitting}, led by ${now.lead.title}; it closes ${new Date(now.sittingEnds).toISOString()}.`, ""];
+  const dir = path.join(ROOT, "DIRECTION.md"); if (fs.existsSync(dir)) out.push(fs.readFileSync(dir, "utf8").trim(), "");
+  const owe = all.filter((t) => ["tablet", "question", "offering"].includes(t.kind) && !(answered.get(t.id) ?? []).length).map((t) => {
+    const owner = t.asks && t.asks !== "-" ? t.asks : t.to, closed = now.sitting > t.sitting; return { t, who: closed ? t.opposite : owner, debt: closed }; }).filter((o) => gods.includes(o.who));
+  out.push(`## Owed by ${who}'s gods (${owe.length})`, ""); for (const { t, who: g, debt } of owe) out.push(`- ${P.godByKey[g].title} ${debt ? "owes (a debt)" : "is asked"}: "${t.subject}" from ${t.title} (\`${t.id}\`)`);
+  const claims = all.filter((t) => t.kind === "claim" && !(answered.get(t.id) ?? []).some((r) => r.steward === t.steward));
+  out.push("", `## Open claims (${claims.length}): work someone has taken; answer your own claim when it is done or dropped`, ""); for (const t of claims) out.push(`- ${t.title} (${t.steward}${t.by ? `, ${t.by}` : ""}): "${t.subject}" (\`${t.id}\`)`);
+  out.push("", "## Your gods' Now (gods/<key>.md)", ""); for (const k of gods) { const f = path.join(ROOT, "gods", `${k}.md`), src = fs.existsSync(f) ? fs.readFileSync(f, "utf8") : ""; const m = /## Now\n([\s\S]*?)(\n## |$)/.exec(src); out.push(`**${P.godByKey[k].title}:** ${m ? m[1].trim() : "(no Now yet)"}`, ""); }
+  out.push("## The latest tablets", ""); for (const t of all.slice(-FIB_LATEST)) out.push(`- ${t.title}, ${t.kind}: ${t.subject} (\`${t.id}\`)`);
+  return out.join("\n");
+}
+const FIB_LATEST = 8;   // derived: a breath of the latest tablets
+
 const cmd = process.argv[2];
 if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith("olympus.mjs")) {
   try {
@@ -195,6 +220,7 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
     else if (cmd === "speak") speak();
     else if (cmd === "read") read();
     else if (cmd === "digest") digest();
+    else if (cmd === "brief") console.log(brief(arg("--stream", "W")));
     else if (cmd === "matrix") showMatrix();
     else if (cmd === "lens") { const r = lens(); console.log(r.lines.join("\n")); process.exit(r.ok ? 0 : 1); }
     else console.log(fs.readFileSync(fileURLToPath(import.meta.url), "utf8").split("\n").filter((l) => l.startsWith("//")).slice(0, 24).map((l) => l.slice(3)).join("\n"));

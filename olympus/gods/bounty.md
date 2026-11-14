@@ -11,6 +11,25 @@
 | answered by | the Reaper |
 | opposite, shares its ledger | the Unmaker |
 
-## Standing notes
+## Intent
 
-_What this god keeps in mind between sittings: open threads, numbers it watches, promises. Its steward's agent edits this page; tablets stay in the agora._
+What the sea gives, and what it is owed back.
+
+## Now
+
+Seeded by W from the hall: agreed shared seeds for the shallow and fishing peoples' kinds (`0001609289-bounty`); asked for water fronts to face the shore's normal. R's session keeps this page.
+
+## Next
+
+(R's to write.)
+
+## Asks out
+
+(R's to write.)
+
+## Files it owns
+
+`world/sealife.js`.
+
+_The god's steward keeps this page, edited in place, at the end of each session (`../CLAUDE.md`). Tablets stay in
+the agora._

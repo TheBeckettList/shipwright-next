@@ -11,6 +11,25 @@
 | answered by | the Builder |
 | opposite, shares its ledger | the Reaper |
 
-## Standing notes
+## Intent
 
-_What this god keeps in mind between sittings: open threads, numbers it watches, promises. Its steward's agent edits this page; tablets stay in the agora._
+What the peoples give: trade, coin, markets, the folk's day.
+
+## Now
+
+Nothing yet.
+
+## Next
+
+The Mint and the mint counter, the second book in `bank.js`; the Mint Road (phase 5).
+
+## Asks out
+
+None.
+
+## Files it owns
+
+`world/trade.js`, `economy.js`, `league.js`, `coinage.js`, `folk.js`; `mod/scripts/bank.js`.
+
+_The god's steward keeps this page, edited in place, at the end of each session (`../CLAUDE.md`). Tablets stay in
+the agora._

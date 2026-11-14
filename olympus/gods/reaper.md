@@ -11,6 +11,25 @@
 | answered by | the Mover |
 | opposite, shares its ledger | the Trader |
 
-## Standing notes
+## Intent
 
-_What this god keeps in mind between sittings: open threads, numbers it watches, promises. Its steward's agent edits this page; tablets stay in the agora._
+What the peoples take: catch, harvest, mining, raids.
+
+## Now
+
+Nothing yet.
+
+## Next
+
+Thera beneath: mining the lode, the haul to the Mint (phase 5).
+
+## Asks out
+
+None.
+
+## Files it owns
+
+`world/pirates.js`; raids, war and harvest in `economy.js` and `jobs.js`.
+
+_The god's steward keeps this page, edited in place, at the end of each session (`../CLAUDE.md`). Tablets stay in
+the agora._
