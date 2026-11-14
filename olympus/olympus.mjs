@@ -178,7 +178,7 @@ export function owed(tick = timeAt().tick, all = tablets()) {
   const answered = new Set(all.filter((t) => t.answers !== "-" && t.tick <= tick).map((t) => t.answers)), out = {};
   for (const g of P.GODS) out[g.key] = { open: 0, debt: 0, words: 0 };
   for (const t of all) {
-    if (t.tick > tick || answered.has(t.id) || !["tablet", "question", "offering"].includes(t.kind)) continue;
+    if (t.tick > tick || answered.has(t.id) || !["tablet", "question", "offering"].includes(t.kind) || t.god === "measure") continue;   // the Measure's own word is owed by no one
     const owner = t.asks && t.asks !== "-" ? t.asks : t.to, closed = Math.floor(tick / MONTH) > t.sitting;
     const who = closed ? t.opposite : owner, w = Math.round(words(t.body) * Math.abs(P.PSI));
     out[who][closed ? "debt" : "open"]++; out[who].words += w;
@@ -203,7 +203,7 @@ export function brief(who = "W") {
   const out = [`# Brief for ${who}: ${gods.map((k) => P.godByKey[k].title).join(", ")}`, "", `Olympus: sitting ${now.sitting}, led by ${now.lead.title}; it closes ${new Date(now.sittingEnds).toISOString()}.`, ""];
   const dir = path.join(ROOT, "DIRECTION.md"); if (fs.existsSync(dir)) out.push(fs.readFileSync(dir, "utf8").trim(), "");
   const owe = all.filter((t) => ["tablet", "question", "offering"].includes(t.kind) && !(answered.get(t.id) ?? []).length).map((t) => {
-    const owner = t.asks && t.asks !== "-" ? t.asks : t.to, closed = now.sitting > t.sitting; return { t, who: closed ? t.opposite : owner, debt: closed }; }).filter((o) => gods.includes(o.who));
+    const owner = t.asks && t.asks !== "-" ? t.asks : t.to, closed = now.sitting > t.sitting; return { t, who: closed ? t.opposite : owner, debt: closed }; }).filter((o) => gods.includes(o.who) && o.who !== o.t.god);   // the Measure's own word (F fixes it: its answerer and opposite are itself) is owed by no one
   out.push(`## Owed by ${who}'s gods (${owe.length})`, ""); for (const { t, who: g, debt } of owe) out.push(`- ${P.godByKey[g].title} ${debt ? "owes (a debt)" : "is asked"}: "${t.subject}" from ${t.title} (\`${t.id}\`)`);
   const claims = all.filter((t) => t.kind === "claim" && !(answered.get(t.id) ?? []).some((r) => r.steward === t.steward));
   out.push("", `## Open claims (${claims.length}): work someone has taken; answer your own claim when it is done or dropped`, ""); for (const t of claims) out.push(`- ${t.title} (${t.steward}${t.by ? `, ${t.by}` : ""}): "${t.subject}" (\`${t.id}\`)`);
