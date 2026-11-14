@@ -1,60 +1,28 @@
-# Growing the towns on a laptop's cores (`tools/growall.mjs`)
+# Growing the towns: in Claude's workspace (`tools/growall.mjs`)
 
-A runbook for whoever has the cores, or their Claude. Branch: `world/terraform` (PR #2).
+**Decided 2026-11-14 (W, D-010): the world is grown in Claude's own workspace, never on anyone's device.** The laptop
+world-gen run planned the night before is scrapped.
 
-## Why on a laptop
+`tools/growall.mjs` stays. It runs one `bakegrown` worker a core wherever Claude runs it, and shares out the stale
+settlements by cost (folk^1.3), biggest first to the least-loaded worker. Each worker writes its own
+`lab/grown/<key>.json`, and its plan in `lab/plans/`.
 
-A town grows single-threaded (`tools/bakegrown.mjs`: `cities.js` → `growth.js` → `district.js`), and grown towns go
-stale whenever the closure of `world/cities.js`, `world/district.js` or `game/ground.js` changes.
+```
+node tools/growall.mjs --dry                        # what is stale, and who grows what
+node tools/growall.mjs [--olympus ../olympus-hall]  # grow, checking in on Olympus at each eighth and at the end
+node tools/replay.mjs                               # every plan lays back IDENTICAL
+node tools/buildmod.mjs                             # bake
+```
 
-Measured on the cloud workspace (2 vCPU):
+**Measured in the workspace** (2 vCPU):
 - towns of a few hundred folk: 0.39 s a head;
 - the 4,625-folk European city: 0.80 s a head, 3,694 s.
 
-`growall.mjs` runs one `bakegrown` worker a core and hands out the stale settlements by cost (folk^1.3), biggest
-first, to the least-loaded worker. Each worker writes its own `lab/grown/<key>.json`, so nothing collides.
+Phase 4's whole world is 463 settlements and 107,581 folk, so it is a long run here. Split it across sessions:
+`bakegrown` keeps what is grown and grows only the stale or new.
 
-## Run it
-
-```
-git fetch origin && git checkout world/terraform && git pull
-npm install
-node tools/growall.mjs --dry                 # what is stale, and who grows what
-node tools/growall.mjs --olympus ../olympus-hall   # grow (all cores but one), checking in on Olympus
-node tools/buildmod.mjs                      # bake: dist/Waterworld.mcaddon and dist/waterworld-update.zip
-```
-
-**Leaving it running:** add `--olympus ../olympus-hall` (a worktree of the `olympus` branch: `git worktree add
-../olympus-hall olympus`). The run then checks in on Olympus as the Grower at each eighth of its cost, and once at the
-end. Each check-in is a tablet with the count, the folk and the time so far, plus a time-left estimate. Each answers
-the last, so they read as one thread, and each is committed and pushed on its own (pulled and retried if the hall
-moved). Anyone, or their Claude, follows the run with `node olympus/olympus.mjs read --god grower`.
-
-**Memory:** a worker needs up to about 3 GB (the big city peaked at 2.6 GB).
-- 16 GB of RAM: `--workers 4 --heap 3000`.
-- 32 GB or more: the defaults (`--heap 4096`).
-
-**Check:** the bake log line `grown settlements: N (…)` should list every chosen settlement, with none left out as
-"grown under older sources".
+**Memory:** about 3 GB a worker at most (the big city peaked at 2.6 GB). On an 8 GB workspace, use
+`--workers 2 --heap 3000`.
 
 **Plans:** every town grown also leaves its plan in `lab/plans/` (phase 2, `tools/plans.mjs`). Check them with
-`node tools/replay.mjs`, which lays each again from its plan and should print IDENTICAL for every one.
-
-**Then commit** `lab/grown/` and `lab/plans/` with the source hash in the message, push to the branch you grew for, and post a tablet on
-Olympus (the Grower) with the counts and times.
-
-## What not to run yet
-
-- **Do not use `--folk 1e9`** (every settlement in the world, 463 to grow, 107,581 folk). Towns are still stored block by
-  block: the 19 near Thera are already 100 MB of JSON, so the whole world would be about 1 GB and an add-on far too
-  large.
-- **That run is phase 4** (`handover/design/world-buildout.md`), once towns share building designs and are stored as
-  plans.
-- **Estimate for phase 4:** on 10 cores the dry run puts the biggest city (5,624 folk) alone on one worker and splits
-  the rest about evenly. That is perhaps 1.5–2 hours on an Apple-silicon laptop. This is an estimate: nobody has timed
-  it there yet.
-
-## Today
-
-All 19 settlements nearest Thera are current (regrown on S003's sources, commit d8d7c9e), so `growall` has nothing to
-do until a closure change.
+`node tools/replay.mjs`, which should print IDENTICAL for every town; then commit `lab/grown/` and `lab/plans/` together.

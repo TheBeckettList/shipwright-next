@@ -109,3 +109,13 @@ reworked to cut size.
 Consequence: phase 4's grow doesn't wait on a smaller street or gap store. Shared seeds stay the rule for the
 prototypes, because the game stamps prototypes and fewer of them is less to carry. If the add-on's size becomes a
 problem on a device (the Switch), this decision is the one to reopen.
+
+## D-010 — The world is grown in Claude's workspace, not on a device  (accepted · W · 2026-11-14 · S004)
+Context: growing every town is long (phase 4: 463 settlements, about 13 or more CPU-hours, super-linear in a town's
+size), and the night before a laptop run was planned (growall --olympus checking in on milestones).
+Decision: the world is grown in Claude's own sessions; nobody runs world generation on a device. tools/growall.mjs stays
+as the workspace's way to use every core it has.
+Consequence: phase 4's grow runs in the workspace, split across sessions as bakegrown allows (it keeps what is grown).
+handover/design/growall.md is rewritten for the workspace. D-009 (on world/plans) is Richard's and stands; this one
+was numbered after it.
+

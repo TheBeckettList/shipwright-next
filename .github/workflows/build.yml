@@ -1,0 +1,33 @@
+# Every push to a working branch builds the add-on and publishes it as that branch's build: a pre-release tagged
+# build-<branch> (slashes as dashes) carrying waterworld-update.zip (what `ww update` pulls) and Waterworld.mcaddon.
+# Builds stay out of git; a release is not git. One build a branch at a time, the newest push wins.
+name: build
+on:
+  push:
+    branches: ["stage/**", "world/**", "s003/**", "sim/**", "dev/**", "main"]
+    paths-ignore: ["handover/**", "olympus/**", "**/*.md"]
+  workflow_dispatch:
+permissions: { contents: write }
+concurrency: { group: "build-${{ github.ref_name }}", cancel-in-progress: true }
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - run: npm ci
+      - name: Bake
+        run: node tools/buildmod.mjs
+      - name: Stamp the build into the update zip
+        run: |
+          printf 'branch %s\ncommit %s\nbuilt %s\nmessage %s\n' "$GITHUB_REF_NAME" "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%MZ)" "$(git log -1 --format=%s | head -c 200)" > dist/BUILD
+          (cd dist && zip -q waterworld-update.zip BUILD)
+      - name: Publish as the branch's build
+        env: { GH_TOKEN: "${{ github.token }}" }
+        run: |
+          TAG="build-${GITHUB_REF_NAME//\//-}"
+          gh release delete "$TAG" --cleanup-tag -y 2>/dev/null || true
+          gh release create "$TAG" dist/waterworld-update.zip dist/Waterworld.mcaddon --prerelease --target "$GITHUB_SHA" \
+            --title "Build: $GITHUB_REF_NAME @ ${GITHUB_SHA::7}" --notes "$(cat dist/BUILD)"
