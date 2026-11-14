@@ -20,9 +20,15 @@ first, to the least-loaded worker. Each worker writes its own `lab/grown/<key>.j
 git fetch origin && git checkout world/terraform && git pull
 npm install
 node tools/growall.mjs --dry                 # what is stale, and who grows what
-node tools/growall.mjs                       # grow (the default: all cores but one)
+node tools/growall.mjs --olympus ../olympus-hall   # grow (all cores but one), checking in on Olympus
 node tools/buildmod.mjs                      # bake: dist/Waterworld.mcaddon and dist/waterworld-update.zip
 ```
+
+**Leaving it running:** add `--olympus ../olympus-hall` (a worktree of the `olympus` branch: `git worktree add
+../olympus-hall olympus`). The run then checks in on Olympus as the Grower at each eighth of its cost, and once at the
+end. Each check-in is a tablet with the count, the folk and the time so far, plus a time-left estimate. Each answers
+the last, so they read as one thread, and each is committed and pushed on its own (pulled and retried if the hall
+moved). Anyone, or their Claude, follows the run with `node olympus/olympus.mjs read --god grower`.
 
 **Memory:** a worker needs up to about 3 GB (the big city peaked at 2.6 GB).
 - 16 GB of RAM: `--workers 4 --heap 3000`.
