@@ -10,6 +10,9 @@
     },
     "shipwright_captains_key": {
       "textures": "textures/items/captains_key"
+    },
+    "shipwright_glass_float": {
+      "textures": "textures/items/glass_float"
     }
   }
 }
