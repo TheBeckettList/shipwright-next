@@ -3,8 +3,10 @@
 // grass over dirt, sand under water, is the game's own), and every block of that skin a town dug away as air.
 // One file a settlement in lab/grown/, keyed by a hash of core/ and world/: a rerun grows only what changed or is new.
 // tools/buildmod.mjs reads them and bakes them into the mod (data/grown.js).
-//   node tools/bakegrown.mjs [--folk 8000] [--secs 540] [--only key]
-//   node tools/bakegrown.mjs --restamp [n]   the sources changed but not the towns (a Thera-only change): grow the n smallest stale
+//   node tools/bakegrown.mjs [--folk 8000] [--secs 540] [--only key] [--keys k1;k2;...]
+//   (many cores: tools/growall.mjs shares the settlements among workers, the biggest first)
+//   node tools/bakegrown.mjs --restamp [n] [--from <hash>]   the sources changed but not the towns (a Thera-only change): grow the n smallest stale
+//                                            (--from: only those grown under that hash)
 //                                            towns again (2 by default), and if each comes out identical, stamp every stale town current
 import fs from "node:fs";
 import path from "node:path";
@@ -36,18 +38,40 @@ export async function chosen(folkBudget) {
   for (const { s, d } of S) { if (folk >= folkBudget) break; out.push({ s, d }); folk += s.folk; }
   return out;
 }
+/** A laid town's blocks as the world's own (what differs from the game's skin, and the skin dug away as air), by column:
+ *  { ids, cols, beasts, blocks, skipped }. `c` is { at, ground, water } (cityOf's, or a plan's: tools/plans.mjs). */
+export async function colsOf(c, lay, t) {
+  const { heightAt, SEA } = await import("../game/ground.js");
+  const H = (x, z) => Math.round(c.ground.h(x, z)), wet = (x, z) => c.water(x, z);
+  // the skin layPlace drew (district.js layPlace, its first loop): grass (snow in the Arctic) over two of dirt; under water, sand three deep or less
+  const skinAt = (x, y, z) => { const h = H(x, z); if (wet(x, z)) return y === 0 ? "minecraft:water" : y === h && h >= -FIB[3] ? "minecraft:sand" : null; return y > h || y < h - FIB[2] ? null : y === h ? (t === "arctic" ? "minecraft:snow" : "minecraft:grass_block") : "minecraft:dirt"; };
+  const byCol = new Map(); let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (const [k, b] of lay.vox) { const [x, y, z] = k.split(",").map(Number), X = Math.round(x), Z = Math.round(z), ck = `${X},${Z}`; let m = byCol.get(ck); if (!m) byCol.set(ck, (m = new Map())); m.set(Math.round(y), b); if (X < x0) x0 = X; if (X > x1) x1 = X; if (Z < z0) z0 = Z; if (Z > z1) z1 = Z; }
+  const ids = [], idKey = new Map(), idOf = (id, st) => { const k = st ? `${id}|${JSON.stringify(st)}` : id; if (!idKey.has(k)) { idKey.set(k, ids.length); ids.push(st ? [id, st] : [id]); } return idKey.get(k); };
+  const AIR = idOf("minecraft:air"), cols = []; let blocks = 0, skipped = 0;
+  for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) {
+    const m = byCol.get(`${x},${z}`), wx = c.at.x + x, wz = c.at.z + z; if (Math.round(heightAt(wx, wz).h) !== H(x, z)) { skipped++; continue; }   // where the game's ground isn't the town's (Thera's island and shelf, game/ground.js), the game's stands
+    const h = H(x, z), row = [];
+    if (m) for (const [y, b] of m) if (skinAt(x, y, z) !== b.id) row.push(SEA + y, idOf(b.id, b.s));
+    if (!wet(x, z)) for (let y = h - FIB[2]; y <= h; y++) if (!m?.has(y)) row.push(SEA + y, AIR);   // the skin dug away
+    if (row.length) { cols.push([wx, wz, ...row]); blocks += row.length / 2; }
+  }
+  const beasts = (lay.entities ?? []).map((e) => [e.type, c.at.x + Math.round(e.x), SEA + Math.round(e.y), c.at.z + Math.round(e.z)]);
+  return { ids, cols, beasts, blocks, skipped };
+}
 export const fileOf = (key) => path.join(OUT, `${key.replace(/[^\w]/g, "_")}.json`);
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
   const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d; };
-  const budget = Number(arg("folk", 8000)), secs = Number(arg("secs", 540)), only = arg("only", null);   // vision: the first towns round Thera; a run fits under ten minutes
+  const budget = Number(arg("folk", 8000)), secs = Number(arg("secs", 540)), only = arg("only", null), keys = arg("keys", null) ? new Set(arg("keys").split(";")) : null;   // keys: a worker's share (tools/growall.mjs), ";" between them   // vision: the first towns round Thera; a run fits under ten minutes
   fs.mkdirSync(OUT, { recursive: true });
   const hash = sourceHash(), t00 = Date.now();
   const { cityOf } = await import("../world/cities.js"), { layPlace } = await import("../world/district.js"), { heightAt, SEA } = await import("../game/ground.js");
   const restamp = process.argv.includes("--restamp"), proofs = [];
-  let list = (await chosen(budget)).filter(({ s }) => !only || s.key === only);
-  const stale = ({ s }) => fs.existsSync(fileOf(s.key)) && JSON.parse(fs.readFileSync(fileOf(s.key), "utf8")).hash !== hash;
+  let list = (await chosen(budget)).filter(({ s }) => (!only || s.key === only) && (!keys || keys.has(s.key)));
+  const from = arg("from", null);   // --restamp --from <hash>: only the towns grown under that hash (others staled earlier are left stale)
+  const stale = ({ s }) => { if (!fs.existsSync(fileOf(s.key))) return false; const h0 = JSON.parse(fs.readFileSync(fileOf(s.key), "utf8")).hash; return h0 !== hash && (!from || h0 === from); };
   if (restamp) list = list.filter(stale).sort((a, b) => a.s.folk - b.s.folk).slice(0, Number(arg("restamp", 2)) || 2);   // vision: two towns' proof
   let grown = 0, kept = 0, left = 0;
   for (const { s, d } of list) {
@@ -56,26 +80,14 @@ if (isMain) {
     if ((Date.now() - t00) / 1000 > secs) { left++; continue; }
     const t0 = Date.now(), c = cityOf(s.lead, { seed: FIB[6] - 2 }), t = s.lead.tradition;   // vision: the seed the snapshots show (eleven)
     const lay = layPlace(c.place, t, { ground: c.ground, water: c.water, margin: FIB[6] });
-    const H = (x, z) => Math.round(c.ground.h(x, z)), wet = (x, z) => c.water(x, z);
-    // the skin layPlace drew (district.js layPlace, its first loop): grass (snow in the Arctic) over two of dirt; under water, sand three deep or less
-    const skinAt = (x, y, z) => { const h = H(x, z); if (wet(x, z)) return y === 0 ? "minecraft:water" : y === h && h >= -FIB[3] ? "minecraft:sand" : null; return y > h || y < h - FIB[2] ? null : y === h ? (t === "arctic" ? "minecraft:snow" : "minecraft:grass_block") : "minecraft:dirt"; };
-    const byCol = new Map(); let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
-    for (const [k, b] of lay.vox) { const [x, y, z] = k.split(",").map(Number), X = Math.round(x), Z = Math.round(z), ck = `${X},${Z}`; let m = byCol.get(ck); if (!m) byCol.set(ck, (m = new Map())); m.set(Math.round(y), b); if (X < x0) x0 = X; if (X > x1) x1 = X; if (Z < z0) z0 = Z; if (Z > z1) z1 = Z; }
-    const ids = [], idKey = new Map(), idOf = (id, st) => { const k = st ? `${id}|${JSON.stringify(st)}` : id; if (!idKey.has(k)) { idKey.set(k, ids.length); ids.push(st ? [id, st] : [id]); } return idKey.get(k); };
-    const AIR = idOf("minecraft:air"), cols = []; let blocks = 0, skipped = 0;
-    for (let x = x0; x <= x1; x++) for (let z = z0; z <= z1; z++) {
-      const m = byCol.get(`${x},${z}`), wx = c.at.x + x, wz = c.at.z + z; if (Math.round(heightAt(wx, wz).h) !== H(x, z)) { skipped++; continue; }   // where the game's ground isn't the town's (Thera's island and shelf, game/ground.js), the game's stands
-      const h = H(x, z), row = [];
-      if (m) for (const [y, b] of m) if (skinAt(x, y, z) !== b.id) row.push(SEA + y, idOf(b.id, b.s));
-      if (!wet(x, z)) for (let y = h - FIB[2]; y <= h; y++) if (!m?.has(y)) row.push(SEA + y, AIR);   // the skin dug away
-      if (row.length) { cols.push([wx, wz, ...row]); blocks += row.length / 2; }
-    }
-    const beasts = (lay.entities ?? []).map((e) => [e.type, c.at.x + Math.round(e.x), SEA + Math.round(e.y), c.at.z + Math.round(e.z)]);
+    const { ids, cols, beasts, blocks, skipped } = await colsOf(c, lay, t);
     const rec = { hash, key: s.key, t, folk: s.folk, members: s.members.map((m) => m.key ?? m), at: s.at, d: Math.round(d), buildings: c.place.placed.length, farms: c.place.farms?.length ?? 0, ms: Date.now() - t0, ids, cols, beasts, decor: lay.decor };
     if (restamp) { const o = JSON.parse(fs.readFileSync(f, "utf8")), same = ["ids", "cols", "beasts"].every((k) => JSON.stringify(o[k]) === JSON.stringify(rec[k])); proofs.push([s.key, same]); console.log(`${s.key}: grown again ${same ? "identical" : "DIFFERENT"}`); continue; }
     fs.writeFileSync(f, JSON.stringify(rec)); grown++;
+    try { const { planOf, writePlan } = await import("./plans.mjs"); writePlan(await planOf(s, c, hash)); } catch (e) { console.log(`${s.key}: no plan kept (${String(e.message).split("\n")[0]})`); }   // phase 2: the town as its plan too (tools/plans.mjs)
     console.log(`${s.key} ${t} ${s.folk} folk, ${Math.round(d)} from Thera: ${rec.buildings} buildings, ${rec.farms} farms, ${blocks} blocks in ${cols.length} columns, ${beasts.length} beasts${skipped ? `, ${skipped} columns where the game's ground differs, left` : ""}, ${rec.ms} ms`);
   }
-  if (restamp) { if (proofs.length && proofs.every(([, same]) => same)) { let n = 0; for (const g of fs.readdirSync(OUT)) { const f = path.join(OUT, g), o = JSON.parse(fs.readFileSync(f, "utf8")); if (o.hash !== hash) { o.hash = hash; fs.writeFileSync(f, JSON.stringify(o)); n++; } } console.log(`restamped ${n} towns to ${hash}`); } else console.log("not restamped: a town came out different (or none was stale); grow them again"); process.exit(0); }
+  if (restamp) { if (proofs.length && proofs.every(([, same]) => same)) { let n = 0; for (const g of fs.readdirSync(OUT)) { const f = path.join(OUT, g), o = JSON.parse(fs.readFileSync(f, "utf8")); if (o.hash !== hash && (!from || o.hash === from)) { o.hash = hash; fs.writeFileSync(f, JSON.stringify(o)); n++; } } const PL = path.join(ROOT, "lab/plans"); let np = 0; if (fs.existsSync(PL)) for (const g of fs.readdirSync(PL)) { const f = path.join(PL, g), o = JSON.parse(fs.readFileSync(f, "utf8")); if (o.hash !== hash && (!from || o.hash === from)) { o.hash = hash; fs.writeFileSync(f, JSON.stringify(o)); np++; } }   // their plans too (tools/plans.mjs)
+    console.log(`restamped ${n} towns and ${np} plans to ${hash}`); } else console.log("not restamped: a town came out different (or none was stale); grow them again"); process.exit(0); }
   console.log(`grown ${grown}, kept ${kept}, left for the next run ${left} (of ${list.length}), ${Math.round((Date.now() - t00) / 1000)} s`);
 }

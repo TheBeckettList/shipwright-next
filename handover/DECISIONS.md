@@ -73,3 +73,49 @@ address). Two streams run at once: ships on `s003/*`, the world on `world/<topic
 request. The stage branch is the default and takes pull requests only. `COLLABORATING.md` is the working agreement.
 Consequence: the baton rule (handover/README) holds per stream, and the hand-off merges both streams first.
 
+
+## D-008 — The sim runs as a pantheon of nine, derived from the law  (accepted · Richard · 2026-11-13 · S004)
+Context: going all in on the sim (D-003) needs a way to divide the world's systems among agents, and to say how their
+updates, reactions and conflicts work, without inventing a framework beside the math.
+Decision: nine agents, read off F on trit pairs mod 3 (`core/pantheon.js`): the still point (0,0) is the Measure
+(Nereus), and the other eight pairs, one cycle of the breath, are the gods, each named by where it acts (sea, peoples,
+land) and what it does to the stock (takes, holds, gives), with a Greek sea-power's name. Opposites (F^4 = -I) share a
+ledger and take each other's debts; F.v answers v on the next tick, bounded by psi = -1/phi; claims on a cell add as
+vectors, a set summing to the still point holds the cell, and any other set goes to the earliest slot from the
+breath's lead. Built wave by wave, each wave merged only when the
+`pantheon` lens holds. The design and its open questions are in the doc "The Pantheon: the sim's nine agents and the
+web between them".
+Consequence: wave 0 (the Measure: `core/pantheon.js`, the `pantheon` lens) lands first; every later system is a god in
+`world/gods/`, and the inherency lens must then read subfolders. Decided too (Richard, 2026-11-13): the gods are both, the sim's architecture and beings in the world. They can enter
+the sim and look round (each through its own realm), and the world honours them; Richard designs the honours. Answered by the math (2026-11-13, for Richard's review): (1) answers in whole units are
+round(cause x psi), which from a Fibonacci number is the one below it (Binet), and the roundings drift at most
+phi^2/2 (`SLACK`); (2) claims are vectors: a balanced set holds, otherwise the earliest slot from a lead that turns a
+slot a breath, so every god leads once in eight; (3) chance is `drawOf(tick, purpose)`: one god a tick, so the tick is its
+stream (a row key would add nothing, since the tick already names the god), and the world's own draws are untouched; (4) the gods are
+built in four waves of two, a god and its opposite together, in F's order from the Builder (they share a ledger, so
+neither can be checked alone); (5) a debt goes to the writer's opposite always, the weak routes included (-v is the
+only route F gives every god); (6) a god that holds may only move its own stock: on another's it lets its tick pass,
+and the next god answers at psi^2. (7) a stock lives in [0, room], starting at room / phi: with the floor
+alone the one-day sample's stocks climbed as a walk reflected at zero (the root of their writes); with both ends they
+stay in the room and the overflow is a debt like the shortfall. Open: counterparts for the shallow-water and European
+peoples.
+
+## D-009 — The world's towns as plans at about 95 MB; no 3 MB target  (accepted · Richard · 2026-11-14 · S004)
+Context: phase 2 (world-buildout.md) proved that grown towns lay back from their plans block for block, at about
+0.8 KB a head, so about 95 MB for all 119,229 folk. Getting down to the plan's 3 MB estimate would mean storing streets
+and gaps as the few numbers they're grown from, a change to growth.js's closure.
+Decision: about 95 MB is fine. The plans stay as `tools/plans.mjs` writes them, and the streets and gaps are not
+reworked to cut size.
+Consequence: phase 4's grow doesn't wait on a smaller street or gap store. Shared seeds stay the rule for the
+prototypes, because the game stamps prototypes and fewer of them is less to carry. If the add-on's size becomes a
+problem on a device (the Switch), this decision is the one to reopen.
+
+## D-010 — The world is grown in Claude's workspace, not on a device  (accepted · W · 2026-11-14 · S004)
+Context: growing every town is long (phase 4: 463 settlements, about 13 or more CPU-hours, super-linear in a town's
+size), and the night before a laptop run was planned (growall --olympus checking in on milestones).
+Decision: the world is grown in Claude's own sessions; nobody runs world generation on a device. tools/growall.mjs stays
+as the workspace's way to use every core it has.
+Consequence: phase 4's grow runs in the workspace, split across sessions as bakegrown allows (it keeps what is grown).
+handover/design/growall.md is rewritten for the workspace. D-009 (on world/plans) is Richard's and stands; this one
+was numbered after it.
+

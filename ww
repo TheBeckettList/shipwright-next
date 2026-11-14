@@ -4,8 +4,13 @@
 #   ww setup         first time only: puts `ww` on your PATH, then does `ww new`
 #   ww new           carte blanche: stops and deletes the old servers (Shipwright's and Waterworld's) and their
 #                    worlds, then starts a clean Waterworld server set up for the Switch
-#   ww update        installs the newest waterworld-update*.zip from Downloads, restarts, checks it loaded
+#   ww update        pulls the newest build of the branch you follow from GitHub, installs it, restarts, checks it
+#                    loaded (does nothing if you already have it; --force reinstalls)
+#   ww update <branch>   that branch's newest build, once (e.g. ww update world/terraform)
 #   ww update --new  the same, on a brand-new world
+#   ww update --local [zip]   the old way: the newest waterworld-update*.zip in Downloads (or the zip given)
+#   ww follow <branch>   the branch ww update pulls from (it starts on the stage, stage/S003-R)
+#   ww builds        the builds on GitHub: each branch's newest, when, and from which commit
 #   ww start | stop  start or stop the server (the world is kept)
 #   ww status        is it up, can the Switch reach it, which version is running
 #   ww watch         live: Waterworld's messages and every error, as they happen (Ctrl-C to stop)
@@ -21,6 +26,8 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$(readlink -f "$0" 2>/dev/null || python3 -c 'import os,sys;print(os.path.realpath(sys.argv[1]))' "$0")")" && pwd)"
 DEV="$HERE/dev"
 C=waterworld-dev
+REPO=TheBeckettList/shipwright-next   # where the builds are published (.github/workflows/build.yml)
+FOLLOW_DEFAULT=stage/S003-R
 b() { printf "\n\033[1m%s\033[0m\n" "$*"; }
 need_docker() { docker info >/dev/null 2>&1 || { echo "Docker isn't running: open Docker Desktop, wait for 'Engine running', and try again."; exit 1; }; }
 logs() { docker logs "$C" 2>&1; }
@@ -61,12 +68,43 @@ case "${1:-help}" in
 
   update)
     need_docker
-    shift; z=""; wipe=""
-    for a in "$@"; do case "$a" in --new|--wipe) wipe="--wipe" ;; *) z="$a" ;; esac; done
+    shift; z=""; wipe=""; local_=""; force=""; branch=""
+    for a in "$@"; do case "$a" in --new|--wipe) wipe="--wipe" ;; --local) local_=1 ;; --force) force=1 ;; *.zip) z="$a"; local_=1 ;; *) branch="$a" ;; esac; done
+    if [ -z "$local_" ]; then
+      branch="${branch:-$(cat "$DEV/.follow" 2>/dev/null || echo "$FOLLOW_DEFAULT")}"
+      tag="build-${branch//\//-}"; z="$DEV/.pull/waterworld-update.zip"; mkdir -p "$DEV/.pull"
+      b "Pulling the newest build of $branch from GitHub"
+      if curl -fsSL "https://github.com/$REPO/releases/download/$tag/waterworld-update.zip" -o "$z.part"; then
+        mv "$z.part" "$z"; have=$(cat "$DEV/.build" 2>/dev/null | grep '^commit' | cut -c8-14); got=$(unzip -p "$z" BUILD 2>/dev/null)
+        echo "$got" | sed 's/^/  /'
+        if [ -n "$have" ] && [ -z "$force" ] && [ -z "$wipe" ] && echo "$got" | grep -q "^commit $have"; then echo "You already have this build (${have}). ww update --force reinstalls it."; exit 0; fi
+      else
+        rm -f "$z.part"; echo "No build of $branch on GitHub yet (or no connection): $REPO, release $tag."
+        echo "ww builds lists what there is; ww update --local installs the newest zip in Downloads."; exit 1
+      fi
+    fi
     [ -n "$z" ] || z=$(ls -t "$HOME"/Downloads/waterworld-update*.zip 2>/dev/null | head -1)
-    [ -n "$z" ] && [ -f "$z" ] || { echo "No waterworld-update zip in Downloads: download it from the chat first."; exit 1; }
+    [ -n "$z" ] && [ -f "$z" ] || { echo "No waterworld-update zip in Downloads: ww update pulls from GitHub instead."; exit 1; }
     unzip -oq "$z" ww 'dev/*' -d "$HERE" 2>/dev/null && chmod +x "$HERE/ww"   # the tools update themselves too
     exec bash "$DEV/refresh.sh" $wipe "$z"
+    ;;
+
+  follow)
+    shift; [ -n "${1:-}" ] || { echo "Following: $(cat "$DEV/.follow" 2>/dev/null || echo "$FOLLOW_DEFAULT")  (ww follow <branch> to change it)"; exit 0; }
+    echo "$1" > "$DEV/.follow"; echo "ww update now pulls the newest build of $1."
+    ;;
+
+  builds)
+    j="$(mktemp)"; curl -fsSL "https://api.github.com/repos/$REPO/releases?per_page=30" -o "$j" || { echo "Couldn't reach GitHub."; rm -f "$j"; exit 1; }
+    python3 - "$j" <<'PY'
+import json, sys
+rs = [r for r in json.load(open(sys.argv[1])) if r["tag_name"].startswith("build-")]
+if not rs: print("No builds on GitHub yet.")
+for r in sorted(rs, key=lambda r: r["published_at"], reverse=True):
+    b = dict(l.split(" ", 1) for l in (r.get("body") or "").splitlines() if " " in l)
+    print("%-24s %s  %s  %s" % (b.get("branch", r["tag_name"]), b.get("commit", "?")[:7], b.get("built", r["published_at"]), b.get("message", "")[:70]))
+PY
+    rm -f "$j"; echo "Following: $(cat "$DEV/.follow" 2>/dev/null || echo "$FOLLOW_DEFAULT")  (ww follow <branch> to change it)"
     ;;
 
   start) need_docker; exec bash "$DEV/dev.sh" up ;;

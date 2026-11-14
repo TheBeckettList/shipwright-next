@@ -1,7 +1,7 @@
 // The lab: every lens on the core and the world, no game needed.
 //
 //   node tools/lab.mjs [lens ...]       lenses: golden reverse purity globe sea boat analogues tempo lod
-//                                       world peoples inherency vanilla   (none: all)
+//                                       world peoples inherency vanilla pantheon   (none: all)
 //   node tools/lab.mjs render out.png   the world map: depth, biomes, peoples by temper
 //
 // Each lens returns { ok, lines }; tests/lab.test.mjs runs them all and fails on any not ok.
@@ -18,7 +18,7 @@ import { fold, overPole, greatCircle, zOfLat, xOfLon, latOf, lonOf, W, H } from 
 import { windAt, belt } from "../core/wind.js";
 import { tideAt, seaState, wavesAt, currentEast } from "../core/sea.js";
 import { groupLaws } from "../core/frames.js";
-import { profile, stats, phasePlan, goldenBeats } from "../core/tempo.js";
+import { profile, stats, phasePlan, goldenBeats, BAR } from "../core/tempo.js";
 import { census, load, LEVELS } from "../core/lod.js";
 import { loadMap } from "../world/load.js";
 import { chunkHeight, blockHeight, map, heightOf as mapHeightOf } from "../world/map.js";
@@ -45,6 +45,8 @@ import { pinnacle, floorsOf, PINNACLE, CLIFF } from "../world/pinnacle.js";
 import { skinOf, DRESS, CULTURES, RANKS, SKINS } from "../world/dress.js";
 import { NAMES } from "../world/names.js";
 import { LADDERS, CALIBRATION, HISTORY as CAL_HISTORY } from "../game/calibration.js";
+import * as TF from "../world/terraform.js";
+import { vnoise } from "../core/noise.js";
 import { TABLE as PTABLE, formulaOf, assemble, joinOf, fitStack, STOREYS } from "../world/periodic.js";
 import { theraPlan, useSectors } from "../world/theracity.js";
 import { roomVox, MATS } from "../world/roomvox.js";
@@ -52,6 +54,7 @@ import { observePeople, observeVillager, observePlace } from "../world/observer.
 import { lifeAt, AMBIENT } from "../world/ambient.js";
 import { fillGaps } from "../core/tempo.js";
 import { budget } from "../world/budget.js";
+import * as PAN from "../core/pantheon.js";
 import { league, presiding, PIECES } from "../world/league.js";
 import { MINT } from "../world/trade.js";
 import { houseOf, FORM as HOUSE_FORM, ROUNDNESS } from "../world/dwelling.js";
@@ -679,6 +682,117 @@ export const LENSES = {
     const t = 4 * RUNGS.day + RUNGS.day / 2, T = L.townAt(town, { living: "farmers", tradition: "european" }, { action: "build", professions: {} }, t), shown = L.shownAt(T, t, { B: T.N }), people = R.costOf(R.peopleOps(shown));
     const lines = [`a village of ${pl.census.households} households: ${pl.placed.length} buildings, ${blocks.toLocaleString("en-US")} blocks one by one, ${b.calls} structure calls (${Math.round(blocks / b.calls)} blocks a call)`, `its ground: ${ground.length.toLocaleString("en-US")} columns in ${f.calls} fills; its ${sets.length} lamps, pots and barrels in ${li.calls} lists`, `its ${shown.length} people out of doors at midday: ${people.by.crowd ?? 0} crowd entities and ${people.by.walker ?? 0} walkers (${shown.length} bodies one by one); 21 entities as crowds show up to ${R.peopleFor(21)}`];
     return { ok: b.calls < pl.placed.length * 2 && people.calls <= shown.length, lines };
+  },
+  terraform() {
+    // the overlay law (world/terraform.js; design/s004-specs/terraform.md §5, checks 4-8) on a synthetic island: hills of
+    // two scales, pads tried on a grid the way place() tries sites, every compatible one set
+    const bad = [], lines = [], N = FIBS_[11], hOf = (x, z) => Math.round(FIB_[7] + FIB_[8] * vnoise(x / FIB_[8], z / FIB_[8], FIB_[4]) + FIB_[4] * vnoise(x / FIB_[4], z / FIB_[4], FIB_[5]));   // vision: 144 blocks a side; hills 34 high over 34 (a block a block at their steepest), bumps 5 over 5
+    const run = (terrace) => {
+      const pads = []; let refused = 0, why = {};
+      for (let z0 = 0; z0 + FIB_[6] < N; z0 += FIB_[7]) for (let x0 = 0; x0 + FIB_[6] < N; x0 += FIB_[7]) {   // vision: a box up to 13 every 21
+        const w = FIB_[4 + ((x0 + z0) % 3)], l = FIB_[4 + ((x0 * 3 + z0) % 3)], cols = [];   // vision: boxes of 5, 8 and 13
+        for (let x = x0; x < x0 + w; x++) for (let z = z0; z < z0 + l; z++) cols.push({ x, z, h: hOf(x, z) });
+        const p0 = TF.padOf(cols, { terrace }), bw = p0.why ? null : TF.bankFits(p0, hOf), p = bw ? { why: bw } : p0; if (p.why) { refused++; why[p.why.split(" ")[0]] = (why[p.why.split(" ")[0]] ?? 0) + 1; continue; }
+        if (!TF.compatible(p, pads)) { refused++; why.incompatible = (why.incompatible ?? 0) + 1; continue; } pads.push(p); }
+      const T = new Int32Array(N * N), H = new Int32Array(N * N);
+      for (let z = 0; z < N; z++) for (let x = 0; x < N; x++) { H[z * N + x] = hOf(x, z); T[z * N + x] = TF.groundAt(x, z, hOf, pads).h; }
+      let onPad = 0, moved = 0, steeper = 0, pits = 0, meet = 0, risers = 0, treads = [], gentle = 0;
+      for (const p of pads) for (let x = p.x0; x <= p.x1; x++) for (let z = p.z0; z <= p.z1; z++) if (T[z * N + x] !== p.L) onPad++;
+      for (let z = 1; z < N - 1; z++) for (let x = 1; x < N - 1; x++) { const k = z * N + x, nb = [k - 1, k + 1, k - N, k + N];
+        moved = Math.max(moved, Math.abs(T[k] - H[k]));
+        for (const q of [k + 1, k + N]) { const dT = Math.abs(T[k] - T[q]), dH = Math.abs(H[k] - H[q]); steeper = Math.max(steeper, dT - Math.max(dH, TF.BANK.GRADE)); if (terrace && dH <= 1) risers = Math.max(risers, dT); }
+        if (nb.every((q) => T[q] > T[k]) && !nb.every((q) => H[q] >= H[k])) pits++;   // a hollow nature lacks
+        let lo = -Infinity, hi = Infinity; for (const p of pads) { const d = TF.distTo(p, x, z); if (d > TF.BANK.REACH) continue; const s2 = TF.spreadOf(p, d); lo = Math.max(lo, p.L - s2); hi = Math.min(hi, p.L + s2); } if (lo > hi) meet++; }
+      return { pads, refused, why, onPad, moved, steeper, pits, meet, risers, T };
+    };
+    for (const terrace of [false, true]) {
+      const r = run(terrace), name = terrace ? "terraced" : "plain";
+      if (r.onPad) bad.push(`${name}: ${r.onPad} footprint columns off their pad's level`);
+      if (r.moved > Math.max(TF.BANK.CUT, TF.BANK.FILL)) bad.push(`${name}: the ground moved ${r.moved}`);
+      if (r.meet) bad.push(`${name}: ${r.meet} columns where compatible pads' cones did not meet`);
+      if (r.pits) bad.push(`${name}: ${r.pits} pits the natural ground lacks`);
+      if (!terrace && r.steeper > TF.BANK.RISER) bad.push(`plain: a bank ${r.steeper} steeper than nature or a block a block`);   // derived: the ease takes at most CUT / (REACH + 1) < 1 a block, and a block of rounding
+      if (terrace && r.risers > TF.BANK.STEP_MAX) bad.push(`terraced: a riser of ${r.risers} on ground of a block a block or gentler`);
+      lines.push(`${name}: ${r.pads.length} pads set, ${r.refused} refused (${Object.entries(r.why).map(([k, v]) => `${k} ${v}`).join(", ")}); every footprint at its level; the ground moved ${r.moved} at most; ${terrace ? `risers at most ${r.risers} where nature is a block a block or gentler; ` : `banks at most ${r.steeper} past nature's or a block's grade; `}no new pits; every meet held`);
+    }
+    // no pads: nature back, exactly; the same inputs, the same field
+    let back = 0; for (let i = 0; i < FIB_[10] * FIB_[10]; i++) { const x = i % FIB_[10], z = Math.floor(i / FIB_[10]), h = hOf(x, z); if (TF.terraAt(x, z, h, []).h !== h) back++; }   // derived: 89 x 89, over 10^4 columns (terraform.md check 8)
+    const a = run(false), b = run(false); let same = a.T.length === b.T.length; for (let i = 0; same && i < a.T.length; i++) same = a.T[i] === b.T[i];
+    if (back) bad.push(`${back} columns changed with no pads`); if (!same) bad.push("the same pads gave a different field");
+    // compatibility is exact: two pads side by side, levels one past what their cones allow, refused; at the bound, set
+    const P = (x0, L, flags = 0) => ({ x0, z0: 0, x1: x0 + FIB_[4] - 1, z1: FIB_[4] - 1, L, flags, cut: 0 });   // vision: five-block boxes
+    const gap = FIB_[4], A = P(0, 0), B = P(FIB_[4] - 1 + gap, gap), C = P(FIB_[4] - 1 + gap, gap + 1);   // vision: five blocks apart
+    if (!TF.compatible(B, [A]) || TF.compatible(C, [A])) bad.push("compatibility missed its bound");
+    lines.push(`no pads: ${FIB_[10] * FIB_[10]} columns all natural; the same pads give the same field; two pads ${gap} apart may differ by ${gap}, not ${gap + 1}`);
+    return { ok: !bad.length, lines: [...lines, ...bad.map((x) => `FAIL ${x}`)] };
+  },
+  pantheon() {
+    // the nine and their web (core/pantheon.js), held to the law they are read from: one still point and one cycle,
+    // the cycle the clock's breath, opposites half a breath apart summing to the still point, every tick one god in F's
+    // order, reactions settling within a breath, claims resolved the same in any order, the wake's codec exact
+    const neg = ([a, b]) => [-a || 0, -b || 0], eqv = (u, v) => u[0] === v[0] && u[1] === v[1], lines = [], bad = [];
+    const all = []; for (const a of [-1, 0, 1]) for (const b of [-1, 0, 1]) all.push([a, b]);   // given: the three trits
+    // the orbits: (0,0) still; every other pair on the one cycle, in it once
+    const fixed = all.filter((v) => eqv(PAN.Fv(v), v)), onCycle = all.filter((v) => PAN.ORBIT.some((o) => eqv(o, v)));
+    if (fixed.length !== 1 || !eqv(fixed[0], [0, 0])) bad.push(`F holds ${fixed.length} pairs still`);
+    if (onCycle.length !== all.length - 1 || PAN.ORBIT.length !== all.length - 1) bad.push(`the cycle holds ${PAN.ORBIT.length} of the ${all.length - 1} moving pairs`);
+    if (PAN.BREATH !== RUNGS.breath) bad.push(`the cycle (${PAN.BREATH}) is not the clock's breath (${RUNGS.breath})`);
+    if (BAR % PAN.BREATH) bad.push(`the breath does not divide the bar (${BAR})`);
+    for (const v of all) { let w = v; for (let k = 0; k < PAN.BREATH / 2; k++) w = PAN.Fv(w); if (!eqv(w, neg(v))) bad.push(`F^4 ${v} is ${w}, not -v`); if (!eqv(PAN.Finv(PAN.Fv(v)), v)) bad.push(`F^-1 F ${v} is not ${v}`); }
+    // the gods: typed by b, opposites -v and half a breath on, the eight summing to the still point
+    let sa = 0, sb = 0;
+    for (const g of PAN.GODS.slice(0, PAN.BREATH)) { sa += g.v[0]; sb += g.v[1]; const o = PAN.opposite(g);
+      if (!eqv(o.v, neg(g.v)) || (o.slot - g.slot + PAN.BREATH) % PAN.BREATH !== PAN.BREATH / 2) bad.push(`${g.title}'s opposite is ${o.title}`);
+      if ((g.v[1] === 0) !== (g.op === "shear")) bad.push(`${g.title} ${g.op}s but b is ${g.v[1]}`);
+      if (!eqv(PAN.next(g).v, PAN.Fv(g.v))) bad.push(`${g.title}'s answer is not F.v`); }
+    if (sa || sb) bad.push(`the eight sum to (${sa},${sb}), not the still point`);
+    // the turn: three bars, one god a tick, each the one F hands to
+    let turnBad = 0; for (let t = 0; t < 3 * BAR; t++) if (PAN.next(PAN.godAt(t)) !== PAN.godAt(t + 1)) turnBad++;   // vision: three bars of ticks
+    if (turnBad) bad.push(`${turnBad} ticks handed to the wrong god`);
+    // reactions: one breath of answers leaves phi^-8 of the act, under a twenty-first
+    let net = 0; for (let k = 0; k < PAN.BREATH; k++) net += PAN.reactionBound(1, k);
+    const left = Math.abs(PAN.reactionBound(1, PAN.BREATH));
+    if (Math.abs(net - PAN.NET) > 1e-12 || Math.abs(left - PAN.SETTLE) > 1e-12 || !(left < 1 / FIB_[7])) bad.push(`a breath leaves ${left} of an act, nets ${net}`);   // given: float equality to a part in 10^12; derived: settles under a twenty-first
+    // whole units: from 610 the answers walk Fibonacci down (Binet), and no chain strays past the bound by more than the slack
+    let chainBad = 0; for (let d0 = 1; d0 <= FIBS_[14]; d0++) { let d = d0, k = 0; while (d) { if (Math.abs(d) > Math.abs(PAN.reactionBound(d0, k)) + PAN.SLACK) chainBad++; d = PAN.answerOf(d); k++; } }   // derived: every first act up to 610
+    if (chainBad) bad.push(`${chainBad} whole-unit answers strayed past the bound plus the slack`);
+    const walk = []; for (let d = FIBS_[14]; d; d = PAN.answerOf(d)) walk.push(Math.abs(d));
+    if (walk.length !== 14 || walk.some((v, i) => v !== FIBS_[14 - i])) bad.push(`from 610 the answers walked ${walk}, not down Fibonacci`);   // derived: 610 is F(15), fourteen numbers down to 1
+    // claims add as vectors: a balanced set holds; otherwise the earliest slot from a lead that turns a slot a breath
+    if (!PAN.resolveClaims([{ slot: 0 }, { slot: 4 }]).held) bad.push("a god and its opposite did not hold");   // vision: the Builder and the Mover
+    if (!PAN.resolveClaims([{ slot: 0 }, { slot: 2 }, { slot: 3 }]).held) bad.push("a balanced three did not hold");   // vision: (1,0)+(-1,1)+(0,-1)
+    const c = [{ slot: 5 }, { slot: 2 }, { slot: 7 }];   // vision: three claims that do not balance
+    const leads = new Set(); for (let b = 0; b < PAN.BREATH; b++) { leads.add(PAN.leadOf(b));
+      const w = PAN.resolveClaims(c, b).winner?.slot, want = c.map((x) => x.slot).sort((p, q) => (p - b + PAN.BREATH) % PAN.BREATH - (q - b + PAN.BREATH) % PAN.BREATH)[0];
+      for (const order of [c, [...c].reverse(), [c[1], c[2], c[0]]]) if (PAN.resolveClaims(order, b).winner?.slot !== w) bad.push(`breath ${b}: the verdict turned with the order`);
+      if (w !== want) bad.push(`breath ${b}: ${w} won, not ${want}`); }
+    if (leads.size !== PAN.BREATH) bad.push(`only ${leads.size} gods led in a full turn of breaths`);
+    // bounds: a stock stays in [0, room], what does not fit is the debt, and nothing is lost between them
+    const room = PAN.roomOf(FIBS_[14]); let fitBad = room !== FIBS_[15] ? 1 : 0;   // derived: 610's room is 987, F(16)
+    for (let s0 = 0; s0 <= room; s0 += FIB_[7]) for (let d = -room; d <= room; d += FIB_[6]) { const { put, short } = PAN.fitWrite(s0, d, room);   // derived: a grid of stocks and writes
+      if (s0 + put < 0 || s0 + put > room || put + short !== d || (short && Math.sign(short) !== Math.sign(d))) fitBad++; }
+    if (fitBad) bad.push(`${fitBad} writes broke the room`);
+    // chance: one stream a tick, the same draw for the same tick and purpose, spread evenly
+    let mean = 0; for (let t = 0; t < BAR * PAN.BREATH; t++) mean += PAN.drawOf(t, 1) / (BAR * PAN.BREATH);   // vision: a breath of bars
+    if (PAN.drawOf(FIB_[10], 2) !== PAN.drawOf(FIB_[10], 2) || Math.abs(mean - 0.5) > 1 / FIB_[9]) bad.push(`draws averaged ${mean}`);   // derived: within a fifty-fifth of a half
+    // holders: only their own stock
+    for (const g of PAN.GODS.slice(0, PAN.BREATH)) for (let k = 0; k < PAN.BREATH; k++) if (PAN.mayWrite(g, k) !== (g.op === "record" || k === g.slot)) bad.push(`${g.title} on stock ${k}`);
+    // the wake: every god's entry round trips; the Measure and a mistyped op are refused
+    const view = PAN.wakeOf(PAN.BREATH); let trip = 0;
+    PAN.GODS.slice(0, PAN.BREATH).forEach((g, i) => { const e = { t: 8640000 - i, slot: g.slot, op: g.op, key: 2 ** 31 - 1 - i, d: -(2 ** 31) + i, cause: i - 1, gate: -(2 ** 15) + i };   // given: a year's ticks, Int32's and Int16's ends
+      PAN.encodeEntry(view, i, e); const r = PAN.decodeEntry(view, i); if (Object.keys(e).every((k) => r[k] === e[k])) trip++; else bad.push(`${g.title}'s entry came back ${JSON.stringify(r)}`); });
+    const refuses = (e) => { try { PAN.encodeEntry(view, 0, e); return false; } catch { return true; } };
+    if (!refuses({ t: 0, slot: PAN.MEASURE.slot, op: "record", key: 0, d: 0 })) bad.push("the Measure wrote an entry");
+    if (!refuses({ t: 0, slot: PAN.godByKey.builder.slot, op: "record", key: 0, d: 0 })) bad.push("the Builder wrote a record");
+    if (PAN.ENTRY_BYTES !== PAN.FIELDS.reduce((a, [, n]) => a + n, 0)) bad.push("the entry's size is not its fields'");
+    lines.push(`the nine: ${PAN.GODS.map((g) => `${g.slot === PAN.BREATH ? "close" : g.slot} ${g.title} (${g.name}) (${g.v}) ${g.op}`).join(" \u00b7 ")}`);
+    lines.push(`orbits: 1 still + ${PAN.ORBIT.length} in one cycle = the breath (${RUNGS.breath}), ${BAR / PAN.BREATH} breaths a bar; F^4 = -I on all nine; the eight sum to (${sa},${sb})`);
+    lines.push(`opposites: ${PAN.GODS.slice(0, PAN.BREATH / 2).map((g) => `${g.title} / ${PAN.opposite(g).title}`).join(", ")}`);
+    lines.push(`reactions: psi = ${PAN.PSI.toFixed(4)}; one breath leaves ${(PAN.SETTLE * 100).toFixed(2)}% of an act and nets ${PAN.NET.toFixed(4)}`);
+    lines.push(`whole units: from 610 the answers walk ${walk.join(", ")}; every act up to 610 keeps within the bound + ${PAN.SLACK.toFixed(4)}`);
+    lines.push(`claims: balanced sets hold; otherwise the earliest slot from the lead, which turns through all ${leads.size} in a full turn of breaths`);
+    lines.push(`wake: ${PAN.ENTRY_BYTES} bytes an entry; ${trip}/${PAN.BREATH} round trips; the Measure and a mistyped op refused; ${3 * BAR} ticks handed on in F's order`);
+    return { ok: !bad.length, lines: [...lines, ...bad.map((b) => `FAIL ${b}`)] };
   },
   inherency() {
     const FREE = new Set([0, 1, 2, 0.5, 90, 180, 360]);   // given: none, one, two, a half, and the degrees of a right angle, a half turn, a turn
