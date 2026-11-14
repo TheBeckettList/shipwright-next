@@ -211,9 +211,8 @@ Built on `world/plans` by Richard's stream for W's plan.
   - wilds: 7%.
 - **The world, at the plan's rate.** About 0.8 KB a head (1.18 MB for 1,506 folk), so ~95 MB for 119,229 folk:
   barely better than the blocks' 0.92 KB a head in the add-on.
-- **Next before the 3 MB target.** The streets and gaps have to be stored the way the buildings are, as the few numbers
-  they're grown from: a street as its control points and class, a gap as its kind and outline. That is in
-  `growth.js`'s closure, so it rides phase 4. Phase 3 (laying plans in game) can start on today's plans.
+- **Decided (D-009, Richard, 2026-11-14): about 95 MB is fine.** The streets and gaps are not reworked to cut size,
+  and the 3 MB estimate is dropped as a target. Phase 3 (laying plans in game) starts on today's plans.
 
 ## Agreed on Olympus (2026-11-13)
 

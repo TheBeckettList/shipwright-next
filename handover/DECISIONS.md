@@ -99,3 +99,13 @@ and the next god answers at psi^2. (7) a stock lives in [0, room], starting at r
 alone the one-day sample's stocks climbed as a walk reflected at zero (the root of their writes); with both ends they
 stay in the room and the overflow is a debt like the shortfall. Open: counterparts for the shallow-water and European
 peoples.
+
+## D-009 — The world's towns as plans at about 95 MB; no 3 MB target  (accepted · Richard · 2026-11-14 · S004)
+Context: phase 2 (world-buildout.md) proved that grown towns lay back from their plans block for block, at about
+0.8 KB a head, so about 95 MB for all 119,229 folk. Getting down to the plan's 3 MB estimate would mean storing streets
+and gaps as the few numbers they're grown from, a change to growth.js's closure.
+Decision: about 95 MB is fine. The plans stay as `tools/plans.mjs` writes them, and the streets and gaps are not
+reworked to cut size.
+Consequence: phase 4's grow doesn't wait on a smaller street or gap store. Shared seeds stay the rule for the
+prototypes, because the game stamps prototypes and fewer of them is less to carry. If the add-on's size becomes a
+problem on a device (the Switch), this decision is the one to reopen.
