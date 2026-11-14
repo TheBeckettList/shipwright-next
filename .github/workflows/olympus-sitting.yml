@@ -1,0 +1,22 @@
+# Olympus: the Measure sits. Each hour, write the record of the last closed sitting on the olympus branch (a sitting
+# is ten hours; writing it again changes nothing) and push it if it changed. Scheduled workflows run only from the
+# default branch, so this one sits idle until it is merged there.
+name: olympus-sitting
+on:
+  schedule: [{ cron: "17 * * * *" }]
+  workflow_dispatch: {}
+permissions: { contents: write }
+jobs:
+  sit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: olympus }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: node olympus/olympus.mjs lens && node olympus/olympus.mjs digest
+      - run: |
+          git config user.name "the Measure (Nereus)"
+          git config user.email "measure@olympus.invalid"
+          git add olympus/sittings
+          git diff --cached --quiet || (git commit -m "The Measure sits" && git push origin HEAD:olympus)

@@ -1,0 +1,9 @@
+# Every platform the same (Claude Code on the web, macOS, Linux, Windows): text in LF, binaries untouched.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.mcaddon binary
+*.mcpack binary
+*.mcworld binary
+*.zip binary
