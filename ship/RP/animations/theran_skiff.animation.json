@@ -105,7 +105,7 @@
         "pennant": {
           "position": [
             0,
-            "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? (q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.571 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.709 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.808 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.772)))) - 1) * 108.096 : -67.536",
+            "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? (q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.581 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.716 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.812 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.777)))) - 1) * 110.596 : -67.536",
             "(math.mod(math.floor(q.property('shipwright:flags') / 1), 2)) ? -q.property('shipwright:mids') * 8 : 20"
           ],
           "rotation": [
@@ -204,14 +204,14 @@
           ],
           "scale": [
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.755 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.873 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.53 : 0.836))))",
-            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.571 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.709 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.808 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.772))))",
+            "q.property('shipwright:rig_scale') * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 0.581 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.716 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.812 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 1.0 : 0.777))))",
             "math.sqrt(q.property('shipwright:rig_scale')) * ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 2 ? 1.0 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 3 ? 0.755 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 4 ? 0.873 : ((math.mod(math.floor(q.property('shipwright:kinds') / 4), 8)) == 5 ? 0.53 : 0.836))))"
           ]
         },
         "rig_square": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 78.216",
+            "(q.property('shipwright:rig_scale') - 1) * 80.716",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -228,7 +228,7 @@
         "rig_lateen": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 51.568",
+            "(q.property('shipwright:rig_scale') - 1) * 54.068",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -245,7 +245,7 @@
         "rig_crab": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 14.676",
+            "(q.property('shipwright:rig_scale') - 1) * 17.176",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * -33.196"
           ],
           "rotation": [
@@ -262,7 +262,7 @@
         "rig_wing": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 11.0",
+            "(q.property('shipwright:rig_scale') - 1) * 13.5",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [
@@ -276,10 +276,234 @@
             "q.property('shipwright:rig_scale')"
           ]
         },
+        "rig_glide_body": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
+        "rig_glide_tail": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
+        "rig_glide_sail": {
+          "position": [
+            0,
+            "-(1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 109.666",
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
+        "rig_glide_l_strut": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
+        "rig_glide_r_strut": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
+        "rig_glide_sail_l_0": {
+          "scale": [
+            1,
+            "math.clamp(1 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
+            1
+          ]
+        },
+        "rig_glide_sail_l_1": {
+          "scale": [
+            1,
+            "math.clamp(2 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
+            1
+          ]
+        },
+        "rig_glide_sail_l_2": {
+          "scale": [
+            1,
+            "math.clamp(3 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
+            1
+          ]
+        },
+        "rig_glide_sail_r_0": {
+          "scale": [
+            1,
+            "math.clamp(1 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
+            1
+          ]
+        },
+        "rig_glide_sail_r_1": {
+          "scale": [
+            1,
+            "math.clamp(2 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
+            1
+          ]
+        },
+        "rig_glide_sail_r_2": {
+          "scale": [
+            1,
+            "math.clamp(3 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
+            1
+          ]
+        },
+        "rig_glide_plate_l_0": {
+          "scale": [
+            "math.clamp(1 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
+            1,
+            1
+          ]
+        },
+        "rig_glide_plate_l_1": {
+          "scale": [
+            "math.clamp(2 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
+            1,
+            1
+          ]
+        },
+        "rig_glide_plate_l_2": {
+          "scale": [
+            "math.clamp(3 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
+            1,
+            1
+          ]
+        },
+        "rig_glide_plate_r_0": {
+          "scale": [
+            "math.clamp(1 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
+            1,
+            1
+          ]
+        },
+        "rig_glide_plate_r_1": {
+          "scale": [
+            "math.clamp(2 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
+            1,
+            1
+          ]
+        },
+        "rig_glide_plate_r_2": {
+          "scale": [
+            "math.clamp(3 - (1 - (1 - q.property('shipwright:fold'))) * 3, 0, 1)",
+            1,
+            1
+          ]
+        },
+        "rig_glide_mast_0": {
+          "scale": [
+            1,
+            "math.clamp(1 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
+            1
+          ]
+        },
+        "rig_glide_mast_1": {
+          "scale": [
+            1,
+            "math.clamp(2 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
+            1
+          ]
+        },
+        "rig_glide_mast_2": {
+          "scale": [
+            1,
+            "math.clamp(3 - (1 - math.min(q.property('shipwright:clam_up'), q.property('shipwright:fold'))) * 3, 0, 1)",
+            1
+          ]
+        },
+        "rig_glide_plate_l": {
+          "position": [
+            "-1 * (1 - (1 - q.property('shipwright:fold'))) * 109.666",
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
+        "rig_glide_plate_r": {
+          "position": [
+            "1 * (1 - (1 - q.property('shipwright:fold'))) * 109.666",
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
+        "rig_glide_sail_l": {
+          "position": [
+            0,
+            0,
+            "1 * 6.111 * q.property('shipwright:clam_cam')"
+          ]
+        },
+        "rig_glide_sail_r": {
+          "position": [
+            0,
+            0,
+            "-1 * 6.111 * q.property('shipwright:clam_cam')"
+          ]
+        },
+        "rig_glide_tailtip": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8 + 16 * (1 - q.property('shipwright:fold'))"
+          ]
+        },
+        "rig_glide_hstab": {
+          "rotation": [
+            0,
+            "1 * q.property('shipwright:rudder') / 1.6180",
+            0
+          ]
+        },
+        "rig_glide_rud_l_mid": {
+          "rotation": [
+            0,
+            "1 * q.property('shipwright:rudder') / 1.6180 * 0.1723",
+            0
+          ]
+        },
+        "rig_glide_rud_l_aft": {
+          "rotation": [
+            0,
+            "1 * q.property('shipwright:rudder') / 1.6180 * 0.1723",
+            0
+          ]
+        },
+        "rig_glide_rud_r_mid": {
+          "rotation": [
+            0,
+            "1 * q.property('shipwright:rudder') / 1.6180 * 0.1723",
+            0
+          ]
+        },
+        "rig_glide_rud_r_aft": {
+          "rotation": [
+            0,
+            "1 * q.property('shipwright:rudder') / 1.6180 * 0.1723",
+            0
+          ]
+        },
+        "rig_glide_l": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
+        "rig_glide_r": {
+          "position": [
+            0,
+            0,
+            "-q.property('shipwright:mids') * 8"
+          ]
+        },
         "rig_junk": {
           "position": [
             0,
-            "(q.property('shipwright:rig_scale') - 1) * 20.849",
+            "(q.property('shipwright:rig_scale') - 1) * 23.349",
             "-q.property('shipwright:mids') * 8 + (q.property('shipwright:rig_scale') - 1) * 0"
           ],
           "rotation": [

@@ -135,11 +135,11 @@ export function computeHandling(rec, load = 0, crew = 0) {
   const sail = !!rec.sections.rig?.sail;
   const hullMass = Math.sqrt(timber / STANDARD_TIMBER.v) * (avgDensity / REFERENCE_DENSITY);
   const mods = rec.modules ?? [];
-  const outrigger = !!plan.outrigger || !!plan.twin || mods.includes("outrigger");   // twin hulls steady like an outrigger
+  const outrigger = !!plan.outrigger || !!plan.twin || !!plan.tri || mods.includes("outrigger");   // twin hulls and a trimaran's floats steady like an outrigger
   // The ship is the sum of its parts: hull, rig, every module, the sea chest's load, the crew aboard.
   const body = bodyOf({
     hull: { mass: hullMass, beam: B, depth: D, length: L, ratio, twin: !!plan.twin },
-    sail, modules: [...mods, ...(plan.outrigger && !mods.includes("outrigger") ? ["outrigger"] : [])], load, crew,
+    sail, modules: [...mods, ...((plan.outrigger || plan.tri) && !mods.includes("outrigger") ? ["outrigger"] : [])], load, crew,   // a trimaran's floats right her as an outrigger's does (therans.md: keyed off tri, not a second float)
   });
   const weight = body.mass;
 
@@ -231,7 +231,7 @@ export function computeHandling(rec, load = 0, crew = 0) {
   // Waterworld's math (ourmath.js, core/boat.js): her crew's speed, her sail's, the water's drag and her heel
   // come from the core hull built from these same numbers, so the helm sails as the trials say she should
   out.mast = rig.mast;   // the rig she would carry: the heel law reads it whenever a sail draws
-  out.core = coreHull(out, { fullness: plan.fullness, twin: !!plan.twin, outrigger: floatFitted, benchPull: out.benchPull });
+  out.core = coreHull(out, { fullness: plan.fullness, twin: !!plan.twin || !!plan.tri, outrigger: floatFitted, benchPull: out.benchPull });   // a trimaran stands on floats each carrying her whole displacement (core/boat.js TWIN)
   out.max = pullBpt(out.core) * (prop.top ?? 1) * reach;
   out.hullSpeedBpt = hullBpt(out.core);
   return out;

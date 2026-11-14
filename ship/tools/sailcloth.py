@@ -17,6 +17,8 @@ REGION = {"square": (0, 0, 60, 60), "lateen": (64, 0, 60, 60), "crab_claw": (0, 
 CLEAR = (124, 0, 4, 4)        # transparent: the cloth's edges and the faces seen edge-on
 SPAR = (64, 124, 56, 4)       # wood for yards, spars and battens
 SOLID = (24, 24, 8, 8)        # plain cloth, for the wing's rigid skin
+SKIN = (120, 60, 8, 8)        # translucent cloth, for the Exokoitos's skin (her body and wings: drawn blended)
+CORE = (120, 68, 8, 8)        # asterion's glow, for her core (drawn emissive)
 TELLTALE = (120, 120, 8, 8)
 
 CRAB_OPENING, CRAB_TILT, CRAB_SAG = 56, 74, 0.22

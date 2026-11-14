@@ -124,7 +124,10 @@ def overlaps(pid, bones):
     return [f"{k} x{n}" for k, n in Counter(hits).most_common()]
 
 
-PROPULSION = {"paddle", "dpaddle", "pole", "scull", "staff", "rudder_post"}
+# one way of moving or steering at a time: the render controllers show the steering oar or T-rudder ("rudder") only
+# under sail with rudder type 0, the sternpost rudder with type 1, a scull or pole in place of both, the stern staff
+# only when there is no sail (S002/S003: the foiler's T-rudder hangs on the centre line, where the others do)
+PROPULSION = {"paddle", "dpaddle", "pole", "scull", "staff", "rudder_post", "rudder"}
 
 
 def exclusive(a, b):

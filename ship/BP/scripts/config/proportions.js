@@ -978,10 +978,10 @@ export const PROPORTIONS = {
     "typical_len": 8.5
   },
   "theran_ship": {
-    "beam": 1.5148,
+    "beam": 0.7648,
     "depth": 0.9375,
     "draft": 0.5938,
-    "wash": 0.1875,
+    "wash": 0.1406,
     "deck": "half",
     "sheds": false,
     "decks": 0,
@@ -998,19 +998,19 @@ export const PROPORTIONS = {
     "mast_count": 4,
     "seats": {
       "lo": [
-        0.5,
+        0.425,
         0.35
       ],
       "": [
-        0.712,
-        0.462
+        0.619,
+        0.369
       ],
       "hi": [
-        1.084,
-        0.834
+        0.958,
+        0.708
       ]
     },
-    "rail": 1.462,
+    "rail": 1.369,
     "helm": "oar",
     "mast_at": [
       0.0,
@@ -1018,7 +1018,7 @@ export const PROPORTIONS = {
       0.33,
       0.33
     ],
-    "oar": 1.181,
+    "oar": 0.506,
     "sail": {
       "square": 20.999,
       "lateen": 24.817,
@@ -1026,8 +1026,8 @@ export const PROPORTIONS = {
       "junk": 22.908,
       "wing": 17.181
     },
-    "twin_gap": 2.55,
-    "pod_half": 0.1361,
+    "twin_gap": 3.3,
+    "pod_half": 0.3011,
     "float_out": 2.38,
     "float_len": 5.525,
     "typical_len": 8.5

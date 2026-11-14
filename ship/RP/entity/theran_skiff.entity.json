@@ -4,7 +4,9 @@
     "description": {
       "identifier": "shipwright:theran_skiff",
       "materials": {
-        "default": "entity_alphatest"
+        "default": "entity_alphatest",
+        "skin": "entity_alphablend",
+        "glow": "entity_emissive_alpha"
       },
       "textures": {
         "hull_oak": "textures/entity/shipwright/hull_oak",

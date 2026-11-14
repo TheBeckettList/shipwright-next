@@ -325,6 +325,9 @@
           "staff": "q.property('shipwright:stage') >= 5 && !(math.mod(math.floor(q.property('shipwright:flags') / 1), 2))"
         },
         {
+          "foils": "q.property('shipwright:stage') >= 4"
+        },
+        {
           "amas": "q.property('shipwright:stage') >= 3"
         },
         {

@@ -418,6 +418,11 @@ def measure(pid, law, mids, wl):
                 hull1.append(p)
                 reach = min(reach if reach is not None else math.inf, p["P"][:, 0].min())
         xs = np.concatenate([p["P"][:, 0] for p in hull1]) if hull1 else np.array([0.0])
+        if hull1:                                     # and her depth one hull's too: the iako and platform over the sheers
+            ys = np.concatenate([p["P"][:, 1] for p in hull1])   # are her joining, not her hull
+            if G.BOATS[pid].get("crown"):             # a crowned hull's crown rolls in from the outer face: every piece within
+                x0, x1 = xs.min() - EPS, xs.max() + EPS   # her breadth is hers
+                ys = np.concatenate([p["P"][:, 1] for p in mid if x0 <= p["P"][:, 0].mean() <= x1])
     else:
         xs = np.concatenate([p["P"][:, 0] for p in mid])
     B = float(xs.max() - xs.min())
@@ -425,7 +430,11 @@ def measure(pid, law, mids, wl):
     # the hull's depth runs to her sheer: a washstrake over it (where her freeboard falls short of her reach's need)
     # counts for freeboard, not for depth, draught or GM (gen_boats draws it wash px over the sheer)
     wash = G.BOATS[pid].get("wash", 0) * G.y_scale(G.BOATS[pid].get("scale", 1)) * PX
-    m = dict(L=float(L), B=B, D=rail - wash - bottom, bottom=bottom, rail=rail, wash=wash)
+    # an AC72 crowned hull (gen_boats shell(): the shell rolling over the top, rising X/phi from the sheer to the centre
+    # line) is measured like a washstrake: the crown is reserve freeboard, her depth runs to her sheer
+    bb = G.BOATS[pid]
+    crown = (bb["F"] + G.outer_of(bb["section"], bb.get("scale", 1))) / G.PHI * G.y_scale(bb.get("scale", 1)) * PX if bb.get("crown") else 0
+    m = dict(L=float(L), B=B, D=rail - wash - crown - bottom, bottom=bottom, rail=rail, wash=wash + crown)
     m["T"] = wl - bottom if wl is not None else None
     m["fb"] = rail - wl if wl is not None else None
     # walls: each slab's least side by its tag (a bone named for its kind: shell, keel, wale, deck; untagged hull
