@@ -54,6 +54,7 @@ main() {
     [ -d "$TMP/$d" ] && mkdir -p "$ROOT/$d" && cp -R "$TMP/$d/." "$ROOT/$d/"
   done
   for f in README.md package.json; do [ -f "$TMP/$f" ] && cp "$TMP/$f" "$ROOT/$f"; done
+  if [ -f "$TMP/BUILD" ]; then cp "$TMP/BUILD" "$DEV/.build"; echo "Build: $(grep -E '^(branch|commit)' "$TMP/BUILD" | cut -d' ' -f2 | cut -c1-24 | paste -sd' ' -)"; else rm -f "$DEV/.build"; fi   # which build this is (ww update compares)
   echo "Behavior pack $(ver "$ROOT/BP/manifest.json"), resource pack $(ver "$ROOT/RP/manifest.json")"
 
   say "4/5 Starting the server${WIPE:+ on a fresh world}"

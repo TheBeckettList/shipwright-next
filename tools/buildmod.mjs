@@ -937,7 +937,7 @@ First time (in Terminal):
 That puts "ww" on your PATH, deletes the old test servers (it asks first), and starts a clean one for the Switch.
 
 Every update after that:
-  download waterworld-update.zip from the chat, then:   ww update        (keeps the world)
+  ww update        pulls the newest build from GitHub and installs it (keeps the world)
                                                          ww update --new  (a brand-new world)
 
 While testing:
