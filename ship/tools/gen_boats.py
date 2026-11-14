@@ -3251,9 +3251,8 @@ def theran_keel(b):
     if b.get("tri"):
         # (Richard: "make the large one a bit more unique: retractable twin keels so she can stand in shallow water,
         # like a mobile island; the keel the two, and then the hull bracket between them"): two bilge keels under her
-        # main hull, splayed out at atan 1/phi^2, each flat-footed on a shoe to stand on the sea floor, and aft on her
-        # centre line the bracket, a skeg that is the tripod's third leg; all three run up into her when she wants the
-        # water and down to the floor when she stands (shipwright:keel, keels.js)
+        # main hull, splayed out at atan 1/phi^2, each flat-footed on a shoe to stand on the sea floor; both run up into
+        # her when she wants the water and down to the floor when she stands (shipwright:keel, keels.js)
         xk = b["F"] * 0.8                              # vision: under her bilges
         foot = yax - side / PHI ** 2                   # the feet's plane, one for all three legs
         cant = math.atan(1 / PHI ** 2)                 # vision: splayed as the twin-keelers' are
@@ -3268,10 +3267,7 @@ def theran_keel(b):
             q += loft_quads(st)
             # its shoe: a short flat-bottomed bulb along the foot, to stand on
             q += drop_quads(sx * (xk + (1.5 - foot) * math.tan(cant)), foot, -ck * 0.55 + (1.5 - foot) * math.tan(math.atan(1 / PHI ** 2)) * 0.6, ck * PHI ** 0.5, ck / PHI ** 3)
-        # the bracket: the skeg aft on her centre line, down to the same plane
-        zs_ = mh["L"] * 0.3
-        q += fin_quads(0.0, 1.5, foot, zs_ - ck / 2, ck * 0.8, ck * 0.55, math.atan(1 / PHI ** 2))
-        q += drop_quads(0.0, foot, zs_ - ck * 0.35 + (1.5 - foot) * math.tan(math.atan(1 / PHI ** 2)), ck * 0.9, ck / PHI ** 3.5)
+        # (Richard: "remove the rear one; let it rest on two"): no skeg; she stands on her two keels alone
         b["_keel_reach"] = 1.5 - foot                  # how far they reach below her (model px)
         fl_y = b["wl"] - mh["float_r"]
         for sx in (-1, 1):                             # the floats': a plain daggerboard each, retracting with them

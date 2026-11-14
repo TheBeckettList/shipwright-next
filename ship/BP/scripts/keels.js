@@ -1,5 +1,5 @@
 // The flagship's retracting keels (Richard: "retractable twin keels so she can stand in shallow water, like a mobile
-// island; the keel the two, and then the hull bracket between them"). Two bilge keels and a skeg aft, one tripod. They
+// island"; "remove the rear one, let it rest on two"). Two bilge keels, splayed. They
 // reach down as far as the water lets them: in deep water all the way, sailing on them; over shallows they draw up to
 // clear the floor; at anchor in shallows they come down onto the floor and she stands on them, still as an island.
 // Pure: what the keels do, from her sounding and draught. steering.js shows it and holds her.
