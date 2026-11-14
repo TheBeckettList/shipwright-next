@@ -7,6 +7,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { loadMap } from "../world/load.js";
+import { PALETTE as PEOPLE_PAL } from "../world/palette.js";
 import { decode } from "./png.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -114,13 +115,14 @@ const protos = [], protoKey = new Map();
 /** A prototype from a vox map, turned r quarter-turns clockwise: { flat [x,y,z,p,...], bounds }. */
 function proto(name, vox, r = 0) {
   const key = `${name}@${r}`; if (protoKey.has(key)) return protoKey.get(key);
+  const base = r ? proto(name, vox, 0) : null; if (base) vox = base.vox;   // a turn of the name's own base, never of another vox under the same name (the game lays the base turned: a turn built from other blocks stood in a box its blocks didn't fill, and lost its doors to the chunk's edge)
   const flat = []; let b = [Infinity, -Infinity, Infinity, -Infinity, Infinity, -Infinity];
   for (const [k, blk] of vox) {
     let [x, y, z] = k.split(",").map(Number); for (let t = 0; t < r; t++) [x, z] = [-z, x];
     flat.push(x, y, z, pal(blk.id, turnStates(blk.s, r)));
     b = [Math.min(b[0], x), Math.max(b[1], x), Math.min(b[2], y), Math.max(b[3], y), Math.min(b[4], z), Math.max(b[5], z)];
   }
-  const P = { i: protos.length, name: key, flat, b, r, base: r ? proto(name, vox, 0).i : null }; protos.push(P); protoKey.set(key, P); return P;   // a turned prototype keeps its base: only the bases are written (the game turns them: lay.js)
+  const P = { i: protos.length, name: key, flat, b, r, base: base ? base.i : null, vox: r ? null : vox }; protos.push(P); protoKey.set(key, P); return P;   // a turned prototype keeps its base: only the bases are written (the game turns them: lay.js)
 }
 const footOf = (vox) => { let b = [Infinity, -Infinity, Infinity, -Infinity]; for (const k of vox.keys()) { const [x, , z] = k.split(",").map(Number); b = [Math.min(b[0], x), Math.max(b[1], x), Math.min(b[2], z), Math.max(b[3], z)]; } return b; };
 
@@ -130,11 +132,19 @@ const shiftAt = (bx, bz) => { const wx = D0.x + bx / K, wy = D0.y + bz / K, [rx,
 const toWorld = (bx, bz, sh) => [Math.round(SX + D0.x * K + bx + sh[0]), Math.round(SZ - (D0.y * K + bz + sh[1]))];
 
 const placements = [], taken = new Set(), why = {};
+const STILT_DEEP = FIB[3];   // derived: the grown towns' own bound (growth.js planeOf, district.js: the stilt peoples build over water three deep at most), so one people builds by one rule wherever it stands
+const CREPIDOMA = FIB[3];   // given: a crepidoma is three steps, the most a footing stands (thera.md §2 rule 1)
+const LIFT = FIB[2];   // vision: on land the stilt peoples still raise the floor on posts, two blocks over the highest ground under it (terraform.md: a pad raised LIFT)
+const POST_MAX = FIB[4] + 1;   // derived: a post at most six (terraform.md: the pad law's five, and the floor's block)
 const no = (w) => { why[w] = (why[w] ?? 0) + 1; return false; };
 const colKey = (x, z) => `${x},${z}`;
 const BAD = new Set(["round harbour", "merchant harbour", "fairway", "ring canal", "wall canal", "canal"].map((k) => G.KIND[k]));
-/** Place a prototype with its footprint's middle at world (X, Z): its floor (y 0) on the highest ground under it. */
-function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, water = false, stilts = false, tag = "", pad = 0, kinds = null, slope = Infinity, anyWater = false, carve = false, trunk = false, over = false, foot = null, origin = false } = {}) {   // origin: the prototype's own 0,0 goes at X, Z (not its box's middle)   // foot: the columns it truly stands on (a round pad's), in place of its box   // over: stands on something already placed (a dockhouse on its pad)
+/** Place a prototype with its footprint's middle at world (X, Z): its floor (y 0) on the highest ground under it.
+ *  wet: a people that builds over the shallows (its key; the stilt-house peoples): always on stilts of its frame wood, a block over the sea where
+ *  its footprint is water no deeper than STILT_DEEP and LIFT over the highest ground where it stands on land, refused
+ *  over deeper water or where a post would pass POST_MAX (a floor at the sea's level on a hill was buried by the deep
+ *  pass: design/s004-specs/terraform.md §1). */
+function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, water = false, stilts = false, wet = false, tag = "", pad = 0, kinds = null, slope = Infinity, anyWater = false, carve = false, trunk = false, over = false, foot = null, origin = false, dry = false } = {}) {   // dry: weigh the site (its earthwork) without taking it   // origin: the prototype's own 0,0 goes at X, Z (not its box's middle)   // foot: the columns it truly stands on (a round pad's), in place of its box   // over: stands on something already placed (a dockhouse on its pad)
   const [x0, x1, , , z0, z1] = trunk ? [0, 0, 0, 0, 0, 0] : P.b, ox = origin ? X : X - Math.round((x0 + x1) / 2), oz = origin ? Z : Z - Math.round((z0 + z1) / 2);   // trunk: the footprint is the trunk's column (a crown hangs free)
   if (!over) { if (foot) { for (const [x, z] of foot) if (taken.has(colKey(ox + x, oz + z))) return no("overlap"); } else for (let x = x0 - pad; x <= x1 + pad; x++) for (let z = z0 - pad; z <= z1 + pad; z++) if (taken.has(colKey(ox + x, oz + z))) return no("overlap"); }
   let top = -Infinity, low = Infinity; const cols = [];
@@ -145,9 +155,13 @@ function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, 
     const t = G.SEA + Math.round(g.h); if (t <= G.SEA && !water) return no("the sea"); top = Math.max(top, t); low = Math.min(low, t); cols.push([wx, wz, t]);
   }
   if (top - low > slope) return no("too steep");
-  const y0 = trunk ? top + 1 : floorAt ?? (carve ? Math.max(low, G.SEA + 1) : Math.max(top, G.SEA + 1));   // a carved house sits at its downhill foot, cut into the slope
+  if (wet) { if (cols.some(([, , t]) => G.SEA - t > STILT_DEEP)) return no("water too deep for stilts");
+    stilts = true; foundation = PEOPLE_PAL[wet]?.frame ?? foundation; floorAt = Math.max(G.SEA + 1, top + LIFT); if (floorAt - low > POST_MAX) return no("posts too tall"); }   // always on posts: a block over the shallows, LIFT over the land (the sea's own columns lie under it: lay.js lays water over a top under SEA)
+  let y0 = trunk ? top + 1 : floorAt ?? (carve ? Math.max(low, G.SEA + 1) : Math.max(top, G.SEA + 1));   // a carved house sits at its downhill foot, cut into the slope
+  let cut = false; if (!trunk && floorAt == null && !carve && !over && y0 - 1 - low > CREPIDOMA) { y0 = Math.max(low + CREPIDOMA + 1, G.SEA + 1); carve = cut = true; }   // a footing of three steps at most: past that the floor drops and the slope above is cut back (thera.md §2)
+  if (dry) { let cut = 0, fill = 0; for (const [, , t] of cols) { cut += Math.max(0, t - y0); fill += Math.max(0, y0 - 1 - t); } return { cut, fill, score: cut + PHI * fill }; }   // derived: fill weighs phi to cut's one (a footing is built, a cut only dug)
   for (const [wx, wz] of cols) taken.add(colKey(wx, wz));
-  placements.push({ p: P.i, x: ox, y: y0, z: oz, f: pal(foundation), stilts, carve, tag, b: [ox + x0, oz + z0, ox + x1, oz + z1] });
+  placements.push({ p: P.i, x: ox, y: y0, z: oz, f: pal(foundation), stilts, carve, cut, tag, b: [ox + x0, oz + z0, ox + x1, oz + z1] });
   return true;
 }
 
@@ -157,6 +171,17 @@ const eu = byT.get("european");
 const theran = theranPeople(eu);   // vision: the Therans as the pack draws them (tools/lab.mjs's houses lens)
 const houseVox = new Map();
 const houseFor = (t) => { if (houseVox.has(t)) return houseVox.get(t); const p = t === "therans" ? theran : byT.get(t); const law = FORM[t]?.form ?? "twocell", h = houseOf(p, { n: HOUSEHOLD[law] ?? 5, job: "fisherman", tradition: t }); houseVox.set(t, h); return h; };   // the same house the boxes are sized from (world/boxes.js houseBox)
+/** A stilt house's way up: where its blocks carry no ladder, one at the floor's level outside its lowest door, hung on
+ *  the floor (the game runs it on down to the ground: lay.js). A copy: the house's own blocks are shared. */
+const withLadder = (vox) => {
+  const has = (x, z) => { for (const k of vox.keys()) { const [a, , c] = k.split(","); if (+a === x && +c === z) return true; } return false; };
+  if ([...vox.values()].some((b) => b.id === "minecraft:ladder")) return vox;
+  let door = null; for (const [k, b] of vox) { if (!/_door$/.test(b.id) || b.s?.upper_block_bit) continue; const [x, y, z] = k.split(",").map(Number); if (!door || y < door[1]) door = [x, y, z]; }
+  if (!door) return vox;
+  for (const [ux, uz, face] of [[1, 0, 5], [-1, 0, 4], [0, 1, 3], [0, -1, 2]]) { const nx = door[0] + ux, nz = door[2] + uz; if (has(nx, nz) || !vox.has(`${door[0]},${door[1] - 1},${door[2]}`)) continue;   // given: out of the door each way, the ladder's facing that way
+    const out = new Map(vox); out.set(`${nx},${door[1] - 1},${nz}`, { id: "minecraft:ladder", s: { facing_direction: face } }); return out; }
+  return vox;
+};
 const small = (blocks) => new Map(blocks.map(([x, y, z, id, s]) => [`${x},${y},${z}`, { id, s: s ?? null }]));
 const WELL = small([...[-1, 0, 1].flatMap((a) => [-1, 0, 1].flatMap((b) => (a || b ? [[a, 0, b, "minecraft:cobblestone"], [a, 1, b, "minecraft:cobblestone_wall"]] : [[0, 0, 0, "minecraft:water"]]))), [0, -1, 0, "minecraft:water"], [-1, 2, -1, "minecraft:oak_fence"], [1, 2, 1, "minecraft:oak_fence"], [-1, 2, 1, "minecraft:oak_fence"], [1, 2, -1, "minecraft:oak_fence"], ...[-1, 0, 1].flatMap((a) => [-1, 0, 1].map((b) => [a, 3, b, "minecraft:oak_slab"]))]);   // vision: a village well
 const BELL = small([[0, 0, 0, "minecraft:stone_bricks"], [0, 1, 0, "minecraft:oak_fence"], [0, 2, 0, "minecraft:bell", { attachment: "standing", direction: 0 }], [0, 3, 0, "minecraft:lantern", { hanging: false }]]);   // vision
@@ -191,7 +216,9 @@ let TP = null, templeOk = false, HORAIA_AT = null; const POOLDRESS = [], POOLFIS
   const site = (name, a, r0) => { const vox = CIVIC[name](), r = turnTo(a + Math.PI), P = proto(name, vox, r);   // its front toward the summit's outside (away from the middle)
     const tries = []; for (let r1 = r0; r1 < r0 + FIB[10]; r1 += 3) tries.push([r1, a]); for (let k = 1; k < (FIB[10] + FIB[9]); k++) tries.push([r0 + FIB[8] * Math.sqrt(k / (FIB[10] + FIB[9])), a + k * Math.PI * (3 - Math.sqrt(5))]);   // straight out, then a golden spiral round the spot (given: the golden angle)
     const w0 = { ...why };
-    for (const [r1, a1] of tries) { const X = Math.round(cx + r1 * Math.cos(a1)), Z = Math.round(cz + r1 * Math.sin(a1)); if (place(P, X, Z, { foundation: "minecraft:calcite", pad: 3, tag: name === "great temple" ? "temple" : name })) { if (name === "great temple") { TP = P; templeOk = true; } done.push(`${name} ${r1} out`); return; } }
+    const opts = { foundation: "minecraft:calcite", pad: 3, tag: name === "great temple" ? "temple" : name }; let best = null;
+    for (const [r1, a1] of tries) { const X = Math.round(cx + r1 * Math.cos(a1)), Z = Math.round(cz + r1 * Math.sin(a1)), w = place(P, X, Z, { ...opts, dry: true }); if (w && (!best || w.score < best.w.score)) best = { X, Z, r1, w }; }   // every try weighed: the least earthwork, cut plus phi times fill (thera.md §2 rule 2)
+    if (best && place(P, best.X, best.Z, opts)) { if (name === "great temple") { TP = P; templeOk = true; } done.push(`${name} ${best.r1.toFixed(0)} out (cut ${best.w.cut}, fill ${best.w.fill})`); return; }
     done.push(`${name} NOT placed (${Object.entries(why).filter(([k, v]) => v > (w0[k] ?? 0)).map(([k, v]) => `${v - (w0[k] ?? 0)} ${k}`).join(", ")})`); };
   // the cascading pools (world/theraplan.js): the Horaia on the first one's island; each pool dressed as its water,
   // and its fish (spawned with the chunk's folk: lay.js POOLFISH)
@@ -226,7 +253,27 @@ let TP = null, templeOk = false, HORAIA_AT = null; const POOLDRESS = [], POOLFIS
     done.push(`the pools dressed (${dressed} things on their floors), ${fish0} fish, ${beasts} beasts on their banks`); }
   site("great temple", mouth, 0);   // the Sea Rite Temple on the summit's middle
   site("navigation house", mouth + Math.PI, 89); site("library", mouth + (2 * Math.PI) / 3, 89); site("government seat", mouth - (2 * Math.PI) / 3, 89);   // vision: eighty-nine out from the summit's middle at least (clear of the great temple)
-  say(`the summit: ${done.join(", ")}`); }
+  say(`the summit: ${done.join(", ")}`);
+  // the museum of the lost keels (handover/design/lost-keels.md on sim/sea; agreed on Olympus, 0001689165-builder): a
+  // stoa on the library's south terrace, 55 by 8 (FIB[9] x FIB[5]), its back to the library, its colonnade to the
+  // sea; eleven plinths at five, the flagship's three wide at its head (east). Empty until a keel comes home.
+  { const lib = placements.find((q) => q.tag === "library"); if (!lib) say("the museum: no library to stand by");
+    else { const L = FIB[9], D = FIB[5], H = FIB[3] + 1, vox = new Map(), put = (x, y, z, id) => vox.set(`${x},${y},${z}`, { id, s: null });   // derived: 55 long, 8 deep, four high under the roof
+      for (let x = 0; x < L; x++) for (let z = 0; z < D; z++) { put(x, 0, z, "waterworld:theran_marble_tile"); put(x, H + 1, z, "waterworld:theran_marble_tile"); }   // the floor and the roof
+      for (let x = 0; x < L; x++) for (let y = 1; y <= H; y++) put(x, y, 0, "waterworld:theran_marble_ashlar");   // the back wall, toward the library
+      for (let x = 0; x < L; x += FIB[4]) for (let y = 1; y <= H; y++) put(x, y, D - 1, "minecraft:quartz_pillar");   // the colonnade, a column every five
+      for (let y = 1; y <= H; y++) put(L - 1, y, D - 1, "minecraft:quartz_pillar");
+      for (let k = 0; k < FIB[9] / FIB[4] - 1; k++) put(FIB[3] + FIB[4] * k, 1, FIB[3], "waterworld:theran_marble_polished");   // derived: ten plinths at five
+      for (let x = L - FIB[4]; x < L - FIB[4] + FIB[3]; x++) for (let z = FIB[2]; z < FIB[2] + FIB[3]; z++) put(x, 1, z, "waterworld:theran_marble_polished");   // the flagship's, three by three at the head
+      const P = proto("museum of the lost keels", vox, 0), cx = Math.round((lib.b[0] + lib.b[2]) / 2); let best = null;
+      for (let dz = FIB[2]; dz <= FIB[5]; dz++) for (let dx = -FIB[4]; dx <= FIB[4]; dx++) { const X = cx + dx, Z = lib.b[3] + dz + D / 2, w = place(P, X, Z, { foundation: "minecraft:calcite", dry: true }); if (w && (!best || w.score < best.w.score)) best = { X, Z, w }; }   // along the terrace, the least earthwork
+      say(best && place(P, best.X, best.Z, { foundation: "minecraft:calcite", tag: "museum" }) ? `the museum of the lost keels on the library's south terrace (cut ${best.w.cut}, fill ${best.w.fill})` : "the museum: NOT placed (the terrace is taken)"); } }
+  // Olympus (world/olympus.js): the world's highest summit, and the ring of nine on it
+  { const O = await import("../world/olympus.js"), M = await import("../world/map.js"), m = M.map(), V = (await import("../core/given.js")).VISION;
+    const top = O.summitOf({ w: m.w, h: m.h, chunkHeight: M.chunkHeight, topAt: G.topAt, px: V.MAP_PX });
+    const stones = new Map(); for (const [dx, y, dz, id] of O.ringOf()) { const k = `${dx},${dz}`; if (!stones.has(k)) stones.set(k, []); stones.get(k).push([y - 1, id]); }
+    let n = 0; for (const [k, col] of stones) { const [dx, dz] = k.split(",").map(Number); if (place(proto(`olympus stone ${k}`, new Map(col.map(([y, id]) => [`0,${y},0`, { id, s: null }])), 0), top.x + dx, top.z + dz, { trunk: true, tag: "olympus" })) n++; }
+    say(`Olympus: the summit at ${top.x}, ${top.y}, ${top.z} (${top.y - G.SEA} over the sea); ${n} of 9 stones in its ring`); } }
 // the skyways (world/theraplan.js, game/skyway.js): a tree from the cone's skirt to each Theran quarter, over the
 // lagoon at the great ships' clearance and up the wall to the rim; laid before the houses so they keep clear of it
 { const { skywayNetwork } = await import("../game/skyway.js"), ground = (X, Z) => { const t = G.SEA + Math.round(G.heightAt(X, Z).h); return { top: t, water: t <= G.SEA }; };
@@ -257,15 +304,23 @@ let TP = null, templeOk = false, HORAIA_AT = null; const POOLDRESS = [], POOLFIS
   const ring = (L) => { const pts = []; for (let a = 0; a < 360; a += 2) { const t = (a * Math.PI) / 180; let hit = null; for (let r = 4; r < R * 1.3; r++) if (Hs(Math.round(CX + r * Math.cos(t)), Math.round(CZ + r * Math.sin(t))) <= L) { hit = r; break; } pts.push(hit); }   // vision: a point every two degrees
     const sm = pts.map((r, i) => { if (r == null) return null; let s = 0, n = 0; for (let d = -3; d <= 3; d++) { const q = pts[(i + d + pts.length) % pts.length]; if (q != null) { s += q; n++; } } return s / n; });   // vision: smoothed over fourteen degrees
     const out = []; sm.forEach((r, i) => { if (r != null) out.push([CX + r * Math.cos((i * 2 * Math.PI) / 180), CZ + r * Math.sin((i * 2 * Math.PI) / 180)]); }); if (out.length > 2) out.push(out[0]); return out; };
-  const LEVELS = [FIB[8], FIB[7], FIB[6], FIB[5]];   // derived: 34, 21, 13 and 8 blocks over the sea
+  const LEVELS = [FIB[9], FIB[8], FIB[7], FIB[6]];   // derived: 55, 34, 21 and 13 blocks over the sea (thera.md §2: the stoa's roof at 13, the contours to 55; the low rings at 5 and 8 fall in the waterfront's band)
   for (const L of LEVELS) if (L < Hs(Math.round(CX), Math.round(CZ))) stroke(ring(L));
   // the serpentine ways: from the summit's edge down, each step the most downhill heading that falls no more than a block in phi squared
-  const GRADE = 1 / PHI ** 2, SPOKES = FIB[4];   // derived: a block's fall in two and a half; five ways
+  const GRADE = 1 / PHI ** 2, SPOKES = FIB[5];   // derived: a block's fall in two and a half; eight ways (thera.md §2, up from five)
   for (let s = 0; s < SPOKES; s++) { const a0 = s * GOLDEN_ANGLE, side = s % 2 ? 1 : -1; let x = CX + FIB[9] * Math.cos(a0), z = CZ + FIB[9] * Math.sin(a0), h = Hs(Math.round(x), Math.round(z)); const pts = [[x, z]];   // derived: from fifty-five out (the summit's buildings inside)
     for (let n = 0; n < FIB[10] * FIB[3] && h > 2; n++) { const out = Math.atan2(z - CZ, x - CX); let best = null;
       for (let turn = 0; turn <= 75; turn += 5) { const t = out + side * (turn * Math.PI) / 180, nx = x + Math.cos(t), nz = z + Math.sin(t), nh = G.heightAt(Math.round(nx), Math.round(nz)).h; if (h - nh <= GRADE + 0.5 || turn === 75) { best = [nx, nz, nh]; break; } }   // vision: turning up to seventy-five degrees off the fall line, five at a time
       [x, z] = best; h = best[2]; if (n % 3 === 0) pts.push([x, z]); }   // vision: a point every three blocks
     stroke(pts); }
+  // the Sacred Way (thera.md §2): from the great temple down to the cothon, switchbacked at the same grade, each step
+  // the heading nearest the cothon's bearing that falls no more than a block in phi squared
+  let sacred = 0, sacredEnd = null; { const CGw = (await import("../world/city.js")).cothonWorld(), TX = SX + CGw.x * K, TZ = SZ - CGw.y * K, tp = placements.find((q) => q.tag === "temple");
+    if (tp) { let x = (tp.b[0] + tp.b[2]) / 2, z = tp.b[3] + FIB[3], h = Hs(Math.round(x), Math.round(z)); const pts = [[x, z]];   // from the temple's front step
+      for (let n = 0; n < FIB[10] * FIB[5] && Math.hypot(TX - x, TZ - z) > FIB[8]; n++) { const toward = Math.atan2(TZ - z, TX - x); let best = null;
+        for (let turn = 0; turn <= 90 && !best; turn += 5) for (const side of [1, -1]) { const t = toward + side * (turn * Math.PI) / 180, nx = x + Math.cos(t), nz = z + Math.sin(t), nh = G.heightAt(Math.round(nx), Math.round(nz)).h; if (h - nh <= GRADE + 0.5 && nh > 0) { best = [nx, nz, nh]; break; } }   // vision: turning up to ninety degrees off the cothon's bearing, either side
+        if (!best) break; [x, z] = best; h = best[2]; if (n % 3 === 0) pts.push([x, z]); }
+      stroke(pts, W + 2); sacred = pts.length; sacredEnd = Math.round(Math.hypot(TX - x, TZ - z)); } }   // vision: two wider than the paths, a processional way
   // the spurs: each skyway trunk's foot to the nearest path
   const all = () => [...paths.values()];
   for (const [rx, rz] of SKYROOTS) { let best = null, bd = Infinity; for (const c of all()) { const d = Math.hypot(c.X - rx, c.Z - rz); if (d < bd) { bd = d; best = c; } } if (best && bd < R) stroke([[rx, rz], [best.X, best.Z]]); }
@@ -310,7 +365,7 @@ let TP = null, templeOk = false, HORAIA_AT = null; const POOLDRESS = [], POOLFIS
   for (const [, list] of pieces) { let b = [Infinity, Infinity, -Infinity, -Infinity]; for (const v of list) b = [Math.min(b[0], v.x), Math.min(b[1], v.z), Math.max(b[2], v.x), Math.max(b[3], v.z)];
     const P2 = proto(`cone park ${b[0]},${b[1]}`, new Map(list.map((v) => [`${v.x - b[0]},${v.y},${v.z - b[1]}`, { id: v.id, s: v.s }])), 0);
     placements.push({ p: P2.i, x: b[0], y: 0, z: b[1], f: pal("minecraft:air"), stilts: false, carve: false, free: true, tag: "park", b }); }
-  say(`the cone's park: ${paths.size} path stones (${LEVELS.length} rings, ${SPOKES} serpentine ways, ${SKYROOTS.length} skyway spurs), ${lamps} lamps, ${benches} benches, ${beds} garden plants, ${trees} cypresses; the amphitheatre ${O ? `${tiers} seats on ${FIB[6]} tiers facing the lagoon` : "found no ground"}`); }
+  say(`the cone's park: ${paths.size} path stones (${LEVELS.length} rings, ${SPOKES} serpentine ways, the Sacred Way ${sacred ? `${sacred * 3} steps, ending ${sacredEnd} from the cothon` : "NOT laid"}, ${SKYROOTS.length} skyway spurs), ${lamps} lamps, ${benches} benches, ${beds} garden plants, ${trees} cypresses; the amphitheatre ${O ? `${tiers} seats on ${FIB[6]} tiers facing the lagoon` : "found no ground"}`); }
 // ---- Akrotiri: the old Theran town under the ash, on the ridge's foot toward the south shore (the real site lies
 // there). Thera's red Minoan columns stand only here now (the user's word, 12 Nov: too far from the living city's
 // white, gold and blue): stumps of them broken at different heights on their white bases, fallen capitals, low walls of
@@ -451,7 +506,7 @@ const scan = (kinds, kind, cultureOf, slope, stride = 1, { max = Infinity, class
     const cls = clsAt(i, j), fp = footOf(b.vox), area = (fp[1] - fp[0] + 1 + 2 * pad) * (fp[3] - fp[2] + 1 + 2 * pad), keep = cls ? ((KEEP[cls] ?? 1) * (t === "therans" ? THINNER : 1) * (G.CELL * stride) ** 2) / area : 1;
     if (classed && golden(j * N + i) >= keep) continue;
     if (made >= max) return;
-    for (const r of [0, 1, 2, 3]) if (place(proto(key, b.vox, r), X, Z, { pad, kinds, slope, carve: kind === "caldera" || (kind === "outer" && !!CLIFF[t]), foundation: kind === "caldera" ? ST.plaster : "minecraft:calcite", stilts: t === "shallow", water: t === "shallow", floorAt: t === "shallow" ? G.SEA + 1 : null, tag: `${kind}|${t}` })) {
+    for (const r of [0, 1, 2, 3]) if (place(proto(key, t === "shallow" ? withLadder(b.vox) : b.vox, r), X, Z, { pad, kinds, slope, carve: kind === "caldera" || (kind === "outer" && !!CLIFF[t]), foundation: kind === "caldera" ? ST.plaster : "minecraft:calcite", wet: t === "shallow" && t, water: t === "shallow", tag: `${kind}|${t}` })) {
       houses++; made++; beds += b.beds; const key = t === "therans" ? `therans (${kind})` : kind === "caldera" ? `${t} (cliff)` : t; perCulture[key] = (perCulture[key] ?? 0) + 1;
       placements[placements.length - 1].folk = { t, kind, beds: b.beds, door: b.door, storeys: b.storeys, r };
       settle(placements[placements.length - 1], b, t, kind, r);
@@ -639,7 +694,7 @@ Lw.forEach((p, i) => {
           const face = [Math.cos(part.face ?? 0), Math.sin(part.face ?? 0)], dc = [hb.door.x - (fx0 + fx1) / 2, hb.door.z - (fz0 + fz1) / 2];   // town boxes are in world axes (z south)
           const opts = [0, 1, 2, 3].map((r) => { let [dx, dz] = dc; for (let k = 0; k < r; k++) [dx, dz] = [-dz, dx]; const [w, l] = r % 2 ? [pl, pw] : [pw, pl]; return { r, over: Math.max(0, w - bw) + Math.max(0, l - bl), align: (dx * face[0] + dz * face[1]) / (Math.hypot(dx, dz) || 1) }; }).sort((a, c) => a.over - c.over || c.align - a.align);
           const water = !!LAYOUT_WATER[t];
-          for (const o of opts.slice(0, 2)) if (place(proto(`town ${t} ${b.storeys ?? 1}`, hb.vox, o.r), X, Z, { pad: 0, water, stilts: water, floorAt: water ? G.SEA + 1 : null })) { townHouses++; townBeds += hb.beds; settle(placements[placements.length - 1], hb, t, "town", o.r, SHOWN_TOWN); break; }
+          for (const o of opts.slice(0, 2)) if (place(proto(`town ${t} ${b.storeys ?? 1}`, water ? withLadder(hb.vox) : hb.vox, o.r), X, Z, { pad: 0, water, wet: water && t })) { townHouses++; townBeds += hb.beds; settle(placements[placements.length - 1], hb, t, "town", o.r, SHOWN_TOWN); break; }
         }
       }
     }
@@ -697,7 +752,7 @@ if (process.env.WW_MCSTRUCTURE) { const { writeStructure, blockVersion } = await
 const bases = protos.filter((P) => !P.r), newIdx = new Map(bases.map((P, k) => [P.i, k]));
 const palN = palette.length, ROT = [1, 2, 3].map((r) => palette.slice(0, palN).map(([id, st]) => pal(id, turnStates(st ?? null, r))));
 for (const pl of placements) { const P = protos[pl.p]; pl.turn = P.r ?? 0; pl.p = newIdx.get(P.r ? P.base : P.i); }
-fs.writeFileSync(path.join(S, "data/structures.js"), `// baked by tools/buildmod.mjs: Thera's structures. palette [id, states?]; protos: f, base64 of an Int16Array [x, y, z, palette index, ...] (decoded when first laid: lay.js flatOf), and bounds;\n// placements: [proto, x, y, z (origin), foundation (palette), flags (1 stilts, 2 carved, 4 free: a skyway, bits 3-4 the quarter turns of its proto), x0, z0, x1, z1]; byChunk "cx,cz" -> placement indices\nexport const PALETTE = ${JSON.stringify(palette)};\nexport const ROT = ${JSON.stringify(ROT)};\nexport const PROTOS = ${JSON.stringify(bases.map((P) => ({ name: P.name, f: B64(new Uint8Array(Int16Array.from(P.flat).buffer)), b: P.b, o: P.origin })))};\nexport const PLACEMENTS = ${JSON.stringify(placements.map(({ p, x, y, z, f, stilts, carve, free, turn, b }) => [p, x, y, z, f, (stilts ? 1 : 0) | (carve ? 2 : 0) | (free ? 4 : 0) | ((turn ?? 0) << 3), ...b]))};\nexport const BY_CHUNK = ${JSON.stringify(byChunk)};\nexport const HORAIA = ${JSON.stringify(HORAIA_AT)};\nexport const POOLDRESS = ${JSON.stringify(POOLDRESS)};\nexport const POOLFISH = ${JSON.stringify(POOLFISH)};\nexport const PARK = ${JSON.stringify(PARK)};\nexport const COURSES = ${JSON.stringify(COURSES)};\nexport const PAINTS = ${JSON.stringify(paints.map((q) => q.d))};\nexport const PAINT_BY = ${JSON.stringify(PAINT_BY)};\nexport const WALLS = ${JSON.stringify(walls.map((w) => w.d))};\nexport const WALL_BY = ${JSON.stringify(WALL_BY)};\nexport const PLACES = ${JSON.stringify(PLACES)};\n`);
+fs.writeFileSync(path.join(S, "data/structures.js"), `// baked by tools/buildmod.mjs: Thera's structures. palette [id, states?]; protos: f, base64 of an Int16Array [x, y, z, palette index, ...] (decoded when first laid: lay.js flatOf), and bounds;\n// placements: [proto, x, y, z (origin), foundation (palette), flags (1 stilts, 2 carved, 4 free: a skyway, bits 3-4 the quarter turns of its proto, 32 a footing's cut: the slope cut back behind it), x0, z0, x1, z1]; byChunk "cx,cz" -> placement indices\nexport const PALETTE = ${JSON.stringify(palette)};\nexport const ROT = ${JSON.stringify(ROT)};\nexport const PROTOS = ${JSON.stringify(bases.map((P) => ({ name: P.name, f: B64(new Uint8Array(Int16Array.from(P.flat).buffer)), b: P.b, o: P.origin })))};\nexport const PLACEMENTS = ${JSON.stringify(placements.map(({ p, x, y, z, f, stilts, carve, cut, free, turn, b }) => [p, x, y, z, f, (stilts ? 1 : 0) | (carve ? 2 : 0) | (free ? 4 : 0) | ((turn ?? 0) << 3) | (cut ? 32 : 0), ...b]))};\nexport const BY_CHUNK = ${JSON.stringify(byChunk)};\nexport const HORAIA = ${JSON.stringify(HORAIA_AT)};\nexport const POOLDRESS = ${JSON.stringify(POOLDRESS)};\nexport const POOLFISH = ${JSON.stringify(POOLFISH)};\nexport const PARK = ${JSON.stringify(PARK)};\nexport const COURSES = ${JSON.stringify(COURSES)};\nexport const PAINTS = ${JSON.stringify(paints.map((q) => q.d))};\nexport const PAINT_BY = ${JSON.stringify(PAINT_BY)};\nexport const WALLS = ${JSON.stringify(walls.map((w) => w.d))};\nexport const WALL_BY = ${JSON.stringify(WALL_BY)};\nexport const PLACES = ${JSON.stringify(PLACES)};\n`);
 fs.writeFileSync(path.join(S, "data/grown.js"), `// baked by tools/buildmod.mjs from tools/bakegrown.mjs's settlements: per chunk "cx,cz" a base64 of a 32-byte no-tree mask, the lowest y\n// (u16, + 64), the chunk's kinds (u8 n, u16 index in data/structures.js PALETTE each), then columns (u8 j*16+i, u8 runs, each u8 y over the lowest,\n// u8 length, u8 kind); beasts [type, x, y, z]\nexport const GROWN_BY = ${JSON.stringify(GROWN_BY)};\nexport const BEAST_TYPES = ${JSON.stringify(BEAST_TYPES)};\nexport const BEASTS = ${JSON.stringify(BEASTS)};\nexport const BEAST_BY = ${JSON.stringify(BEAST_BY)};\n`);
 fs.writeFileSync(path.join(S, "data/folk.js"), `// baked by tools/buildmod.mjs: Thera's folk [x, y, z, skin, people (index in CULTURES, -1 the League), n]\nexport const CULTURES = ${JSON.stringify(CULTURES)};\nexport const RESIDENTS = ${JSON.stringify(residents)};\nexport const FOLK_BY_CHUNK = ${JSON.stringify(folkByChunk)};\nexport const NAMES = ${JSON.stringify(NAMES)};\nexport const SKINS = ${SKINS};\nexport const RANKS = ${JSON.stringify(RANKS)};\n`);
 fs.writeFileSync(path.join(S, "data/faith.js"), `// baked by tools/buildmod.mjs from world/faith.js\nexport const FAITH = ${JSON.stringify({ name: FAITH.name, tenets: FAITH.tenets, calendar: FAITH.calendar })};\nexport const WAYS = ${JSON.stringify(WAYS)};\nexport const DRESS = ${JSON.stringify(Object.fromEntries(Object.entries(DRESS).map(([k, v]) => [k, v.note])))};\n`);

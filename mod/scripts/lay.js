@@ -44,6 +44,10 @@ export const MARKS = ["minecraft:bedrock", "minecraft:structure_void", "minecraf
 import { LEVEL } from "./rings.js";
 export { LEVEL };
 const C = 16;   // given: a chunk's side
+const SKIN = { EARTH: 5, WALL: 13 };   // derived: a riser up to five (FIB[4], the pad law's bound) shows earth; to thirteen (FIB[6]) a pezoula walls it; past that it is a cliff, its own rock
+const PEZOULA = ["minecraft:smooth_basalt", "minecraft:red_sandstone", "waterworld:theran_marble_ashlar"];   // given: Thera's three stones, black, red and white (Plato, Critias 116a)
+const PILE = 3;   // derived: a stilt house's piles every three blocks, FIB[3] (the stilt peoples' shallows are three deep)
+const BEHIND = { 2: [0, 1], 3: [0, -1], 4: [1, 0], 5: [-1, 0] };   // given: a ladder facing north (2), south (3), west (4) or east (5) hangs on the block behind it
 const perms = new Map();
 export function perm(id, states) {
   const key = states ? `${id}|${JSON.stringify(states)}` : id;
@@ -125,6 +129,10 @@ export function* surfaceChunk(dim, cx, cz) {
       if (c.top < SEA) fill(dim, xa, c.top + 1, z, xb, SEA, z, "minecraft:water");
       if (c.water) fill(dim, xa, c.top + 1, z, xb, c.water, z, "minecraft:water");   // a river's water (or the tarn's)
       if (c.frozen && c.water) fill(dim, xa, c.water, z, xb, c.water, z, "minecraft:packed_ice");   // the Arctic tarn, frozen over (packed ice never melts)
+      if (thera) for (let k = i; k <= e; k++) { const q = cols[j * C + k]; if (q.top <= SEA || q.water || q.rise < 2) continue;   // the cone's skin (thera.md §2): a riser shows earth, a taller one a pezoula, a cliff its rock
+        const under = q.under === "minecraft:calcite" ? "minecraft:packed_mud" : q.under;   // the city's calcite under its soil reads as earth on a riser
+        if (q.rise <= SKIN.EARTH) fill(dim, x0 + k, q.top - q.rise - 1, z, x0 + k, q.top - 1, z, under);
+        else if (q.rise <= SKIN.WALL) for (let y = q.top - q.rise; y < q.top; y++) set(dim, x0 + k, y, z, perm(y === q.top - 1 ? PEZOULA[2] : PEZOULA[y & 1])); }
       i = e + 1;
     }
     for (let i = 0; i < C; i++) { if (!iceAt(cols[j * C + i])) continue; let e = i; while (e + 1 < C && iceAt(cols[j * C + e + 1])) e++; fill(dim, x0 + i, SEA, z0 + j, x0 + e, SEA, z0 + j, ICE); i = e; }   // the sea's ice by its own columns, in runs (its edge in floes)
@@ -148,10 +156,22 @@ function grownOf(cx, cz) {
 /** Bring a grown chunk's beasts out (once, as the folk). */
 function spawnBeasts(dim, cx, cz) { for (const k of BEAST_BY[`${cx},${cz}`] ?? []) { const [t, x, y, z] = BEASTS[k]; try { dim.spawnEntity(BEAST_TYPES[t], { x: x + 0.5, y, z: z + 0.5 }); } catch { fails++; } } }
 
-/** The columns a structure stands on (the deep pass leaves them as the surface laid them). */
+/** A placed prototype's lowest block in each column it fills, "x,z" -> y (a stilt house's floor, its porch, its legs), and .floor, the level most columns start at. */
+function undersOf(P, turn, pl) {
+  const f = flatOf(P), out = new Map();
+  for (let i = 0; i < f.length; i += 4) { let dx = f[i], dz = f[i + 2]; for (let t = 0; t < turn; t++) [dx, dz] = [-dz, dx]; const k = `${pl.x + dx},${pl.z + dz}`, y = pl.y + f[i + 1]; if (!out.has(k) || out.get(k) > y) out.set(k, y); }
+  const n = new Map(); for (const y of out.values()) n.set(y, (n.get(y) ?? 0) + 1);
+  out.floor = [...n].sort((p, q) => q[1] - p[1] || p[0] - q[0])[0]?.[0] ?? pl.y;   // the floor: the level most columns start at
+  return out;
+}
+
+/** The columns a structure stands on (the deep pass leaves them as the surface laid them), each with the lowest block
+ *  of what stands there (its prototype's base): the body is filled only under that, so a house set lower than the
+ *  skin's foot (cut into a slope, or a floor under the hill) keeps its rooms. */
 function coveredOf(cx, cz) {
-  const x0 = cx * C, z0 = cz * C, covered = new Set();
-  for (const k of BY_CHUNK[`${cx},${cz}`] ?? []) { const a = PLACEMENTS[k]; for (let x = Math.max(a[6], x0); x <= Math.min(a[8], x0 + C - 1); x++) for (let z = Math.max(a[7], z0); z <= Math.min(a[9], z0 + C - 1); z++) covered.add((z - z0) * C + (x - x0)); }
+  const x0 = cx * C, z0 = cz * C, covered = new Map();
+  for (const k of BY_CHUNK[`${cx},${cz}`] ?? []) { const a = PLACEMENTS[k], base = a[5] & 4 ? Infinity : a[2] + PROTOS[a[0]].b[2];   // the prototype's bounds [x0, x1, y0, y1, z0, z1]: y doesn't turn; a free piece (a skyway's deck, the park) stands over the ground, not on it, so the body under it goes up to the skin as before   // given: the placement's flag bits (data/structures.js: 1 stilts, 2 carved, 4 free)
+    for (let x = Math.max(a[6], x0); x <= Math.min(a[8], x0 + C - 1); x++) for (let z = Math.max(a[7], z0); z <= Math.min(a[9], z0 + C - 1); z++) { const q = (z - z0) * C + (x - x0); covered.set(q, Math.min(covered.get(q) ?? Infinity, base)); } }
   return covered;
 }
 
@@ -187,12 +207,19 @@ export function* lifeChunk(dim, cx, cz, { folk = true } = {}) {
   for (const k of BY_CHUNK[`${cx},${cz}`] ?? []) {
     const a = PLACEMENTS[k], pl = { p: a[0], x: a[1], y: a[2], z: a[3], f: a[4], s: a[5] & 1, c: a[5] & 2, free: a[5] & 4, b: [a[6], a[7], a[8], a[9]] }, P = PROTOS[pl.p], fp = palPerm(pl.f);   // free: a way in the air (a skyway), no foundation and nothing covered under it
     const bx0 = Math.max(pl.b[0], x0), bx1 = Math.min(pl.b[2], x0 + C - 1), bz0 = Math.max(pl.b[1], z0), bz1 = Math.min(pl.b[3], z0 + C - 1);
+    const under = pl.free ? null : undersOf(P, (a[5] >> 3) & 3, pl);   // the house's own lowest block in each column: a stilt house's piles run up to it, and the ground over it is the house's (a sunk floor, a pit house's)
     if (!pl.free) for (let x = bx0; x <= bx1; x++) for (let z = bz0; z <= bz1; z++) {
       covered.add((z - z0) * C + (x - x0));
       const top = cols[(z - z0) * C + (x - x0)].top;
-      const corner = (x === pl.b[0] || x === pl.b[2]) && (z === pl.b[1] || z === pl.b[3]);
-      if (!pl.s || corner) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp);
-      if (pl.c) fill(dim, x, pl.y + 1, z, x, top, z, "minecraft:air");   // cut into the slope
+      const pile = ((x - pl.b[0]) % PILE === 0 || x === pl.b[2]) && ((z - pl.b[1]) % PILE === 0 || z === pl.b[3]);   // a stilt house's piles: a grid every PILE, its edges always
+      if (!pl.s) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp); else if (pile && under.get(`${x},${z}`) <= under.floor + 1) fill(dim, x, top + 1, z, x, under.get(`${x},${z}`) - 1, z, fp);   // piles only under the floor (not under an eave, nor where the box is empty)
+      const lo = under.get(`${x},${z}`);
+      if (lo !== undefined && top > lo) fill(dim, x, lo + 1, z, x, top, z, "minecraft:air");   // the ground over the house's lowest block is the house's: cut into the slope, or a sunk floor dug out
+      else if (pl.c) fill(dim, x, pl.y + 1, z, x, top, z, "minecraft:air");   // cut into the slope
+    }
+    if (a[5] & 32 && theraUV(pl.x, pl.z)) for (let x = pl.b[0] - 1; x <= pl.b[2] + 1; x++) for (let z = pl.b[1] - 1; z <= pl.b[3] + 1; z++) {   // a footing's cut on Thera faced as a pezoula: the ring round the box, where the ground stands over the floor, walled in the three stones
+      if (x >= pl.b[0] && x <= pl.b[2] && z >= pl.b[1] && z <= pl.b[3]) continue; if (x < x0 || x >= x0 + C || z < z0 || z >= z0 + C) continue;
+      const top = cols[(z - z0) * C + (x - x0)].top; for (let y = pl.y + 1; y <= top; y++) set(dim, x, y, z, perm(y === top ? PEZOULA[2] : PEZOULA[y & 1]));   // banded black and red, a white coping (Critias 116a)
     }
     yield;
     const f = flatOf(P), turn = (a[5] >> 3) & 3, rot = turn ? ROT[turn - 1] : null;   // the base proto turned as it's laid (its block states by ROT)
@@ -202,6 +229,18 @@ export function* lifeChunk(dim, cx, cz, { folk = true } = {}) {
       if (x < x0 || x >= x0 + C || z < z0 || z >= z0 + C) continue;
       set(dim, x, y, z, palPerm(rot ? rot[f[i + 3]] : f[i + 3]));
       if (i % 256 === 0) yield;
+    }
+    if (pl.s) {   // a stilt house on land: its own ladders, made for the sea, run on down to the ground, a pile behind each
+      const lad = new Map();   // "x,z" -> the lowest ladder there: [y, its permutation's palette entry]
+      for (let i = 0; i < f.length; i += 4) { const e = PALETTE[rot ? rot[f[i + 3]] : f[i + 3]]; if (e[0] !== "minecraft:ladder") continue;
+        let dx = f[i], dz = f[i + 2]; for (let t = 0; t < turn; t++) [dx, dz] = [-dz, dx];
+        const k = `${pl.x + dx},${pl.z + dz}`, y = pl.y + f[i + 1]; if (!lad.has(k) || lad.get(k)[0] > y) lad.set(k, [y, e]); }
+      const low = Math.min(...[...lad.values()].map(([y]) => y));   // only the run's foot: a ladder that steps down the porch reaches the ground once
+      for (const [k, [y, e]] of lad) { if (y !== low) continue; const [x, z] = k.split(",").map(Number), [bx, bz] = BEHIND[e[1]?.facing_direction] ?? [0, 0], px2 = x + bx, pz = z + bz;
+        if ([x, px2].some((u) => u < x0 || u >= x0 + C) || [z, pz].some((v) => v < z0 || v >= z0 + C)) continue;   // both columns in this chunk
+        const g = cols[(z - z0) * C + (x - x0)].top; if (g < SEA || y - 1 <= g) continue;   // on land, and short of the ground
+        if (bx || bz) fill(dim, px2, cols[(pz - z0) * C + (px2 - x0)].top + 1, pz, px2, y - 1, pz, fp);
+        fill(dim, x, g + 1, z, x, y - 1, z, perm(e[0], e[1])); }
     }
   }
   // a grown settlement's blocks (data/grown.js): each column's runs, a fill apiece
@@ -245,7 +284,7 @@ export function* deepChunk(dim, cx, cz) {
   for (let j = 0; j < C; j++) { const tr = Date.now(); for (let i = 0; i < C; i++) { const c = cols[j * C + i]; rocks.push(columnRock({ x: c.x, z: c.z, top: c.top - 2 }, provinceOf(plan.climate, c.top, thera), rise, c.under)); } COUNT.js += Date.now() - tr; yield; }   // the rock reckoned a row a step
   fill(dim, x0, BOTTOM, z0, x0 + C - 1, BOTTOM, z0 + C - 1, "minecraft:bedrock"); mark(dim, cx, cz, LEVEL.life);   // the floor, and the corner's mark kept (a pass cut short lays again from life)
   { const P = PROVINCES[provinceOf(plan.climate, Math.min(...cols.map((c) => c.top)), thera)] ?? PROVINCES.temperate;   // the body under what stands on the ground (its columns keep their skin; the rock's beds go round them)
-    for (const c of cols) if (covered.has(c.j * C + c.i)) { const f = Math.max(BOTTOM + 1, footOf(c)) - 1; fill(dim, c.x, BOTTOM + 1, c.z, c.x, Math.min(f, DEEPSLATE - 1), c.z, P.deep); fill(dim, c.x, DEEPSLATE, c.z, c.x, f, c.z, P.beds[0]); } }
+    for (const c of cols) if (covered.has(c.j * C + c.i)) { const f = Math.min(Math.max(BOTTOM + 1, footOf(c)), covered.get(c.j * C + c.i)) - 1; fill(dim, c.x, BOTTOM + 1, c.z, c.x, Math.min(f, DEEPSLATE - 1), c.z, P.deep); fill(dim, c.x, DEEPSLATE, c.z, c.x, f, c.z, P.beds[0]); } }
   yield;
   for (let j = 0; j < C; j++) {
     const runs = new Map();   // "y0,y1,id" -> [start i, last i]

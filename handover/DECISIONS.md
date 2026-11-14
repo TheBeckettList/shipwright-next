@@ -73,3 +73,29 @@ address). Two streams run at once: ships on `s003/*`, the world on `world/<topic
 request. The stage branch is the default and takes pull requests only. `COLLABORATING.md` is the working agreement.
 Consequence: the baton rule (handover/README) holds per stream, and the hand-off merges both streams first.
 
+
+## D-008 — The sim runs as a pantheon of nine, derived from the law  (accepted · Richard · 2026-11-13 · S004)
+Context: going all in on the sim (D-003) needs a way to divide the world's systems among agents, and to say how their
+updates, reactions and conflicts work, without inventing a framework beside the math.
+Decision: nine agents, read off F on trit pairs mod 3 (`core/pantheon.js`): the still point (0,0) is the Measure
+(Nereus), and the other eight pairs, one cycle of the breath, are the gods, each named by where it acts (sea, peoples,
+land) and what it does to the stock (takes, holds, gives), with a Greek sea-power's name. Opposites (F^4 = -I) share a
+ledger and take each other's debts; F.v answers v on the next tick, bounded by psi = -1/phi; claims on a cell add as
+vectors, a set summing to the still point holds the cell, and any other set goes to the earliest slot from the
+breath's lead. Built wave by wave, each wave merged only when the
+`pantheon` lens holds. The design and its open questions are in the doc "The Pantheon: the sim's nine agents and the
+web between them".
+Consequence: wave 0 (the Measure: `core/pantheon.js`, the `pantheon` lens) lands first; every later system is a god in
+`world/gods/`, and the inherency lens must then read subfolders. Decided too (Richard, 2026-11-13): the gods are both, the sim's architecture and beings in the world. They can enter
+the sim and look round (each through its own realm), and the world honours them; Richard designs the honours. Answered by the math (2026-11-13, for Richard's review): (1) answers in whole units are
+round(cause x psi), which from a Fibonacci number is the one below it (Binet), and the roundings drift at most
+phi^2/2 (`SLACK`); (2) claims are vectors: a balanced set holds, otherwise the earliest slot from a lead that turns a
+slot a breath, so every god leads once in eight; (3) chance is `drawOf(tick, purpose)`: one god a tick, so the tick is its
+stream (a row key would add nothing, since the tick already names the god), and the world's own draws are untouched; (4) the gods are
+built in four waves of two, a god and its opposite together, in F's order from the Builder (they share a ledger, so
+neither can be checked alone); (5) a debt goes to the writer's opposite always, the weak routes included (-v is the
+only route F gives every god); (6) a god that holds may only move its own stock: on another's it lets its tick pass,
+and the next god answers at psi^2. (7) a stock lives in [0, room], starting at room / phi: with the floor
+alone the one-day sample's stocks climbed as a walk reflected at zero (the root of their writes); with both ends they
+stay in the room and the overflow is a debt like the shortfall. Open: counterparts for the shallow-water and European
+peoples.
