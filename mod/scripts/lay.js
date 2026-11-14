@@ -202,13 +202,15 @@ export function* lifeChunk(dim, cx, cz, { folk = true } = {}) {
   for (const k of BY_CHUNK[`${cx},${cz}`] ?? []) {
     const a = PLACEMENTS[k], pl = { p: a[0], x: a[1], y: a[2], z: a[3], f: a[4], s: a[5] & 1, c: a[5] & 2, free: a[5] & 4, b: [a[6], a[7], a[8], a[9]] }, P = PROTOS[pl.p], fp = palPerm(pl.f);   // free: a way in the air (a skyway), no foundation and nothing covered under it
     const bx0 = Math.max(pl.b[0], x0), bx1 = Math.min(pl.b[2], x0 + C - 1), bz0 = Math.max(pl.b[1], z0), bz1 = Math.min(pl.b[3], z0 + C - 1);
-    const under = pl.s ? undersOf(P, (a[5] >> 3) & 3, pl) : null;   // a stilt house's piles run up to its own lowest block in each column
+    const under = pl.free ? null : undersOf(P, (a[5] >> 3) & 3, pl);   // the house's own lowest block in each column: a stilt house's piles run up to it, and the ground over it is the house's (a sunk floor, a pit house's)
     if (!pl.free) for (let x = bx0; x <= bx1; x++) for (let z = bz0; z <= bz1; z++) {
       covered.add((z - z0) * C + (x - x0));
       const top = cols[(z - z0) * C + (x - x0)].top;
       const pile = ((x - pl.b[0]) % PILE === 0 || x === pl.b[2]) && ((z - pl.b[1]) % PILE === 0 || z === pl.b[3]);   // a stilt house's piles: a grid every PILE, its edges always
       if (!pl.s) fill(dim, x, top + 1, z, x, pl.y - 1, z, fp); else if (pile && under.get(`${x},${z}`) <= under.floor + 1) fill(dim, x, top + 1, z, x, under.get(`${x},${z}`) - 1, z, fp);   // piles only under the floor (not under an eave, nor where the box is empty)
-      if (pl.c) fill(dim, x, pl.y + 1, z, x, top, z, "minecraft:air");   // cut into the slope
+      const lo = under.get(`${x},${z}`);
+      if (lo !== undefined && top > lo) fill(dim, x, lo + 1, z, x, top, z, "minecraft:air");   // the ground over the house's lowest block is the house's: cut into the slope, or a sunk floor dug out
+      else if (pl.c) fill(dim, x, pl.y + 1, z, x, top, z, "minecraft:air");   // cut into the slope
     }
     if (a[5] & 32 && theraUV(pl.x, pl.z)) for (let x = pl.b[0] - 1; x <= pl.b[2] + 1; x++) for (let z = pl.b[1] - 1; z <= pl.b[3] + 1; z++) {   // a footing's cut on Thera faced as a pezoula: the ring round the box, where the ground stands over the floor, walled in the three stones
       if (x >= pl.b[0] && x <= pl.b[2] && z >= pl.b[1] && z <= pl.b[3]) continue; if (x < x0 || x >= x0 + C || z < z0 || z >= z0 + C) continue;
