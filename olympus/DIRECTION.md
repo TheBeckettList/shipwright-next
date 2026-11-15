@@ -17,11 +17,12 @@ Work in the other stream's realm: claim it here first, then make a PR into that 
 ### The plan (2026-11-14, world lead)
 
 **1. Land the world chain (now)**
-- **#10 (`world/cone`, step 5: the larger cone, the crater, terraced pads).** Regrow its 19 towns in the workspace,
-  replay them identical, then merge it into `world/terraform`. *W, running.*
+- **#10 (`world/cone`, step 5) is merged into `world/terraform`.** Its 19 towns regrew and replay identical, 19 of 19
+  (the city 23:24,5 needed a 6000 MB heap; growall now gives cities their own). *Done.*
 - **#3 (the pantheon) into the stage.** Then **#2 (`world/terraform`: phases 0–3 and step 5).** `npm test` must be
   green, and the owner gets a build to play first. *W.*
-- **#11 (D-011, the leads)** into the stage. *Owner's merge.*
+- #11 (the leads) and #12 (`ww pin`, the server held on the Switch's version; recipe unlock data) are merged into
+  the stage.
 
 **2. Thera, outside the towns' closure (next, W)**
 - **thera.md §2a:**
@@ -67,16 +68,13 @@ The Unmaker, the Reaper and the Trader.
 
 Merged on 2026-11-14:
 - #8, onboarding;
-- #9, builds on GitHub;
+- #9, builds on GitHub; #11, the leads; #10, the cone; #3, the pantheon; #12, `ww pin`;
 - #4, moorings;
 - #6 and #7, into `world/terraform`.
 
 Open, in order:
-1. #11, the leads.
-2. #10, into `world/terraform`, after the regrow.
-3. #3, the pantheon.
-4. #2, the world chain.
-5. #5, ships in bottles (a draft until `s003/therans` is green).
+1. #2, the world chain (after `npm test` and the owner's play).
+2. #5, ships in bottles (a draft until `s003/therans` is green).
 
 ### Builds
 
@@ -86,7 +84,7 @@ Every push to a working branch builds on GitHub as that branch's pre-release (`b
 
 ### The grow schedule (the closure: `world/cities.js`, `world/district.js`, `game/ground.js` and their imports)
 
-- **Now:** the 19 towns near Thera, for #10 (the cone resize reads into the closure).
+- **Done:** the 19 towns near Thera, for #10 (replay 19 of 19 identical).
 - **Next:** phase 4's batch, the whole world, with `boatsizes.js`.
 
 Anything else that touches the closure waits for that grow, or says why here.
