@@ -311,3 +311,26 @@ In blocks the city is 2.8 M blocks in 981,179 columns (32 MB of JSON); with it, 
 **Assumed:**
 - grow time and add-on size scale linearly to the largest cities;
 - the plan's size, above all the prototype count.
+
+## Step 5: the larger cone and terraced pads (2026-11-14, `world/cone`)
+
+**What changed:**
+- **The cone:** thera.md §2 says `dome.r` 1.62 and `top` 287.5. The crater is 21 deep and 34 round, centred in the real plane. Its floor is about 50 blocks over the sea and the rim about 68.
+- **The great temple:** it now stands on the crater's rim on the mouth's side (61 out).
+- **Terraced pads:** houses of the terracing peoples on Thera stand on TERRACE pads (`census.terraces`), 573 of them.
+
+**Probe on Thera (400 sampled):**
+- 13 footings of 3 or more, all of them igloos on a set floor;
+- 3 steps up and 1 sill down;
+- doors lost: 0;
+- fill and cut over 5: 2 and 1.
+
+Flight: 38.6 ms a chunk, and 819 fills a chunk (in the gate).
+
+**The grown towns need a real regrow.** This isn't a restamp: 50:19,6 and 50:18,6 come out different after the resize, because the closure reads Thera's island (peoples, trade, boxes). The build leaves all 19 out until they're grown again.
+
+**Next: the regrow, in Claude's workspace (D-010).** On this branch, run `node tools/growall.mjs --dry`, then
+`node tools/growall.mjs --workers 2 --heap 3000`, then `node tools/replay.mjs`. Then commit `lab/grown` and
+`lab/plans`.
+
+**Not done:** §2a (the ring quay, the stoa, the cothon on the ring line, the Koinon House) and the six rings and skyway roots at DECK 30.

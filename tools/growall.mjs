@@ -8,7 +8,8 @@
 //   node tools/growall.mjs [--folk 8000] [--workers n] [--heap 4096] [--dry]
 //   --folk     the budget bakegrown chooses by (nearest Thera first); 1e9 for every settlement in the world
 //   --workers  default: the machine's cores less one
-//   --heap     MB of heap a worker (the 4,625-folk city needed about 2.6 GB)
+//   --heap     MB of heap a worker; a city of 2,000 folk or more gets at least BIG_HEAP (the 4,649-folk city ran out at
+//              3,000 MB on 2026-11-14, an hour in, and grew in 6,000), and runs on a worker of its own
 //   --olympus  the path of an olympus worktree (git worktree add ../olympus-hall olympus): the run checks in there as the
 //              Grower at its milestones, each eighth of its cost grown (a breath of eight), then once at its end, a
 //              tablet a milestone, each answering the last, committed and pushed (pulled and retried if the hall moved)
@@ -25,8 +26,10 @@ const workers = Math.max(1, Number(arg("workers", Math.max(1, (os.availableParal
 const hash = sourceHash(), all = await chosen(Number(folk));
 const todo = all.filter(({ s }) => !fs.existsSync(fileOf(s.key)) || JSON.parse(fs.readFileSync(fileOf(s.key), "utf8")).hash !== hash)
   .map(({ s }) => ({ key: s.key, folk: s.folk, cost: s.folk ** 1.3 })).sort((a, b) => b.cost - a.cost);   // vision: the cost's exponent, from the city's 0.80 s a head against the towns' 0.39
-const shares = Array.from({ length: workers }, () => ({ keys: [], cost: 0, folk: 0 }));
-for (const t of todo) { const w = shares.reduce((m, x) => (x.cost < m.cost ? x : m)); w.keys.push(t.key); w.cost += t.cost; w.folk += t.folk; }   // the biggest first to the least loaded
+const BIG = 2000, BIG_HEAP = 6000;   // vision: a city's folk and the heap it gets (the 4,649-folk city needed more than 3,000 MB)
+const shares = Array.from({ length: workers }, () => ({ keys: [], cost: 0, folk: 0, big: false }));
+for (const t of todo) { if (t.folk < BIG) continue; const w = shares.filter((x) => !x.keys.length)[0] ?? shares.reduce((m, x) => (x.cost < m.cost ? x : m)); w.keys.push(t.key); w.cost += t.cost; w.folk += t.folk; w.big = true; }   // each city to a worker of its own while there are workers
+for (const t of todo.filter((x) => x.folk < BIG)) { const w = shares.reduce((m, x) => (x.cost < m.cost ? x : m)); w.keys.push(t.key); w.cost += t.cost; w.folk += t.folk; }   // the biggest first to the least loaded
 console.log(`${all.length} chosen, ${todo.length} to grow (${todo.reduce((a, t) => a + t.folk, 0)} folk) on ${workers} workers; the biggest: ${todo.slice(0, 4).map((t) => `${t.key} (${Math.round(t.folk)})`).join(", ")}`);
 for (const [i, w] of shares.entries()) if (w.keys.length) console.log(`  worker ${i}: ${w.keys.length} settlements, ${Math.round(w.folk)} folk`);
 if (process.argv.includes("--dry") || !todo.length) process.exit(0);
@@ -49,7 +52,7 @@ function checkIn(final = false) {   // a tablet on Olympus from the Grower, comm
 }
 const grew = (key) => { const t = costOf.get(key); if (!t) return; grownCost += t.cost; grownFolk += t.folk; grownN++; while (nextMark < MARKS && grownCost >= (total * nextMark) / MARKS) { nextMark++; checkIn(); } };
 await Promise.all(shares.filter((w) => w.keys.length).map((w, i) => new Promise((done) => {
-  const p = spawn(process.execPath, [`--max-old-space-size=${heap}`, path.join(here, "bakegrown.mjs"), "--folk", folk, "--secs", "1e9", "--keys", w.keys.join(";")], { stdio: ["ignore", "pipe", "inherit"] });
+  const p = spawn(process.execPath, [`--max-old-space-size=${w.big ? Math.max(Number(heap), BIG_HEAP) : heap}`, path.join(here, "bakegrown.mjs"), "--folk", folk, "--secs", "1e9", "--keys", w.keys.join(";")], { stdio: ["ignore", "pipe", "inherit"] });
   p.stdout.on("data", (b) => { for (const line of String(b).split("\n")) if (line.trim()) { console.log(`[${i}] ${line}`); const k = /^(\S+) \S+ \d+ folk/.exec(line); if (k) grew(k[1]); } });
   p.on("exit", (code) => { console.log(`[${i}] done (${code === 0 ? "ok" : `exit ${code}`}) at ${Math.round((Date.now() - t0) / 1000)} s`); done(); });
 })));

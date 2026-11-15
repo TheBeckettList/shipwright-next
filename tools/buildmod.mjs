@@ -144,7 +144,7 @@ const PADS = [], padIndex = new Map(), PAD_C = 16;   // given: a chunk, the pads
 const padCells = (p, r) => { const out = []; for (let cx = Math.floor((p.x0 - r) / PAD_C); cx <= Math.floor((p.x1 + r) / PAD_C); cx++) for (let cz = Math.floor((p.z0 - r) / PAD_C); cz <= Math.floor((p.z1 + r) / PAD_C); cz++) out.push(`${cx},${cz}`); return out; };
 const padsNear = (p) => { const seen = new Set(), out = []; for (const k of padCells(p, 2 * TF.BANK.REACH)) for (const i of padIndex.get(k) ?? []) if (!seen.has(i)) { seen.add(i); out.push(PADS[i]); } return out; };   // derived: two reaches, the farthest two pads' cones can meet
 const natCache = new Map(), natH = (x, z) => { const k = x * 262144 + z; let v = natCache.get(k); if (v === undefined) { if (natCache.size > 1 << 22) natCache.clear(); const g = G.naturalAt(x, z); v = g.water != null || g.h <= 0 ? null : Math.round(g.h); natCache.set(k, v); } return v; };   // the natural land (null: the sea's or a river's, which no bank fills), kept as the banks are weighed   // given: four million columns kept at most
-let padStats = { n: 0, cut: 0, fill: 0 };
+let padStats = { n: 0, cut: 0, fill: 0, terraced: 0 };
 const colKey = (x, z) => `${x},${z}`;
 const BAD = new Set(["round harbour", "merchant harbour", "fairway", "ring canal", "wall canal", "canal"].map((k) => G.KIND[k]));
 /** Place a prototype with its footprint's middle at world (X, Z): its floor (y 0) on the highest ground under it.
@@ -152,7 +152,7 @@ const BAD = new Set(["round harbour", "merchant harbour", "fairway", "ring canal
  *  its footprint is water no deeper than STILT_DEEP and LIFT over the highest ground where it stands on land, refused
  *  over deeper water or where a post would pass POST_MAX (a floor at the sea's level on a hill was buried by the deep
  *  pass: design/s004-specs/terraform.md §1). */
-function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, water = false, stilts = false, wet = false, tag = "", pad = 0, kinds = null, slope = Infinity, anyWater = false, carve = false, trunk = false, over = false, foot = null, origin = false, dry = false } = {}) {   // dry: weigh the site (its earthwork) without taking it   // origin: the prototype's own 0,0 goes at X, Z (not its box's middle)   // foot: the columns it truly stands on (a round pad's), in place of its box   // over: stands on something already placed (a dockhouse on its pad)
+function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, water = false, stilts = false, wet = false, tag = "", pad = 0, kinds = null, slope = Infinity, anyWater = false, carve = false, trunk = false, over = false, foot = null, origin = false, dry = false, terrace = false } = {}) {   // dry: weigh the site (its earthwork) without taking it   // origin: the prototype's own 0,0 goes at X, Z (not its box's middle)   // foot: the columns it truly stands on (a round pad's), in place of its box   // over: stands on something already placed (a dockhouse on its pad)
   const [x0, x1, , , z0, z1] = trunk ? [0, 0, 0, 0, 0, 0] : P.b, ox = origin ? X : X - Math.round((x0 + x1) / 2), oz = origin ? Z : Z - Math.round((z0 + z1) / 2);   // trunk: the footprint is the trunk's column (a crown hangs free)
   if (!over) { if (foot) { for (const [x, z] of foot) if (taken.has(colKey(ox + x, oz + z))) return no("overlap"); } else for (let x = x0 - pad; x <= x1 + pad; x++) for (let z = z0 - pad; z <= z1 + pad; z++) if (taken.has(colKey(ox + x, oz + z))) return no("overlap"); }
   let top = -Infinity, low = Infinity; const cols = [];
@@ -168,7 +168,7 @@ function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, 
   // a pad: a free-standing building on dry land (not on posts, a trunk, a set floor or something already placed)
   let ground = null;
   if (!trunk && floorAt == null && !over && !stilts && cols.every(([, , t]) => t > G.SEA)) {
-    ground = TF.padOf(cols.map(([x, z, t]) => ({ x, z, h: t - G.SEA })), { carve });
+    ground = TF.padOf(cols.map(([x, z, t]) => ({ x, z, h: t - G.SEA })), { carve, terrace });   // terrace: its banks stepped as pezoules (terraform.md TERRACE)
     if (ground.why) return no(`pad: ${ground.why.split(" ")[0]}`);
     if (!TF.compatible(ground, padsNear(ground))) return no("pad: its banks clash with a neighbour's");
     const bank = TF.bankFits(ground, (x, z) => natH(x, z) ?? ground.L); if (bank) return no("pad: bank");
@@ -177,7 +177,7 @@ function place(P, X, Z, { foundation = "minecraft:cobblestone", floorAt = null, 
   let cut = false; if (!ground && !trunk && floorAt == null && !carve && !over && y0 - 1 - low > CREPIDOMA) { y0 = Math.max(low + CREPIDOMA + 1, G.SEA + 1); carve = cut = true; }   // a footing of three steps at most: past that the floor drops and the slope above is cut back (thera.md §2)
   if (dry) { let cut = 0, fill = 0; for (const [, , t] of cols) { cut += Math.max(0, t - y0); fill += Math.max(0, y0 - 1 - t); } return { cut, fill, score: cut + PHI * fill }; }   // derived: fill weighs phi to cut's one (a footing is built, a cut only dug)
   for (const [wx, wz] of cols) taken.add(colKey(wx, wz));
-  if (ground) { const i = PADS.length; PADS.push(ground); for (const k of padCells(ground, 2 * TF.BANK.REACH)) { let a = padIndex.get(k); if (!a) padIndex.set(k, (a = [])); a.push(i); } padStats.n++; padStats.cut += ground.cut; padStats.fill += ground.fill; carve = false; }
+  if (ground) { const i = PADS.length; PADS.push(ground); for (const k of padCells(ground, 2 * TF.BANK.REACH)) { let a = padIndex.get(k); if (!a) padIndex.set(k, (a = [])); a.push(i); } padStats.n++; if (ground.flags & TF.FLAG.terrace) padStats.terraced++; padStats.cut += ground.cut; padStats.fill += ground.fill; carve = false; }
   placements.push({ p: P.i, x: ox, y: y0, z: oz, f: pal(foundation), stilts, carve, cut, padded: !!ground, tag, b: [ox + x0, oz + z0, ox + x1, oz + z1] });
   return true;
 }
@@ -268,7 +268,7 @@ let TP = null, templeOk = false, HORAIA_AT = null; const POOLDRESS = [], POOLFIS
       for (let f = 0; f < FIB[4] - 2 + (n === 0 ? 1 : 0); f++) { const a = f * 2.4 + n, X = Math.round(SX + p.u + (p.R + FIB[4]) * Math.cos(a)), Z = Math.round(SZ + p.v + (p.R + FIB[4]) * Math.sin(a)), g = G.heightAt(X, Z);   // vision: three a pool (four by the Horaia's), five out from the water
         if (g.water != null || g.h < 1) continue; POOLFISH.push([kinds[f % kinds.length], X, G.SEA + Math.round(g.h) + 1, Z]); beasts++; } }
     done.push(`the pools dressed (${dressed} things on their floors), ${fish0} fish, ${beasts} beasts on their banks`); }
-  site("great temple", mouth, 0);   // the Sea Rite Temple on the summit's middle
+  site("great temple", mouth, FIB[8] + FIB[6]);   // the Sea Rite Temple on the crater's rim on the mouth's side, facing across the vent as Delphi faced its chasm (thera.md §2)
   site("navigation house", mouth + Math.PI, 89); site("library", mouth + (2 * Math.PI) / 3, 89); site("government seat", mouth - (2 * Math.PI) / 3, 89);   // vision: eighty-nine out from the summit's middle at least (clear of the great temple)
   say(`the summit: ${done.join(", ")}`);
   // the museum of the lost keels (handover/design/lost-keels.md on sim/sea; agreed on Olympus, 0001689165-builder): a
@@ -523,7 +523,7 @@ const scan = (kinds, kind, cultureOf, slope, stride = 1, { max = Infinity, class
     const cls = clsAt(i, j), fp = footOf(b.vox), area = (fp[1] - fp[0] + 1 + 2 * pad) * (fp[3] - fp[2] + 1 + 2 * pad), keep = cls ? ((KEEP[cls] ?? 1) * (t === "therans" ? THINNER : 1) * (G.CELL * stride) ** 2) / area : 1;
     if (classed && golden(j * N + i) >= keep) continue;
     if (made >= max) return;
-    for (const r of [0, 1, 2, 3]) if (place(proto(key, t === "shallow" ? withLadder(b.vox) : b.vox, r), X, Z, { pad, kinds, slope, carve: kind === "caldera" || (kind === "outer" && !!CLIFF[t]), foundation: kind === "caldera" ? ST.plaster : "minecraft:calcite", wet: t === "shallow" && t, water: t === "shallow", tag: `${kind}|${t}` })) {
+    for (const r of [0, 1, 2, 3]) if (place(proto(key, t === "shallow" ? withLadder(b.vox) : b.vox, r), X, Z, { pad, kinds, slope, carve: kind === "caldera" || (kind === "outer" && !!CLIFF[t]), terrace: CEN.terraces(t, i * N + j, { grade: 1 }), foundation: kind === "caldera" ? ST.plaster : "minecraft:calcite", wet: t === "shallow" && t, water: t === "shallow", tag: `${kind}|${t}` })) {   // a terracing people's house steps its banks (building.js TERRACING, census.js terraces: the cell's golden step against the people's share)
       houses++; made++; beds += b.beds; const key = t === "therans" ? `therans (${kind})` : kind === "caldera" ? `${t} (cliff)` : t; perCulture[key] = (perCulture[key] ?? 0) + 1;
       placements[placements.length - 1].folk = { t, kind, beds: b.beds, door: b.door, storeys: b.storeys, r };
       settle(placements[placements.length - 1], b, t, kind, r);
@@ -729,7 +729,7 @@ say(`the world's towns: ${towns} towns, ${townHouses} houses, ${townBeds} beds, 
 const PAD_BY = {}; let padsOffGrown = 0;
 for (const [i, q] of PADS.entries()) for (let cx = Math.floor((q.x0 - TF.BANK.REACH) / C0); cx <= Math.floor((q.x1 + TF.BANK.REACH) / C0); cx++) for (let cz = Math.floor((q.z0 - TF.BANK.REACH) / C0); cz <= Math.floor((q.z1 + TF.BANK.REACH) / C0); cz++) {
   const k = `${cx},${cz}`; if (GROWN_BY[k]) { padsOffGrown++; continue; } (PAD_BY[k] ??= []).push(i); }
-say(`pads: ${padStats.n} buildings on pads (cut ${padStats.cut}, fill ${padStats.fill} blocks at their deepest, summed), ${Object.keys(PAD_BY).length} chunks banked${padsOffGrown ? `, ${padsOffGrown} kept off grown towns' chunks` : ""}; refused: ${Object.entries(why).filter(([k]) => k.startsWith("pad")).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}`);
+say(`pads: ${padStats.n} buildings on pads, ${padStats.terraced} of them terraced (cut ${padStats.cut}, fill ${padStats.fill} blocks at their deepest, summed), ${Object.keys(PAD_BY).length} chunks banked${padsOffGrown ? `, ${padsOffGrown} kept off grown towns' chunks` : ""}; refused: ${Object.entries(why).filter(([k]) => k.startsWith("pad")).map(([k, v]) => `${k} ${v}`).join(", ") || "none"}`);
 G.usePads(Int32Array.from(PADS.flatMap((q) => [q.x0, q.z0, q.x1, q.z1, q.L, q.flags, q.cut, 0])), PAD_BY);   // the rest of the bake reads the ground the game lays
 
 // the League's sea wardens: at the Exchange, the quays and the harbour master's island (world/sealife.js's wardens, the tax's keepers)

@@ -22,6 +22,7 @@
 // block upward (relief is exaggerated so Minecraft's blocks can show it).
 import { fbm, ridged, smoothstep } from "../core/noise.js";
 import { GIVEN, D } from "../core/given.js";
+import { FIB } from "../core/golden.js";
 
 export const THERA = Object.freeze({
   name: "Thera",
@@ -46,7 +47,7 @@ export const THERA = Object.freeze({
   bay: { x: -0.9, y: 3.2, a: 2.9, b: 3.4, floor: -30, rim: 70, wall: 0.16, scallops: 0.14 },   // vision: the flooded caldera (Cape Riva): centre, half-axes km, floor m, rim crest m, wall width (share)
   strait: { path: [[-2.5, 5.6], [-3.7, 7.1], [-4.4, 9.6]], half: 0.3, depth: -30 },   // vision: the mouth to the north-west, km (120 blocks wide: two great lanes and the light's islet); derived: 30 m, the great ships' 7 blocks and a half
   stack: { x: -3.3, y: 6.44, r: 0.12, top: 46, widen: 0.2 },   // vision: a lava-plug stack in mid-strait (km, m), and how much the strait widens round it (km)   // vision: the low narrow strait to the north-west, km; depth m
-  dome: { x: -0.8, y: 2.7, r: 1.08, top: 230, lobes: 0.35 },   // vision: Pre-Kameni: centre, summit m, lobing (share of radius); derived: radius 1.75 km / phi, the least that holds the precinct on its plateau and the cothon on its flank (theramath.mjs)
+  dome: { x: -0.8, y: 2.7, r: 1.62, top: 287.5, lobes: 0.35 },   // vision: radius x 1.5 and a quarter higher (the owner's word, D-006; thera.md §2: 6.27 km² of land, the narrowest lagoon 0.86 km)   // vision: Pre-Kameni: centre, summit m, lobing (share of radius); derived: radius 1.75 km / phi, the least that holds the precinct on its plateau and the cothon on its flank (theramath.mjs)
   massifs: [                // [name, x, y, a, b, turn, height m, crags (share)]
     ["Profitis Ilias", 6.0, -5.0, 1.9, 1.15, 40, 567, 0.35],   // given: 567 m; vision: its shape
     ["Mesa Vouno", 6.9, -6.5, 0.7, 0.55, 30, 369, 0.3],        // given: 369 m
@@ -133,7 +134,9 @@ export function theraMetres(x0, y0) {
   // Pre-Kameni: the dome, lobed where its lavas ran
   const D = T.dome, r = domeField(x, y);
   if (r < 1.25) {   // vision: its foot runs out under the bay
-    const dome = B.floor + (D.top - B.floor) * Math.max(0, 1 - r * r) ** 1.3;   // vision: a low dome
+    let dome = B.floor + (D.top - B.floor) * Math.max(0, 1 - r * r) ** 1.3;   // vision: a low dome
+    const rc = Math.hypot(x0 - D.x, y0 - D.y) * T.KM;   // blocks from the summit (in the real plane, where the bake sites the precinct)
+    if (rc < FIB[8]) dome -= FIB[7] * T.M * (1 - (rc / FIB[8]) ** 2);   // derived: the crater (thera.md §2): a bowl 21 blocks deep, 34 round, the dormant volcano open at the top
     if (dome > m) { m = smax(m, dome, 12); what = "Pre-Kameni"; }   // vision: its foot's join (m)
   }
   // erosion: gullies down from the heights, running away from the caldera rim toward the sea

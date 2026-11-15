@@ -21,8 +21,9 @@ node tools/buildmod.mjs                             # bake
 Phase 4's whole world is 463 settlements and 107,581 folk, so it is a long run here. Split it across sessions:
 `bakegrown` keeps what is grown and grows only the stale or new.
 
-**Memory:** about 3 GB a worker at most (the big city peaked at 2.6 GB). On an 8 GB workspace, use
-`--workers 2 --heap 3000`.
+**Memory:** a city of 2,000 folk or more gets a worker of its own with at least 6,000 MB of heap. The 4,649-folk
+city ran out at 3,000 MB an hour in on 2026-11-14. Towns need well under 3 GB. On an 8 GB workspace use `--workers 2`,
+so the city's worker and one town worker fit.
 
 **Plans:** every town grown also leaves its plan in `lab/plans/` (phase 2, `tools/plans.mjs`). Check them with
 `node tools/replay.mjs`, which should print IDENTICAL for every town; then commit `lab/grown/` and `lab/plans/` together.
