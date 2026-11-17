@@ -11,7 +11,8 @@ import { decode } from "./png.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist"), BP = path.join(DIST, "Waterworld_BP"), RP = path.join(DIST, "Waterworld_RP");
-const VERSION = [0, 9, 14];
+const CLIENT_PACK_MB = 60;   // vision: the most resource pack a Switch client downloads and holds (it hung at 129 MB)
+const VERSION = [0, 9, 15];
 const t0 = performance.now(), say = (s) => console.log(`[${((performance.now() - t0) / 1000).toFixed(1)}s] ${s}`);
 
 loadMap();
@@ -870,6 +871,20 @@ say(`packs written (${nt} block textures)`);
     let raw; try { raw = zlib.inflateSync(Buffer.concat(idat)); } catch { bad.push(p); continue; }
     if (raw.length !== (Math.ceil((w * CH[t] * depth) / 8) + 1) * h) bad.push(path.relative(RP, p)); } } };
   walk(RP); if (bad.length) throw new Error(`${bad.length} malformed textures: ${bad.slice(0, 5).join(", ")}`); say(`textures: ${n} PNGs, every one well formed`); }
+// every pack JSON written minified: the game reads it the same, and a Switch has to download, parse and hold all of
+// it as it joins (the boats' geometry alone was 110 MB pretty-printed, 21 MB minified). A file that isn't plain JSON
+// (Bedrock allows comments in a few) is left as it is.
+{ let before = 0, after = 0, files = 0;
+  const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (f.name.endsWith(".json")) {
+    const t = fs.readFileSync(p, "utf8"); before += t.length; let o; try { o = JSON.parse(t); } catch { after += t.length; continue; }
+    const m = JSON.stringify(o); fs.writeFileSync(p, m); after += m.length; files++; } } };
+  walk(BP); walk(RP);
+  say(`pack JSON minified: ${files} files, ${(before / 1e6).toFixed(1)} MB to ${(after / 1e6).toFixed(1)} MB`); }
+// the pack's weight on the device: what a client downloads and holds (the RP; the BP stays on the server)
+{ const size = (d) => fs.readdirSync(d, { withFileTypes: true }).reduce((s, f) => s + (f.isDirectory() ? size(path.join(d, f.name)) : fs.statSync(path.join(d, f.name)).size), 0);
+  const rp = size(RP) / 1e6, geo = size(path.join(RP, "models")) / 1e6;
+  say(`the client's pack (RP): ${rp.toFixed(1)} MB, of it geometry ${geo.toFixed(1)} MB; the server's (BP): ${(size(BP) / 1e6).toFixed(1)} MB`);
+  if (rp > CLIENT_PACK_MB) throw new Error(`the resource pack is ${rp.toFixed(1)} MB, over the ${CLIENT_PACK_MB} MB a Switch is given (CLIENT_PACK_MB)`); }
 // the test kit for the dev server (dev/: the Docker Bedrock server the Switch joins through BedrockConnect): waterworld/{BP, RP, dev, VERSION}
 const KIT = path.join(DIST, "kit", "waterworld"); fs.mkdirSync(KIT, { recursive: true });
 fs.cpSync(BP, path.join(KIT, "BP"), { recursive: true }); fs.cpSync(RP, path.join(KIT, "RP"), { recursive: true }); fs.cpSync(path.join(ROOT, "dev"), path.join(KIT, "dev"), { recursive: true });

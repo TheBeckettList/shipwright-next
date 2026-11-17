@@ -1705,11 +1705,8 @@ def finish(bones):
             o, s = c["origin"], c["size"]
             if c.get("rotation"):
                 c["origin"], c["size"] = [round(v, 4) for v in o], [round(max(0.05, v), 4) for v in s]
-                if c.get("uv") == [0, 0]:
-                    w, h, d = (min(128, max(1, round(v * SCALE, 3))) for v in c["size"])
-                    c["uv"] = {"north": {"uv": [0, 0], "uv_size": [w, h]}, "south": {"uv": [0, 0], "uv_size": [w, h]},
-                               "east": {"uv": [0, 0], "uv_size": [d, h]}, "west": {"uv": [0, 0], "uv_size": [d, h]},
-                               "up": {"uv": [0, 0], "uv_size": [w, d]}, "down": {"uv": [0, 0], "uv_size": [w, d]}}
+                # a turned slab keeps the box UV it was given ([0, 0]: the wood at the sheet's corner): one pair, where
+                # six per-face maps cost a Switch ~400 bytes a slab to download and parse, over ~29,000 slabs
                 continue
             lo = [math.floor(round(o[k] / S, 6)) * S for k in range(3)]
             hi = [math.ceil(round((o[k] + s[k]) / S, 6)) * S for k in range(3)]
