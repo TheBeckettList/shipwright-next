@@ -10,7 +10,7 @@
 // The world's mode (/scriptevent shipwright:mode port|boatblock) says where newcomers start: at the
 // homeport (port, the default) or straight on the raft (boatblock). It never changes the world.
 import { world, system, ItemStack } from "@minecraft/server";
-import { SEA_DIM } from "./dims.js";
+import { SEA_DIM, hasDim } from "./dims.js";
 import { SEA_LEVEL } from "./world/terrain.js";
 import { groupsNear, climate } from "./world/terrain.js";
 import { groupWoods } from "./world/peoples.js";
@@ -97,6 +97,7 @@ let tick = 0;
 
 function driftTick(seed) {
   tick++;
+  if (!hasDim(SEA_DIM)) return;   // no sea world on this server
   const hp = homeportIfReady(seed);
   const dim = world.getDimension(SEA_DIM);
   for (const p of world.getAllPlayers()) {
@@ -249,7 +250,7 @@ export const _seaLawsTest = { tideTick, washTick, reefTick, reset: () => { tides
 
 export function startBoatblock() {
   system.runInterval(() => {
-    if (!seaWorldOn()) return;
+    if (!seaWorldOn() || !hasDim(SEA_DIM)) return;
     try {
       const seed = worldSeed(), dim = world.getDimension(SEA_DIM);
       tideTick(seed, dim);
@@ -258,7 +259,7 @@ export function startBoatblock() {
   }, 100);   // vision: every five seconds
   system.runInterval(() => {
     if (!seaWorldOn()) return;
-    try { washTick(worldSeed(), world.getDimension(SEA_DIM)); } catch (err) { warnOnce("wash", `[Shipwright] Storm wash: ${err}`); }
+    if (hasDim(SEA_DIM)) try { washTick(worldSeed(), world.getDimension(SEA_DIM)); } catch (err) { warnOnce("wash", `[Shipwright] Storm wash: ${err}`); }
   }, 200);   // vision: a wave group every ten seconds
   system.runInterval(() => {
     if (!seaWorldOn()) return;
